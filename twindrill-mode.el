@@ -1,4 +1,4 @@
-;;; twittering-mode.el --- Major mode for Twitter
+;;; twindrill-mode.el --- Twitter client for Emacs
 
 ;; Copyright (C) 2009-2015 Tadashi MATSUO
 ;;               2007, 2009-2011 Yuto Hayamizu.
@@ -6,15 +6,15 @@
 ;;               2014, 2015 Xavier Maillard
 
 ;; Author: Tadashi MATSUO <tad@mymail.twin.ne.jp>
-;;	Y. Hayamizu <y.hayamizu@gmail.com>
-;;	Tsuyoshi CHO <Tsuyoshi.CHO+develop@Gmail.com>
-;;	Alberto Garcia <agarcia@igalia.com>
-;;	Xavier Maillard <xavier@maillard.im>
+;;         Y. Hayamizu <y.hayamizu@gmail.com>
+;;         Tsuyoshi CHO <Tsuyoshi.CHO+develop@Gmail.com>
+;;         Alberto Garcia <agarcia@igalia.com>
+;;         Xavier Maillard <xavier@maillard.im>
 ;; Created: Sep 4, 2007
 ;; Version: 4.0
 ;; Identity: $Id$
 ;; Keywords: twitter web
-;; URL: http://twmode.sf.net/
+;; URL: https://github.com/zonuexe/twindrill-mode
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -33,8 +33,11 @@
 
 ;;; Commentary:
 
-;; twittering-mode.el is a major mode for Twitter.
+;; twindrill-mode.el is a major mode for Twitter.
 ;; You can check friends timeline, and update your status on Emacs.
+
+;; twindrill-mode is forked from twittering-mode http://twmode.sourceforge.net/
+;; thanks!
 
 ;;; Feature Request:
 
@@ -51,88 +54,88 @@
 (require 'xml)
 (require 'url)
 
-(defgroup twittering-mode nil
-  "Settings for twittering-mode."
+(defgroup twindrill-mode nil
+  "Settings for twindrill-mode."
   :group 'hypermedia)
 
-(defconst twittering-mode-version "4.0.0")
-(defconst twittering-mode-identity "$Id$")
-(defvar twittering-api-host "api.twitter.com")
-(defvar twittering-api-search-host "search.twitter.com")
-(defvar twittering-web-host "twitter.com")
-(defvar twittering-oauth-request-token-url-without-scheme
+(defconst twindrill-mode-version "4.0.0")
+(defconst twindrill-mode-identity "$Id$")
+(defvar twindrill-api-host "api.twitter.com")
+(defvar twindrill-api-search-host "search.twitter.com")
+(defvar twindrill-web-host "twitter.com")
+(defvar twindrill-oauth-request-token-url-without-scheme
   "://api.twitter.com/oauth/request_token")
-(defvar twittering-oauth-authorization-url-base-without-scheme
+(defvar twindrill-oauth-authorization-url-base-without-scheme
   "://api.twitter.com/oauth/authorize?oauth_token=")
-(defvar twittering-oauth-access-token-url-without-scheme
+(defvar twindrill-oauth-access-token-url-without-scheme
   "://api.twitter.com/oauth/access_token")
 
-(defun twittering-mode-version ()
-  "Display a message for twittering-mode version."
+(defun twindrill-mode-version ()
+  "Display a message for twindrill-mode version."
   (interactive)
   (let ((version-string
-	 (format "twittering-mode-v%s" twittering-mode-version)))
+	 (format "twindrill-mode-v%s" twindrill-mode-version)))
     (if (called-interactively-p 'interactive)
 	(message "%s" version-string)
       version-string)))
 
-(defcustom twittering-auth-method 'oauth
-  "*Authentication method to use with `twittering-mode'.
+(defcustom twindrill-auth-method 'oauth
+  "*Authentication method to use with `twindrill-mode'.
 
 Choose between symbols `oauth' (default), `basic' or `xauth'.
 
-OAuth Authentication requires `twittering-oauth-consumer-key' and
-`twittering-oauth-consumer-secret'.
+OAuth Authentication requires `twindrill-oauth-consumer-key' and
+`twindrill-oauth-consumer-secret'.
 
 Additionally, it requires an external command `curl' or another
 command included in `tls-program', which may be `openssl' or
 `gnutls-cli', for SSL."
-  :group 'twittering-mode
+  :group 'twindrill-mode
   :type '(choice :tag "Twitter authentication method"
 		 (const :tag "Basic authentication" :value basic)
 		 (const :tag "OAuth authentication" :value oauth)
 		 (const :tag "xAuth authentication" :value xauth)))
 
-(defvar twittering-account-authorization nil
-  "State of account authorization for `twittering-username' and
-`twittering-password'.  The value is one of the following symbols:
+(defvar twindrill-account-authorization nil
+  "State of account authorization for `twindrill-username' and
+`twindrill-password'.  The value is one of the following symbols:
 nil -- The account have not been authorized yet.
 queried -- The authorization has been queried, but not finished yet.
 authorized -- The account has been authorized.")
 
-(defcustom twittering-oauth-use-ssl t
+(defcustom twindrill-oauth-use-ssl t
   "*If non-nil, use SSL authentication for OAuth.
 
 Twitter requires SSL on authorization via OAuth."
-  :group 'twittering-mode
+  :group 'twindrill-mode
   :type 'boolean)
 
-(defcustom twittering-oauth-invoke-browser nil
+(defcustom twindrill-oauth-invoke-browser nil
   "*If non-nil, invoke a browser on authorization of access key automatically."
   :type 'boolean
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defvar twittering-oauth-consumer-key nil)
-(defvar twittering-oauth-consumer-secret nil)
-(defvar twittering-oauth-access-token-alist nil)
+(defvar twindrill-oauth-consumer-key nil)
+(defvar twindrill-oauth-consumer-secret nil)
+(defvar twindrill-oauth-access-token-alist nil)
 
-(defconst twittering-max-number-of-tweets-on-retrieval 200
-  "The maximum number of `twittering-number-of-tweets-on-retrieval'.")
+(defconst twindrill-max-number-of-tweets-on-retrieval 200
+  "The maximum number of `twindrill-number-of-tweets-on-retrieval'.")
 
-(defcustom twittering-number-of-tweets-on-retrieval 20
+(defcustom twindrill-number-of-tweets-on-retrieval 20
   "*Number of tweets which will be retrieved in one request.
 
-The upper limit is `twittering-max-number-of-tweets-on-retrieval'."
+The upper limit is `twindrill-max-number-of-tweets-on-retrieval'."
   :type 'integer
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-tinyurl-service 'tinyurl
+(defcustom twindrill-tinyurl-service 'tinyurl
   "*Shorten URI service to use.
 
-This must be one of key symbols of `twittering-tinyurl-services-map'.
+This must be one of key symbols of `twindrill-tinyurl-services-map'.
 
 To use bit.ly or j.mp services, you have to configure
-`twittering-bitly-login' and `twittering-bitly-api-key'."
+`twindrill-bitly-login' and `twindrill-bitly-api-key'."
   :type '(radio (symbol :tag "bit.ly"
 			:value bit.ly)
 		(symbol :tag "goo.gl"
@@ -147,17 +150,17 @@ To use bit.ly or j.mp services, you have to configure
 			:value tinyurl)
 		(symbol :tag "toly"
 			:value toly))
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-tinyurl-services-map
-  '((bit.ly twittering-make-http-request-for-bitly
+(defcustom twindrill-tinyurl-services-map
+  '((bit.ly twindrill-make-http-request-for-bitly
 	    (lambda (service reply)
 	      (if (string-match "\n\\'" reply)
 		  (substring reply 0 (match-beginning 0))
 		reply)))
     (goo.gl
      (lambda (service longurl)
-       (twittering-make-http-request-from-uri
+       (twindrill-make-http-request-from-uri
 	"POST" '(("Content-Type" . "application/json"))
 	"https://www.googleapis.com/urlshortener/v1/url"
 	(concat "{\"longUrl\": \"" longurl "\"}")))
@@ -166,7 +169,7 @@ To use bit.ly or j.mp services, you have to configure
 			   reply)
 	 (match-string 1 reply))))
     (is.gd . "http://is.gd/create.php?format=simple&url=")
-    (j.mp twittering-make-http-request-for-bitly
+    (j.mp twindrill-make-http-request-for-bitly
 	  (lambda (service reply)
 	    (if (string-match "\n\\'" reply)
 		(substring reply 0 (match-beginning 0))
@@ -175,10 +178,10 @@ To use bit.ly or j.mp services, you have to configure
     (tinyurl . "http://tinyurl.com/api-create.php?url=")
     (toly
      (lambda (service longurl)
-       (twittering-make-http-request-from-uri
+       (twindrill-make-http-request-from-uri
 	"POST" nil
 	"http://to.ly/api.php"
-	(concat "longurl=" (twittering-percent-encode longurl))))))
+	(concat "longurl=" (twindrill-percent-encode longurl))))))
   "Alist of URL shortening services.
 The key is a symbol specifying the service.
 The value is a string or a list consisting of two elements at most.
@@ -191,7 +194,7 @@ If the first element is a string, `(concat THE-FIRST-ELEMENT longurl)' is
 used as the URL invoking the service.
 If the first element is a function, it is called as `(funcall THE-FIRST-ELEMENT
 service-symbol longurl)' to obtain a HTTP request alist for invoking the
-service, which must be generated by `twittering-make-http-request'.
+service, which must be generated by `twindrill-make-http-request'.
 
 The second element specifies how to post-process a HTTP reply by the HTTP
 request.
@@ -200,85 +203,85 @@ If the second element is a function, it is called as `(funcall
 THE-SECOND-ELEMENT service-symbol HTTP-reply-string)' and its result is used
 as a shortened URL."
   :type 'alist
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-bitly-login nil
+(defcustom twindrill-bitly-login nil
   "*The login name for URL shortening service bit.ly and j.mp."
   :type '(choice (const nil)
 		 string)
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-bitly-api-key nil
+(defcustom twindrill-bitly-api-key nil
   "*API key for `bit.ly' and `j.mp' URL shortening services."
   :type '(choice (const nil)
 		 string)
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defvar twittering-mode-map (make-sparse-keymap))
-(defvar twittering-mode-menu-on-uri-map (make-sparse-keymap "Twittering Mode"))
-(defvar twittering-mode-on-uri-map (make-sparse-keymap))
+(defvar twindrill-mode-map (make-sparse-keymap))
+(defvar twindrill-mode-menu-on-uri-map (make-sparse-keymap "Twindrill Mode"))
+(defvar twindrill-mode-on-uri-map (make-sparse-keymap))
 
-(defvar twittering-tweet-history nil)
-(defvar twittering-user-history nil)
-(defvar twittering-timeline-history nil)
-(defvar twittering-hashtag-history nil)
-(defvar twittering-search-history nil)
+(defvar twindrill-tweet-history nil)
+(defvar twindrill-user-history nil)
+(defvar twindrill-timeline-history nil)
+(defvar twindrill-hashtag-history nil)
+(defvar twindrill-search-history nil)
 
-(defvar twittering-current-hashtag nil
+(defvar twindrill-current-hashtag nil
   "A hash tag string currently set. You can set it by calling
-`twittering-set-current-hashtag'.")
+`twindrill-set-current-hashtag'.")
 
-(defvar twittering-timer nil
+(defvar twindrill-timer nil
   "Timer object for timeline refreshing will be stored here.
 DO NOT SET VALUE MANUALLY.")
 
-(defcustom twittering-timer-interval 90
+(defcustom twindrill-timer-interval 90
   "Number of seconds to wait before an auto-reload occurs.
 
 Number of API calls per hour is limited so this value should be 60 or more."
   :type 'integer
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defvar twittering-timer-for-redisplaying nil
+(defvar twindrill-timer-for-redisplaying nil
   "Timer object for timeline redisplay statuses will be stored here.
 DO NOT SET VALUE MANUALLY.")
 
-(defvar twittering-timer-interval-for-redisplaying 5.0
+(defvar twindrill-timer-interval-for-redisplaying 5.0
   "The interval of auto redisplaying statuses.
-Each time Emacs remains idle for the interval, twittering-mode updates parts
+Each time Emacs remains idle for the interval, twindrill-mode updates parts
 requiring to be redrawn.")
 
-(defcustom twittering-username nil
+(defcustom twindrill-username nil
   "*A username of your Twitter account."
   :type '(choice (const nil)
 		 string)
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-password nil
+(defcustom twindrill-password nil
   "*A password of your Twitter account. Leave it blank is the
 recommended way because writing a password in .emacs file is so
 dangerous."
   :type '(choice (const nil)
 		 string)
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-initial-timeline-spec-string ":home"
+(defcustom twindrill-initial-timeline-spec-string ":home"
   "*An initial timeline spec string or a list of timeline spec strings.
 This specifies one or more initial timeline spec strings, which are
-automatically visited when invoking `twittering-mode' or `twit'.
+automatically visited when invoking `twindrill-mode' or `twit'.
 
 If it is a string, it specifies a timeline spec string.
 If it is a list of strings, it specifies multiple timeline spec strings."
   :type '(choice (const nil)
 		 string)
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defvar twittering-timeline-spec nil
+(defvar twindrill-timeline-spec nil
   "The timeline spec for the current buffer.")
-(defvar twittering-timeline-spec-string ""
+(defvar twindrill-timeline-spec-string ""
   "The timeline spec string for the current buffer.")
 
-(defcustom twittering-timeline-spec-alias nil
+(defcustom twindrill-timeline-spec-alias nil
   "*Alist for aliases of timeline spec.
 Each element is (NAME . SPEC-STRING), where NAME is a string and
 SPEC-STRING is a string or a function that returns a timeline spec string.
@@ -301,73 +304,73 @@ then you can use \"$FRIENDS\" and \"$related-to(USER)\" as
 \"my-account/friends-list\" and \":search/to:USER OR from:USER OR @USER/\",
 respectively."
   :type 'alist
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defvar twittering-current-timeline-spec-string nil
+(defvar twindrill-current-timeline-spec-string nil
   "The current timeline spec string. This variable should not be referred
-directly. Use `twittering-current-timeline-spec-string' or
-`twittering-current-timeline-spec'.")
-(defvar twittering-list-index-retrieved nil)
+directly. Use `twindrill-current-timeline-spec-string' or
+`twindrill-current-timeline-spec'.")
+(defvar twindrill-list-index-retrieved nil)
 
-(defvar twittering-process-info-alist nil
+(defvar twindrill-process-info-alist nil
   "Alist of active process and timeline spec retrieved by the process.")
 
-(defvar twittering-server-info-alist nil
+(defvar twindrill-server-info-alist nil
   "Alist of server information.")
 
-(defvar twittering-api-limit-info-alist '()
+(defvar twindrill-api-limit-info-alist '()
   "Alist of an API identifier and an alist representing rate limit for the API.")
 
-(defvar twittering-timeline-spec-to-api-table '()
+(defvar twindrill-timeline-spec-to-api-table '()
   "Alist of a timeline spec and an API identifier for retrieving the timeline.")
 
-(defcustom twittering-mode-init-hook nil
-  "*Hook run after initializing global variables for `twittering-mode'."
+(defcustom twindrill-mode-init-hook nil
+  "*Hook run after initializing global variables for `twindrill-mode'."
   :type 'hook
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-mode-hook nil
-  "*Hook run every time a buffer is initialized as a `twittering-mode' buffer."
+(defcustom twindrill-mode-hook nil
+  "*Hook run every time a buffer is initialized as a `twindrill-mode' buffer."
   :type 'hook
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defvar twittering-cookie-alist nil
+(defvar twindrill-cookie-alist nil
   "Alist for stroing cookies for each account.
 This variable stores an alist.
 A key of the alist is a string that is a screen name of an account.
 A value of the alist is a cookie alist which corresponds to a list of
 a pair of a cookie name and value.")
 
-(defvar twittering-new-tweets-count 0
-  "Number of new tweets when `twittering-new-tweets-hook' is run.")
-(defvar twittering-new-tweets-spec nil
+(defvar twindrill-new-tweets-count 0
+  "Number of new tweets when `twindrill-new-tweets-hook' is run.")
+(defvar twindrill-new-tweets-spec nil
   "Timeline spec, which new tweets belong to, when
-`twittering-new-tweets-hook' is run.")
-(defvar twittering-new-tweets-statuses nil
+`twindrill-new-tweets-hook' is run.")
+(defvar twindrill-new-tweets-statuses nil
   "New tweet status messages, when
-`twittering-new-tweets-hook' is run.")
+`twindrill-new-tweets-hook' is run.")
 
-(defcustom twittering-new-tweets-hook nil
+(defcustom twindrill-new-tweets-hook nil
   "*Hook run when new tweets are received.
 
-You can read `twittering-new-tweets-count' or `twittering-new-tweets-spec'
+You can read `twindrill-new-tweets-count' or `twindrill-new-tweets-spec'
 to get the number of new tweets received when this hook is run."
   :type 'hook
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defvar twittering-rendered-new-tweets-spec nil
+(defvar twindrill-rendered-new-tweets-spec nil
   "A timeline spec of newly rendered tweets.
 This variable is bound when invoking hooks registered with
-`twittering-new-tweets-rendered-hook'.")
+`twindrill-new-tweets-rendered-hook'.")
 
-(defvar twittering-rendered-new-tweets-spec-string nil
+(defvar twindrill-rendered-new-tweets-spec-string nil
   "A timeline spec string of newly rendered tweets.
 This variable is bound when invoking hooks registered with
-`twittering-new-tweets-rendered-hook'.")
+`twindrill-new-tweets-rendered-hook'.")
 
-(defvar twittering-rendered-new-tweets nil
+(defvar twindrill-rendered-new-tweets nil
   "A list of newly rendered tweets.
-Hooks registered with `twittering-new-tweets-rendered-hook' can use this
+Hooks registered with `twindrill-new-tweets-rendered-hook' can use this
 variable as a list of rendered tweets. Each tweet is represented as an alist.
 You can refer to a property of a tweet alist as
  (cdr (assq PROPERTY-SYMBOL TWEET-ALIST)).
@@ -376,43 +379,43 @@ Valid symbols are following; id, text, user-name, user-screen-name, user-id,
 In the list, tweets are placed in order of time.  The car of the list is the
 latest one, and the last is the oldest one.")
 
-(defcustom twittering-new-tweets-rendered-hook nil
+(defcustom twindrill-new-tweets-rendered-hook nil
   "*Hook run when new tweets are rendered.
 When the registered functions are called, the current buffer is the buffer
 that the new tweets are just rendered on.
 The functions can refer to the timeline spec and timeline spec string as
-`twittering-rendered-new-tweets-spec' and
-`twittering-rendered-new-tweets-spec-string', repectively.
-Hooks can also use the local variable `twittering-rendered-new-tweets' as a
+`twindrill-rendered-new-tweets-spec' and
+`twindrill-rendered-new-tweets-spec-string', repectively.
+Hooks can also use the local variable `twindrill-rendered-new-tweets' as a
 list of rendered tweets.
 For the detail of the representation of tweets, see the variable
-`twittering-rendered-new-tweets'."
+`twindrill-rendered-new-tweets'."
   :type 'hook
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defvar twittering-active-mode nil
+(defvar twindrill-active-mode nil
   "Non-nil if new statuses should be retrieved periodically.
-Do not modify this variable directly. Use `twittering-activate-buffer',
-`twittering-deactivate-buffer', `twittering-toggle-activate-buffer' or
-`twittering-set-active-flag-for-buffer'.")
+Do not modify this variable directly. Use `twindrill-activate-buffer',
+`twindrill-deactivate-buffer', `twindrill-toggle-activate-buffer' or
+`twindrill-set-active-flag-for-buffer'.")
 
-(defvar twittering-jojo-mode nil)
-(defcustom twittering-reverse-mode nil
+(defvar twindrill-jojo-mode nil)
+(defcustom twindrill-reverse-mode nil
   "*Non-nil means tweets are aligned in reverse order of `http://twitter.com/'."
   :type 'boolean
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-display-remaining nil
+(defcustom twindrill-display-remaining nil
   "*If non-nil, display remaining of rate limit on the mode-line."
   :type 'boolean
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-display-connection-method t
+(defcustom twindrill-display-connection-method t
   "*If non-nil, display the current connection method on the mode-line."
   :type 'boolean
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-status-format "%i %s,  %@:\n%FILL[  ]{%T // from %f%L%r%R}\n "
+(defcustom twindrill-status-format "%i %s,  %@:\n%FILL[  ]{%T // from %f%L%r%R}\n "
   "Format string for rendering statuses.
 Ex. \"%i %s,  %@:\\n%FILL{  %T // from %f%L%r%R}\n \"
 
@@ -457,23 +460,23 @@ Items:
  %f - source
  %# - id"
   :type 'string
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-retweet-format '(nil _ " RT: %t (via @%s)")
+(defcustom twindrill-retweet-format '(nil _ " RT: %t (via @%s)")
   "*A format string or a skeleton for retweet.
 If the value is a string, it means a format string for generating an initial
 string of a retweet. The format string is converted with the below replacement
 table. And then, the cursor is placed on the next of the initial string.
 It is equivalent to the skeleton '(nil STRING _).
 Note that this string is inserted before the edit skeleton specified by
-`twittering-edit-skeleton' is performed.
+`twindrill-edit-skeleton' is performed.
 
 If the value is a list, it is treated as a skeleton used with
 `skeleton-insert'. The strings included in the list are converted with the
 following replacement table. And then, the list with converted strings is
 inserted by `skeleton-insert'.
 Note that this skeleton is performed before the edit skeleton specified by
-`twittering-edit-skeleton' is performed.
+`twindrill-edit-skeleton' is performed.
 
 Replacement table:
  %s - The screen-name of the cited tweet.
@@ -482,16 +485,16 @@ Replacement table:
  %# - The ID of the cited tweet.
  %% - % itself."
   :type 'sexp
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-fill-column nil
-  "*The `fill-column' used for \"%FILL{...}\" in `twittering-status-format'.
+(defcustom twindrill-fill-column nil
+  "*The `fill-column' used for \"%FILL{...}\" in `twindrill-status-format'.
 If nil, the fill-column is automatically calculated."
   :type '(choice (const nil)
 		 integer)
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-show-replied-tweets t
+(defcustom twindrill-show-replied-tweets t
   "*The number of replied tweets which will be showed in one tweet.
 
 If the value is not a number and is non-nil, show all replied tweets
@@ -503,63 +506,63 @@ If the value is nil, doesn't show replied tweets."
 		 (const :tag "Show all replied tweets"
 			:value t)
 		 (integer :tag "Number of replied tweet"))
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-default-show-replied-tweets nil
+(defcustom twindrill-default-show-replied-tweets nil
   "*The number of default replied tweets which will be shown in one tweet.
 This value will be used only when showing new tweets.
 
-See `twittering-show-replied-tweets' for more details."
+See `twindrill-show-replied-tweets' for more details."
   :type '(choice (const nil)
 		 integer)
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-disable-overlay-on-too-long-string nil
+(defcustom twindrill-disable-overlay-on-too-long-string nil
   "*If non-nil, disable overlay on too long string on edit buffer.
 
-If nil, `twittering-edit-mode' puts an overlay `twittering-warning-overlay' on
+If nil, `twindrill-edit-mode' puts an overlay `twindrill-warning-overlay' on
 characters following the 140th character.
 
 On some environments, some input methods seem to interfere the update of the
 overlay.  In such case, you may avoid the problems by setting this variable to
 non-nil."
   :type 'boolean
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-use-show-minibuffer-length t
+(defcustom twindrill-use-show-minibuffer-length t
   "*Show current length of minibuffer if this variable is non-nil.
 
 We suggest that you should set to nil to disable the showing function
 when it conflict with your input method (such as AquaSKK, etc.)"
   :type 'boolean
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defvar twittering-notify-successful-http-get t)
+(defvar twindrill-notify-successful-http-get t)
 
-(defcustom twittering-use-ssl t
+(defcustom twindrill-use-ssl t
   "*Use SSL connection if this variable is non-nil.
 
 SSL connections use an external command as a backend."
   :type 'boolean
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-allow-insecure-server-cert nil
-  "*If non-nil, `twittering-mode' allows insecure server certificates."
+(defcustom twindrill-allow-insecure-server-cert nil
+  "*If non-nil, `twindrill-mode' allows insecure server certificates."
   :type 'boolean
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defvar twittering-curl-program nil
-  "Cache a result of `twittering-find-curl-program'.
+(defvar twindrill-curl-program nil
+  "Cache a result of `twindrill-find-curl-program'.
 DO NOT SET VALUE MANUALLY.")
-(defvar twittering-curl-program-https-capability nil
-  "Cache a result of `twittering-start-http-session-curl-https-p'.
-DO NOT SET VALUE MANUALLY.")
-
-(defvar twittering-wget-program nil
-  "Cache a result of `twittering-find-wget-program'.
+(defvar twindrill-curl-program-https-capability nil
+  "Cache a result of `twindrill-start-http-session-curl-https-p'.
 DO NOT SET VALUE MANUALLY.")
 
-(defcustom twittering-tls-program nil
+(defvar twindrill-wget-program nil
+  "Cache a result of `twindrill-find-wget-program'.
+DO NOT SET VALUE MANUALLY.")
+
+(defcustom twindrill-tls-program nil
   "*List of strings containing commands to start TLS stream to a host.
 Each entry in the list is tried until a connection is successful.
 %h is replaced with server hostname, %p with port to connect to.
@@ -567,16 +570,16 @@ Also see `tls-program'.
 If nil, this is initialized with a list of valied entries extracted from
 `tls-program'."
   :type '(repeat string)
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-connection-type-order
+(defcustom twindrill-connection-type-order
   '(curl wget urllib-http native urllib-https)
   "*A list of connection methods in the preferred order."
   :type 'list
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defun twittering-connection-build-customize-option ()
-  "Generate a valid `defcustom' entry to build `twittering-connection-type-table' variable."
+(defun twindrill-connection-build-customize-option ()
+  "Generate a valid `defcustom' entry to build `twindrill-connection-type-table' variable."
   (list 'repeat
 	(list
 	 'cons :tag "Connection"
@@ -603,65 +606,65 @@ If nil, this is initialized with a list of valied entries extracted from
 		  (const :format "" pre-process-buffer)
 		  function))))))
 
-(defcustom twittering-connection-type-table
+(defcustom twindrill-connection-type-table
   '((native
      (check . t)
-     (send-http-request . twittering-send-http-request-native)
-     (pre-process-buffer . twittering-pre-process-buffer-native))
+     (send-http-request . twindrill-send-http-request-native)
+     (pre-process-buffer . twindrill-pre-process-buffer-native))
     (curl
-     (check . twittering-start-http-session-curl-p)
-     (https . twittering-start-http-session-curl-https-p)
-     (send-http-request . twittering-send-http-request-curl)
-     (pre-process-buffer . twittering-pre-process-buffer-curl))
+     (check . twindrill-start-http-session-curl-p)
+     (https . twindrill-start-http-session-curl-https-p)
+     (send-http-request . twindrill-send-http-request-curl)
+     (pre-process-buffer . twindrill-pre-process-buffer-curl))
     (wget
-     (check . twittering-start-http-session-wget-p)
+     (check . twindrill-start-http-session-wget-p)
      (https . ignore)
-     (send-http-request . twittering-send-http-request-wget)
-     (pre-process-buffer . twittering-pre-process-buffer-wget))
+     (send-http-request . twindrill-send-http-request-wget)
+     (pre-process-buffer . twindrill-pre-process-buffer-wget))
     (urllib-http
      (display-name . "urllib")
-     (check . twittering-start-http-session-urllib-p)
+     (check . twindrill-start-http-session-urllib-p)
      (https . nil)
-     (send-http-request . twittering-send-http-request-urllib)
-     (pre-process-buffer . twittering-pre-process-buffer-urllib))
+     (send-http-request . twindrill-send-http-request-urllib)
+     (pre-process-buffer . twindrill-pre-process-buffer-urllib))
     (urllib-https
      (display-name . "urllib")
-     (check . twittering-start-http-session-urllib-p)
-     (https . twittering-start-http-session-urllib-https-p)
-     (send-http-request . twittering-send-http-request-urllib)
-     (pre-process-buffer . twittering-pre-process-buffer-urllib)))
+     (check . twindrill-start-http-session-urllib-p)
+     (https . twindrill-start-http-session-urllib-https-p)
+     (send-http-request . twindrill-send-http-request-urllib)
+     (pre-process-buffer . twindrill-pre-process-buffer-urllib)))
   "A list of alist of connection methods."
-  :group 'twittering-mode
-  :type (twittering-connection-build-customize-option))
+  :group 'twindrill-mode
+  :type (twindrill-connection-build-customize-option))
 
-(defvar twittering-format-status-function-source ""
+(defvar twindrill-format-status-function-source ""
   "The status format string that has generated the current
-`twittering-format-status-function'.")
-(defvar twittering-format-status-function nil
-  "The formating function generated from `twittering-format-status-function-source'.")
-(defvar twittering-format-status-function-without-compile nil
-  "The formating function generated from `twittering-format-status-function-source',
+`twindrill-format-status-function'.")
+(defvar twindrill-format-status-function nil
+  "The formating function generated from `twindrill-format-status-function-source'.")
+(defvar twindrill-format-status-function-without-compile nil
+  "The formating function generated from `twindrill-format-status-function-source',
 which is a lambda expression without being compiled.")
 
-(defvar twittering-timeline-data-table (make-hash-table :test 'equal))
+(defvar twindrill-timeline-data-table (make-hash-table :test 'equal))
 
-(defcustom twittering-username-face 'twittering-username-face
+(defcustom twindrill-username-face 'twindrill-username-face
   "*Face used to display USERNAME."
   :type 'face
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-uri-face 'twittering-uri-face
+(defcustom twindrill-uri-face 'twindrill-uri-face
   "*Face used to display URIs."
   :type 'face
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-use-native-retweet nil
+(defcustom twindrill-use-native-retweet nil
   "*If non-nil, post retweet using native retweets."
   :type 'boolean
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-update-status-function
-  'twittering-update-status-from-pop-up-buffer
+(defcustom twindrill-update-status-function
+  'twindrill-update-status-from-pop-up-buffer
   "*The function which is used to post a tweet.
 
 It takes the following 5 arguments, INIT-STR, REPLY-TO-ID, USERNAME,
@@ -673,113 +676,113 @@ TWEET-TYPE is a symbol specifying a type of a tweet being edited. It must
 be one of 'direct-message, 'normal, 'organic-retweet and 'reply.
 CURRENT-SPEC means on which timeline the function is called.
 
-Twittering-mode provides two functions for updating status:
-* `twittering-update-status-from-minibuffer': edit tweets in minibuffer
-* `twittering-update-status-from-pop-up-buffer': edit tweets in pop-up buffer"
+Twindrill-mode provides two functions for updating status:
+* `twindrill-update-status-from-minibuffer': edit tweets in minibuffer
+* `twindrill-update-status-from-pop-up-buffer': edit tweets in pop-up buffer"
   :type '(choice  (const :tag "built-in: from minibuffer"
-			 twittering-update-status-from-minibuffer)
+			 twindrill-update-status-from-minibuffer)
 		  (const :tag "built-in: from a popup buffer"
-			 twittering-update-status-from-pop-up-buffer)
+			 twindrill-update-status-from-pop-up-buffer)
 		  (function :tag "Your own function"))
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-request-confirmation-on-posting nil
+(defcustom twindrill-request-confirmation-on-posting nil
   "*If non-nil, confirmation will be requested on posting a tweet edited in
 pop-up buffer."
   :type 'boolean
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-use-master-password nil
+(defcustom twindrill-use-master-password nil
   "*If non-nil, store private information encrypted with a master password."
   :type 'boolean
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-private-info-file (expand-file-name "~/.twittering-mode.gpg")
+(defcustom twindrill-private-info-file (expand-file-name "~/.twindrill-mode.gpg")
   "*File for storing encrypted private information.
 
- Only used when `twittering-use-master-password' is non-nil."
-  :group 'twittering-mode
+ Only used when `twindrill-use-master-password' is non-nil."
+  :group 'twindrill-mode
   :type 'file)
 
-(defvar twittering-private-info-file-loaded nil
+(defvar twindrill-private-info-file-loaded nil
   "Whether the private info file has been loaded or not.")
-(defvar twittering-variables-stored-with-encryption
-  '(twittering-oauth-access-token-alist))
+(defvar twindrill-variables-stored-with-encryption
+  '(twindrill-oauth-access-token-alist))
 
-(defvar twittering-api-prefix "1/")
-(defvar twittering-search-api-method "search")
-(defvar twittering-web-path-prefix "")
+(defvar twindrill-api-prefix "1/")
+(defvar twindrill-search-api-method "search")
+(defvar twindrill-web-path-prefix "")
 
-(defconst twittering-service-method-table
-  '((twitter (status-url . twittering-get-status-url-twitter)
-	     (search-url . twittering-get-search-url-twitter))
+(defconst twindrill-service-method-table
+  '((twitter (status-url . twindrill-get-status-url-twitter)
+	     (search-url . twindrill-get-search-url-twitter))
     (twitter-api-v1.1
-     (status-url . twittering-get-status-url-twitter)
-     (search-url . twittering-get-search-url-twitter))
-    (statusnet (status-url . twittering-get-status-url-statusnet)
-	       (search-url . twittering-get-search-url-statusnet)))
+     (status-url . twindrill-get-status-url-twitter)
+     (search-url . twindrill-get-search-url-twitter))
+    (statusnet (status-url . twindrill-get-status-url-statusnet)
+	       (search-url . twindrill-get-search-url-statusnet)))
   "A list of alist of service methods.")
 
-(defcustom twittering-service-method 'twitter-api-v1.1
-  "*Service method for `twittering-mode'.
+(defcustom twindrill-service-method 'twitter-api-v1.1
+  "*Service method for `twindrill-mode'.
 
 The symbol `twitter' means Twitter Service.
 The symbol `statusnet' means StatusNet Service.
 
 Default to `twitter-api-v1.1' which is an alias for `twitter'.
 
-See also `twittering-service-method-table'."
-  :type (if (> (length (mapcar #'car twittering-service-method-table)) 0)
+See also `twindrill-service-method-table'."
+  :type (if (> (length (mapcar #'car twindrill-service-method-table)) 0)
 	    `(choice ,@(mapcar (lambda (entry) `(const ,(car entry)))
-			       twittering-service-method-table))
+			       twindrill-service-method-table))
 	  'symbol)
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-timeline-header-face 'twittering-timeline-header-face
-  "*Face for the header on `twittering-mode'.
+(defcustom twindrill-timeline-header-face 'twindrill-timeline-header-face
+  "*Face for the header on `twindrill-mode'.
 
-The face is used for rendering `twittering-timeline-header'."
+The face is used for rendering `twindrill-timeline-header'."
   :type 'face
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-timeline-footer-face 'twittering-timeline-footer-face
-  "*Face for the footer on `twittering-mode'.
+(defcustom twindrill-timeline-footer-face 'twindrill-timeline-footer-face
+  "*Face for the footer on `twindrill-mode'.
 
-The face is used for rendering `twittering-timeline-footer'."
+The face is used for rendering `twindrill-timeline-footer'."
   :type 'face
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-timeline-header "-- Press Enter here to update --\n"
-  "*Timeline header string on `twittering-mode'.
+(defcustom twindrill-timeline-header "-- Press Enter here to update --\n"
+  "*Timeline header string on `twindrill-mode'.
 
-The string is rendered on the beginning of a `twittering-mode' buffer.
-Its face is specified by `twittering-timeline-header-face'."
+The string is rendered on the beginning of a `twindrill-mode' buffer.
+Its face is specified by `twindrill-timeline-header-face'."
   :type 'string
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-timeline-footer "-- Press Enter here to update --"
-  "*Timeline footer string on `twittering-mode'.
+(defcustom twindrill-timeline-footer "-- Press Enter here to update --"
+  "*Timeline footer string on `twindrill-mode'.
 
-The string is rendered on the end of a `twittering-mode' buffer.
-Its face is specified by `twittering-timeline-footer-face'."
+The string is rendered on the end of a `twindrill-mode' buffer.
+Its face is specified by `twindrill-timeline-footer-face'."
   :type 'string
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-pop-to-buffer-function
-  'twittering-pop-to-buffer-in-bottom-largest-window
-  "*Function being invoked by `twittering-pop-to-buffer'.
+(defcustom twindrill-pop-to-buffer-function
+  'twindrill-pop-to-buffer-in-bottom-largest-window
+  "*Function being invoked by `twindrill-pop-to-buffer'.
 
 It will receive an argument, the buffer being selected.
 For example, the following functions can be used; `pop-to-buffer',
-`twittering-pop-to-buffer-simple',
-`twittering-pop-to-buffer-in-current-window',
-`twittering-pop-to-buffer-in-largest-window', and
-`twittering-pop-to-buffer-in-bottom-largest-window'."
+`twindrill-pop-to-buffer-simple',
+`twindrill-pop-to-buffer-in-current-window',
+`twindrill-pop-to-buffer-in-largest-window', and
+`twindrill-pop-to-buffer-in-bottom-largest-window'."
   :type 'function
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
 ;; FIXME: change to something better than alist
-(defcustom twittering-relative-retrieval-interval-alist
+(defcustom twindrill-relative-retrieval-interval-alist
   '(("\\`:direct.*\\'" 4)
     (":home" ":mentions" 1)
     (t 1))
@@ -795,20 +798,20 @@ interval of retrieving timelines that match TIMELINE-SPEC-REGEXP.
 An interval for a timeline is determined as follows;
 1. Find the first element where TIMELINE-SPEC-REGEXP matches the
    timeline or TIMELINE-SPEC-REGEXP is t.
-   If no elements are found, the interval is `twittering-timer-interval'.
+   If no elements are found, the interval is `twindrill-timer-interval'.
 2. Check the RELATIVE-INTERVAL of the element.
    If RELATIVE-INTERVAL is a positive integer, the interval is
-   RELATIVE-INTERVAL times as long as `twittering-timer-interval'.
+   RELATIVE-INTERVAL times as long as `twindrill-timer-interval'.
 
    If RELATIVE-INTERVAL is zero, the interval is infinity.
    The timeline is not retrieved automatically."
   :type 'alist
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defvar twittering-relative-retrieval-count-alist '()
+(defvar twindrill-relative-retrieval-count-alist '()
   "An alist for counting retrieval of primary timelines.")
 
-(defvar twittering-filter-alist '()
+(defvar twindrill-filter-alist '()
   "*An alist of hidden tweet patterns for each primary timeline.
 Each element looks like:
  (TIMELINE-SPECIFIER (SYM1 . REGEXP1) (SYM2 . REGEXP2) ...).
@@ -863,7 +866,7 @@ the following tweets are hidden.
 	     ,@body)))
        clauses)))
 
-(defmacro twittering-wait-while (timeout interval condition &optional form &rest timeout-forms)
+(defmacro twindrill-wait-while (timeout interval condition &optional form &rest timeout-forms)
   "Wait while CONDITION returns non-nil until TIMEOUT seconds passes.
 
 The form CONDITION is repeatedly evaluated for every INTERVAL seconds
@@ -888,7 +891,7 @@ the value of the last form in TIMEOUT-FORMS."
 	     ,@timeout-forms)))))
 
 
-(defun twittering-extract-matched-substring-all (regexp str)
+(defun twindrill-extract-matched-substring-all (regexp str)
   (let ((pos 0)
 	(result nil))
     (while (string-match regexp str pos)
@@ -896,33 +899,33 @@ the value of the last form in TIMEOUT-FORMS."
       (setq pos (match-end 0)))
     (reverse result)))
 
-(defun twittering-process-alive-p (proc)
+(defun twindrill-process-alive-p (proc)
   "Return non-nil if PROC is alive."
   (not (memq (process-status proc) '(nil closed exit failed signal))))
 
-(defun twittering-start-process-with-sentinel (name buffer program args sentinel)
+(defun twindrill-start-process-with-sentinel (name buffer program args sentinel)
   "Start a program in a subprocess with a sentinel.
 
 This function is the same as `start-process' except that SENTINEL must
 be invoked when the process is successfully started."
   (let ((proc (apply 'start-process name buffer program args)))
     (when (and proc (functionp sentinel))
-      (if (twittering-process-alive-p proc)
+      (if (twindrill-process-alive-p proc)
 	  (set-process-sentinel proc sentinel)
 	;; Ensure that the sentinel is invoked if a subprocess is
 	;; successfully started.
 	(funcall sentinel proc "finished")))
     proc))
 
-(defun twittering-parse-time-string (str &optional round-up)
+(defun twindrill-parse-time-string (str &optional round-up)
   "Parse the time-string STR into (SEC MIN HOUR DAY MON YEAR DOW DST TZ).
 This function is the same as `parse-time-string' except to complement the
 lacked parameters with the current time.
 If ROUND-UP is nil, complement the lacked parameters with the oldest ones.
 If ROUND-UP is non-nil, complement the lacked parameters with the latest ones.
-For example, (twittering-parse-time-string \"2012-04-20\")
+For example, (twindrill-parse-time-string \"2012-04-20\")
 returns (0 0 0 20 4 2012 nil nil 32400).
-And (twittering-parse-time-string \"2012-04-20\" t)
+And (twindrill-parse-time-string \"2012-04-20\" t)
 returns (59 59 23 20 4 2012 nil nil 32400).
 The values are identical to those of `decode-time', but any values that are
 unknown are returned as nil."
@@ -960,7 +963,7 @@ unknown are returned as nil."
       (setq sym-list (cdr sym-list)))
     (reverse result)))
 
-(defun twittering-normalize-string (str)
+(defun twindrill-normalize-string (str)
   (if (require 'ucs-normalize nil t)
       (ucs-normalize-NFC-string str)
     str))
@@ -969,7 +972,7 @@ unknown are returned as nil."
 ;;;; Utility for portability
 ;;;;
 
-(defun twittering-remove-duplicates (list)
+(defun twindrill-remove-duplicates (list)
   "Return a copy of LIST with all duplicate elements removed.
 This is non-destructive version of `delete-dups' which is not
 defined in Emacs21."
@@ -983,13 +986,13 @@ defined in Emacs21."
 	(setq rest (cdr rest)))
       (nreverse result))))
 
-(defun twittering-completing-read (prompt collection &optional predicate require-match initial-input hist def inherit-input-method)
+(defun twindrill-completing-read (prompt collection &optional predicate require-match initial-input hist def inherit-input-method)
   "Read a string in the minibuffer, with completion.
 This is a modified version of `completing-read' and accepts candidates
 as a list of a string on Emacs21."
   ;; completing-read() of Emacs21 does not accepts candidates as
   ;; a list. Candidates must be given as an alist.
-  (let* ((collection (twittering-remove-duplicates collection))
+  (let* ((collection (twindrill-remove-duplicates collection))
 	 (collection
 	  (if (and (> 22 emacs-major-version)
 		   (listp collection)
@@ -999,7 +1002,7 @@ as a list of a string on Emacs21."
     (completing-read prompt collection predicate require-match
 		     initial-input hist def inherit-input-method)))
 
-(defun twittering-add-to-history (history-var elt &optional maxelt keep-all)
+(defun twindrill-add-to-history (history-var elt &optional maxelt keep-all)
   (if (functionp 'add-to-history)
       (add-to-history history-var elt maxelt keep-all)
     (let* ((added (cons elt
@@ -1016,8 +1019,8 @@ as a list of a string on Emacs21."
 	      (butlast added (- len maxelt)))))))
 
 (if (fboundp 'assoc-string)
-    (defalias 'twittering-assoc-string 'assoc-string)
-  (defun twittering-assoc-string (key list &optional case-fold)
+    (defalias 'twindrill-assoc-string 'assoc-string)
+  (defun twindrill-assoc-string (key list &optional case-fold)
     "Like `assoc' but specifically for strings (and symbols).
 This returns the first element of LIST whose car matches the string or
 symbol KEY, or nil if no match exists.  When performing the
@@ -1057,10 +1060,10 @@ defined in Emacs21."
 ;;;; Debug mode
 ;;;;
 
-(defvar twittering-debug-mode nil)
-(defvar twittering-debug-buffer "*debug*")
+(defvar twindrill-debug-mode nil)
+(defvar twindrill-debug-buffer "*debug*")
 
-(defun twittering-get-or-generate-buffer (buffer)
+(defun twindrill-get-or-generate-buffer (buffer)
   (if (bufferp buffer)
       (if (buffer-live-p buffer)
 	  buffer
@@ -1069,210 +1072,210 @@ defined in Emacs21."
 	(or (get-buffer buffer)
 	    (generate-new-buffer buffer)))))
 
-(defun twittering-debug-buffer ()
-  (twittering-get-or-generate-buffer twittering-debug-buffer))
+(defun twindrill-debug-buffer ()
+  (twindrill-get-or-generate-buffer twindrill-debug-buffer))
 
 (defmacro debug-print (obj)
   (let ((obsym (gensym)))
     `(let ((,obsym ,obj))
-       (if twittering-debug-mode
-	   (with-current-buffer (twittering-debug-buffer)
+       (if twindrill-debug-mode
+	   (with-current-buffer (twindrill-debug-buffer)
 	     (insert "[debug] " (prin1-to-string ,obsym))
 	     (newline)
 	     ,obsym)
 	 ,obsym))))
 
 (defun debug-printf (fmt &rest args)
-  (when twittering-debug-mode
-    (with-current-buffer (twittering-debug-buffer)
+  (when twindrill-debug-mode
+    (with-current-buffer (twindrill-debug-buffer)
       (insert "[debug] " (apply 'format fmt args))
       (newline))))
 
-(defun twittering-debug-mode ()
+(defun twindrill-debug-mode ()
   (interactive)
-  (setq twittering-debug-mode
-	(not twittering-debug-mode))
-  (message (if twittering-debug-mode "debug mode:on" "debug mode:off")))
+  (setq twindrill-debug-mode
+	(not twindrill-debug-mode))
+  (message (if twindrill-debug-mode "debug mode:on" "debug mode:off")))
 
 ;;;;
 ;;;; Proxy setting / functions
 ;;;;
 
-(defgroup twittering-proxy nil
-  "Subgroup handling `twittering-mode' proxy setup."
-  :group 'twittering-mode)
+(defgroup twindrill-proxy nil
+  "Subgroup handling `twindrill-mode' proxy setup."
+  :group 'twindrill-mode)
 
-(defcustom twittering-proxy-use nil
+(defcustom twindrill-proxy-use nil
   "*If non-nil, use PROXY.
 
-See also `twittering-proxy-server' for documentation."
+See also `twindrill-proxy-server' for documentation."
   :type 'boolean
-  :group 'twittering-mode)
+  :group 'twindrill-mode)
 
-(defcustom twittering-proxy-server nil
-  "*Proxy server for `twittering-mode'.
+(defcustom twindrill-proxy-server nil
+  "*Proxy server for `twindrill-mode'.
 
-If both `twittering-proxy-server' and `twittering-proxy-port' are
-non-nil, the variables `twittering-proxy-*' have priority over other
-variables `twittering-http-proxy-*' or `twittering-https-proxy-*'
+If both `twindrill-proxy-server' and `twindrill-proxy-port' are
+non-nil, the variables `twindrill-proxy-*' have priority over other
+variables `twindrill-http-proxy-*' or `twindrill-https-proxy-*'
 regardless of HTTP or HTTPS.
 
-To use individual proxies for HTTP and HTTPS, both `twittering-proxy-server'
-and `twittering-proxy-port' must be nil."
-  :group 'twittering-proxy
+To use individual proxies for HTTP and HTTPS, both `twindrill-proxy-server'
+and `twindrill-proxy-port' must be nil."
+  :group 'twindrill-proxy
   :type '(choice (const nil) string))
 
-(defcustom twittering-proxy-port nil
-  "*Port number for `twittering-mode'.
+(defcustom twindrill-proxy-port nil
+  "*Port number for `twindrill-mode'.
 
-If both `twittering-proxy-server' and `twittering-proxy-port' are
-non-nil, the variables `twittering-proxy-*' have priority over other
-variables `twittering-http-proxy-*' or `twittering-https-proxy-*'
+If both `twindrill-proxy-server' and `twindrill-proxy-port' are
+non-nil, the variables `twindrill-proxy-*' have priority over other
+variables `twindrill-http-proxy-*' or `twindrill-https-proxy-*'
 regardless of HTTP or HTTPS.
 
-To use individual proxies for HTTP and HTTPS, both `twittering-proxy-server'
-and `twittering-proxy-port' must be nil."
-  :group 'twittering-proxy
+To use individual proxies for HTTP and HTTPS, both `twindrill-proxy-server'
+and `twindrill-proxy-port' must be nil."
+  :group 'twindrill-proxy
   :type '(choice (const nil)
 		 integer))
 
-(defvar twittering-proxy-keep-alive nil)
-(defcustom twittering-proxy-user nil
-  "*Username for `twittering-proxy-server'.
+(defvar twindrill-proxy-keep-alive nil)
+(defcustom twindrill-proxy-user nil
+  "*Username for `twindrill-proxy-server'.
 
-NOTE: If both `twittering-proxy-server' and `twittering-proxy-port' are
-non-nil, the variables `twittering-proxy-*' have priority over other
-variables `twittering-http-proxy-*' or `twittering-https-proxy-*'
+NOTE: If both `twindrill-proxy-server' and `twindrill-proxy-port' are
+non-nil, the variables `twindrill-proxy-*' have priority over other
+variables `twindrill-http-proxy-*' or `twindrill-https-proxy-*'
 regardless of HTTP or HTTPS.")
 
-(defcustom twittering-proxy-password nil
-  "*Password for `twittering-proxy-server'.
+(defcustom twindrill-proxy-password nil
+  "*Password for `twindrill-proxy-server'.
 
-NOTE: If both `twittering-proxy-server' and `twittering-proxy-port' are
-non-nil, the variables `twittering-proxy-*' have priority over other
-variables `twittering-http-proxy-*' or `twittering-https-proxy-*'
+NOTE: If both `twindrill-proxy-server' and `twindrill-proxy-port' are
+non-nil, the variables `twindrill-proxy-*' have priority over other
+variables `twindrill-http-proxy-*' or `twindrill-https-proxy-*'
 regardless of HTTP or HTTPS."
-  :group 'twittering-proxy
+  :group 'twindrill-proxy
   :type '(choice (const nil)
 		 string))
 
-(defcustom twittering-http-proxy-server nil
-  "*HTTP proxy server for `twittering-mode'.
-If nil, it is initialized on entering `twittering-mode'.
-The port number is specified by `twittering-http-proxy-port'.
-For HTTPS connection, the proxy specified by `twittering-https-proxy-server'
-and `twittering-https-proxy-port' is used.
+(defcustom twindrill-http-proxy-server nil
+  "*HTTP proxy server for `twindrill-mode'.
+If nil, it is initialized on entering `twindrill-mode'.
+The port number is specified by `twindrill-http-proxy-port'.
+For HTTPS connection, the proxy specified by `twindrill-https-proxy-server'
+and `twindrill-https-proxy-port' is used.
 
-NOTE: If both `twittering-proxy-server' and `twittering-proxy-port' are
-non-nil, the variables `twittering-proxy-*' have priority over other
-variables `twittering-http-proxy-*' or `twittering-https-proxy-*'
+NOTE: If both `twindrill-proxy-server' and `twindrill-proxy-port' are
+non-nil, the variables `twindrill-proxy-*' have priority over other
+variables `twindrill-http-proxy-*' or `twindrill-https-proxy-*'
 regardless of HTTP or HTTPS."
-  :group 'twittering-proxy
+  :group 'twindrill-proxy
   :type '(choice (const nil)
 		 string))
 
-(defcustom twittering-http-proxy-port nil
-  "*Port number of a HTTP proxy server for `twittering-mode'.
-If nil, it is initialized on entering `twittering-mode'.
-The server is specified by `twittering-http-proxy-server'.
-For HTTPS connection, the proxy specified by `twittering-https-proxy-server'
-and `twittering-https-proxy-port' is used.
+(defcustom twindrill-http-proxy-port nil
+  "*Port number of a HTTP proxy server for `twindrill-mode'.
+If nil, it is initialized on entering `twindrill-mode'.
+The server is specified by `twindrill-http-proxy-server'.
+For HTTPS connection, the proxy specified by `twindrill-https-proxy-server'
+and `twindrill-https-proxy-port' is used.
 
-NOTE: If both `twittering-proxy-server' and `twittering-proxy-port' are
-non-nil, the variables `twittering-proxy-*' have priority over other
-variables `twittering-http-proxy-*' or `twittering-https-proxy-*'
+NOTE: If both `twindrill-proxy-server' and `twindrill-proxy-port' are
+non-nil, the variables `twindrill-proxy-*' have priority over other
+variables `twindrill-http-proxy-*' or `twindrill-https-proxy-*'
 regardless of HTTP or HTTPS."
-  :group 'twittering-proxy
+  :group 'twindrill-proxy
   :type '(choice (const nil)
 		 integer))
 
-(defcustom twittering-http-proxy-keep-alive nil
+(defcustom twindrill-http-proxy-keep-alive nil
   "*If non-nil, the Keep-alive is enabled.  This is experimental."
-  :group 'twittering-proxy
+  :group 'twindrill-proxy
   :type 'boolean)
 
-(defcustom twittering-http-proxy-user nil
-  "*Username for `twittering-http-proxy-server'.
+(defcustom twindrill-http-proxy-user nil
+  "*Username for `twindrill-http-proxy-server'.
 
-NOTE: If both `twittering-proxy-server' and `twittering-proxy-port' are
-non-nil, the variables `twittering-proxy-*' have priority over other
-variables `twittering-http-proxy-*' or `twittering-https-proxy-*'
+NOTE: If both `twindrill-proxy-server' and `twindrill-proxy-port' are
+non-nil, the variables `twindrill-proxy-*' have priority over other
+variables `twindrill-http-proxy-*' or `twindrill-https-proxy-*'
 regardless of HTTP or HTTPS."
-  :group 'twittering-proxy
+  :group 'twindrill-proxy
   :type '(choice (const nil)
 		 string))
 
-(defcustom twittering-http-proxy-password nil
-  "*Password for `twittering-http-proxy-server'.
+(defcustom twindrill-http-proxy-password nil
+  "*Password for `twindrill-http-proxy-server'.
 
-NOTE: If both `twittering-proxy-server' and `twittering-proxy-port' are
-non-nil, the variables `twittering-proxy-*' have priority over other
-variables `twittering-http-proxy-*' or `twittering-https-proxy-*'
+NOTE: If both `twindrill-proxy-server' and `twindrill-proxy-port' are
+non-nil, the variables `twindrill-proxy-*' have priority over other
+variables `twindrill-http-proxy-*' or `twindrill-https-proxy-*'
 regardless of HTTP or HTTPS."
-  :group 'twittering-proxy
+  :group 'twindrill-proxy
   :type '(choice (const nil)
 		 string))
 
-(defcustom twittering-https-proxy-server nil
-  "*HTTPS proxy server for `twittering-mode'.
-If nil, it is initialized on entering `twittering-mode'.
-The port number is specified by `twittering-https-proxy-port'.
-For HTTP connection, the proxy specified by `twittering-http-proxy-server'
-and `twittering-http-proxy-port' is used.
+(defcustom twindrill-https-proxy-server nil
+  "*HTTPS proxy server for `twindrill-mode'.
+If nil, it is initialized on entering `twindrill-mode'.
+The port number is specified by `twindrill-https-proxy-port'.
+For HTTP connection, the proxy specified by `twindrill-http-proxy-server'
+and `twindrill-http-proxy-port' is used.
 
-NOTE: If both `twittering-proxy-server' and `twittering-proxy-port' are
-non-nil, the variables `twittering-proxy-*' have priority over other
-variables `twittering-http-proxy-*' or `twittering-https-proxy-*'
+NOTE: If both `twindrill-proxy-server' and `twindrill-proxy-port' are
+non-nil, the variables `twindrill-proxy-*' have priority over other
+variables `twindrill-http-proxy-*' or `twindrill-https-proxy-*'
 regardless of HTTP or HTTPS."
-  :group 'twittering-proxy
+  :group 'twindrill-proxy
   :type '(choice (const nil)
 		 string))
 
-(defcustom twittering-https-proxy-port nil
-  "*Port number of a HTTPS proxy server for `twittering-mode'.
-If nil, it is initialized on entering `twittering-mode'.
-The server is specified by `twittering-https-proxy-server'.
-For HTTP connection, the proxy specified by `twittering-http-proxy-server'
-and `twittering-http-proxy-port' is used.
+(defcustom twindrill-https-proxy-port nil
+  "*Port number of a HTTPS proxy server for `twindrill-mode'.
+If nil, it is initialized on entering `twindrill-mode'.
+The server is specified by `twindrill-https-proxy-server'.
+For HTTP connection, the proxy specified by `twindrill-http-proxy-server'
+and `twindrill-http-proxy-port' is used.
 
-NOTE: If both `twittering-proxy-server' and `twittering-proxy-port' are
-non-nil, the variables `twittering-proxy-*' have priority over other
-variables `twittering-http-proxy-*' or `twittering-https-proxy-*'
+NOTE: If both `twindrill-proxy-server' and `twindrill-proxy-port' are
+non-nil, the variables `twindrill-proxy-*' have priority over other
+variables `twindrill-http-proxy-*' or `twindrill-https-proxy-*'
 regardless of HTTP or HTTPS."
-  :group 'twittering-proxy
+  :group 'twindrill-proxy
   :type '(choice (const nil)
 		 integer))
 
-(defcustom twittering-https-proxy-keep-alive nil
+(defcustom twindrill-https-proxy-keep-alive nil
   "*If non-nil, the Keep-alive is enabled.  This is experimental."
-  :group 'twittering-proxy
+  :group 'twindrill-proxy
   :type 'boolean)
 
-(defcustom twittering-https-proxy-user nil
-  "*Username for `twittering-https-proxy-server'.
+(defcustom twindrill-https-proxy-user nil
+  "*Username for `twindrill-https-proxy-server'.
 
-NOTE: If both `twittering-proxy-server' and `twittering-proxy-port' are
-non-nil, the variables `twittering-proxy-*' have priority over other
-variables `twittering-http-proxy-*' or `twittering-https-proxy-*'
+NOTE: If both `twindrill-proxy-server' and `twindrill-proxy-port' are
+non-nil, the variables `twindrill-proxy-*' have priority over other
+variables `twindrill-http-proxy-*' or `twindrill-https-proxy-*'
 regardless of HTTP or HTTPS."
-  :group 'twittering-proxy
+  :group 'twindrill-proxy
   :type '(choice (const nil)
 		 string))
 
-(defcustom twittering-https-proxy-password nil
-  "*Password for `twittering-https-proxy-server'.
+(defcustom twindrill-https-proxy-password nil
+  "*Password for `twindrill-https-proxy-server'.
 
-NOTE: If both `twittering-proxy-server' and `twittering-proxy-port' are
-non-nil, the variables `twittering-proxy-*' have priority over other
-variables `twittering-http-proxy-*' or `twittering-https-proxy-*'
+NOTE: If both `twindrill-proxy-server' and `twindrill-proxy-port' are
+non-nil, the variables `twindrill-proxy-*' have priority over other
+variables `twindrill-http-proxy-*' or `twindrill-https-proxy-*'
 regardless of HTTP or HTTPS."
-  :group 'twittering-proxy
+  :group 'twindrill-proxy
   :type '(choice (const nil)
 		 string))
 
-(defun twittering-normalize-proxy-vars ()
-  "Normalize the type of `twittering-http-proxy-port' and
-`twittering-https-proxy-port'."
+(defun twindrill-normalize-proxy-vars ()
+  "Normalize the type of `twindrill-http-proxy-port' and
+`twindrill-https-proxy-port'."
   (mapc (lambda (sym)
 	  (let ((value (symbol-value sym)))
 	    (cond
@@ -1284,37 +1287,37 @@ regardless of HTTP or HTTPS."
 	      (set sym (string-to-number value)))
 	     (t
 	      (set sym nil)))))
-	'(twittering-proxy-port
-	  twittering-http-proxy-port
-	  twittering-https-proxy-port)))
+	'(twindrill-proxy-port
+	  twindrill-http-proxy-port
+	  twindrill-https-proxy-port)))
 
-(defun twittering-proxy-info (scheme &optional item)
+(defun twindrill-proxy-info (scheme &optional item)
   "Return an alist for proxy configuration registered for SCHEME.
 SCHEME must be a string \"http\", \"https\" or a symbol 'http or 'https.
 The server name is a string and the port number is an integer."
-  (twittering-normalize-proxy-vars)
+  (twindrill-normalize-proxy-vars)
   (let ((scheme (if (symbolp scheme)
 		    (symbol-name scheme)
 		  scheme))
 	(info-list
 	 `((("http" "https")
-	    . ((server . ,twittering-proxy-server)
-	       (port . ,twittering-proxy-port)
-	       (keep-alive . ,twittering-proxy-keep-alive)
-	       (user . ,twittering-proxy-user)
-	       (password . ,twittering-proxy-password)))
+	    . ((server . ,twindrill-proxy-server)
+	       (port . ,twindrill-proxy-port)
+	       (keep-alive . ,twindrill-proxy-keep-alive)
+	       (user . ,twindrill-proxy-user)
+	       (password . ,twindrill-proxy-password)))
 	   (("http")
-	    . ((server . ,twittering-http-proxy-server)
-	       (port . ,twittering-http-proxy-port)
-	       (keep-alive . ,twittering-http-proxy-keep-alive)
-	       (user . ,twittering-http-proxy-user)
-	       (password . ,twittering-http-proxy-password)))
+	    . ((server . ,twindrill-http-proxy-server)
+	       (port . ,twindrill-http-proxy-port)
+	       (keep-alive . ,twindrill-http-proxy-keep-alive)
+	       (user . ,twindrill-http-proxy-user)
+	       (password . ,twindrill-http-proxy-password)))
 	   (("https")
-	    . ((server . ,twittering-https-proxy-server)
-	       (port . ,twittering-https-proxy-port)
-	       (keep-alive . ,twittering-https-proxy-keep-alive)
-	       (user . ,twittering-https-proxy-user)
-	       (password . ,twittering-https-proxy-password))))))
+	    . ((server . ,twindrill-https-proxy-server)
+	       (port . ,twindrill-https-proxy-port)
+	       (keep-alive . ,twindrill-https-proxy-keep-alive)
+	       (user . ,twindrill-https-proxy-user)
+	       (password . ,twindrill-https-proxy-password))))))
     (let ((info
 	   (car (remove nil
 			(mapcar
@@ -1329,18 +1332,18 @@ The server name is a string and the port number is an integer."
 	  (cdr (assq item info))
 	info))))
 
-(defun twittering-url-proxy-services ()
-  "Return the current proxy configuration for `twittering-mode' in the format
+(defun twindrill-url-proxy-services ()
+  "Return the current proxy configuration for `twindrill-mode' in the format
 of `url-proxy-services'."
   (remove nil (mapcar
 	       (lambda (scheme)
-		 (let ((server (twittering-proxy-info scheme 'server))
-		       (port (twittering-proxy-info scheme 'port)))
+		 (let ((server (twindrill-proxy-info scheme 'server))
+		       (port (twindrill-proxy-info scheme 'port)))
 		   (when (and server port)
 		     `(,scheme . ,(format "%s:%s" server port)))))
 	       '("http" "https"))))
 
-(defun twittering-find-proxy (scheme)
+(defun twindrill-find-proxy (scheme)
   "Find proxy server and its port from the environmental variables and return
 a cons pair of them.
 SCHEME must be \"http\" or \"https\"."
@@ -1370,7 +1373,7 @@ SCHEME must be \"http\" or \"https\"."
 	    (cons host port))
 	nil)))))
 
-(defun twittering-setup-proxy ()
+(defun twindrill-setup-proxy ()
   (when (require 'url-methods nil t)
     ;; If `url-scheme-registry' is not initialized,
     ;; `url-proxy-services' will be reset by calling
@@ -1379,53 +1382,53 @@ SCHEME must be \"http\" or \"https\"."
     ;; `url-scheme-get-property' before calling such functions.
     (url-scheme-get-property "http" 'name)
     (url-scheme-get-property "https" 'name))
-  (unless (and twittering-http-proxy-server
-	       twittering-http-proxy-port)
-    (let ((info (twittering-find-proxy "http")))
-      (setq twittering-http-proxy-server (car-safe info))
-      (setq twittering-http-proxy-port (cdr-safe info))))
-  (unless (and twittering-https-proxy-server
-	       twittering-https-proxy-port)
-    (let ((info (twittering-find-proxy "https")))
-      (setq twittering-https-proxy-server (car-safe info))
-      (setq twittering-https-proxy-port (cdr-safe info))))
-  (if (and twittering-proxy-use
-	   (null (twittering-proxy-info "http"))
-	   (null (twittering-proxy-info "https")))
+  (unless (and twindrill-http-proxy-server
+	       twindrill-http-proxy-port)
+    (let ((info (twindrill-find-proxy "http")))
+      (setq twindrill-http-proxy-server (car-safe info))
+      (setq twindrill-http-proxy-port (cdr-safe info))))
+  (unless (and twindrill-https-proxy-server
+	       twindrill-https-proxy-port)
+    (let ((info (twindrill-find-proxy "https")))
+      (setq twindrill-https-proxy-server (car-safe info))
+      (setq twindrill-https-proxy-port (cdr-safe info))))
+  (if (and twindrill-proxy-use
+	   (null (twindrill-proxy-info "http"))
+	   (null (twindrill-proxy-info "https")))
       (progn
 	(message "Disabling proxy due to lack of configuration.")
-	(setq twittering-proxy-use nil))
+	(setq twindrill-proxy-use nil))
     t))
 
-(defun twittering-toggle-proxy ()
+(defun twindrill-toggle-proxy ()
   (interactive)
-  (setq twittering-proxy-use
-	(not twittering-proxy-use))
-  (if (twittering-setup-proxy)
-      (message (if twittering-proxy-use "Use Proxy:on" "Use Proxy:off")))
-  (twittering-update-mode-line))
+  (setq twindrill-proxy-use
+	(not twindrill-proxy-use))
+  (if (twindrill-setup-proxy)
+      (message (if twindrill-proxy-use "Use Proxy:on" "Use Proxy:off")))
+  (twindrill-update-mode-line))
 
 ;;;;
 ;;;; Functions for URL library
 ;;;;
 
-(defcustom twittering-url-show-status nil
+(defcustom twindrill-url-show-status nil
   "*If non-nil, show a running total of bytes transferred by urllib.
 
 This has effect only if either \"urllib-httpp\" or \"urllib-https\" is used
 as the connection method."
-  :group 'twittering-mode
+  :group 'twindrill-mode
   :type 'boolean)
 
 ;;;;
 ;;;; CA certificate
 ;;;;
 
-(defvar twittering-cert-file nil
+(defvar twindrill-cert-file nil
   "The full-path of the file including the certificates authorizing
 servers on SSL.")
 
-(defconst twittering-ca-cert-list
+(defconst twindrill-ca-cert-list
   '(
 ;; #BEGIN-CERTIFICATE
 ;; Equifax Secure CA
@@ -1698,69 +1701,69 @@ FRJZap7v1VmyHVIsmXHNxynfGyphe3HR3vPA5Q06Sqotp9iGKt0uEA==
 ;; #END-CERTIFICATE
 ))
 
-(defun twittering-delete-ca-cert ()
-  (when (and twittering-cert-file
-	     (file-exists-p twittering-cert-file))
-    (delete-file twittering-cert-file))
-  (setq twittering-cert-file nil))
+(defun twindrill-delete-ca-cert ()
+  (when (and twindrill-cert-file
+	     (file-exists-p twindrill-cert-file))
+    (delete-file twindrill-cert-file))
+  (setq twindrill-cert-file nil))
 
-(defun twittering-ensure-ca-cert ()
+(defun twindrill-ensure-ca-cert ()
   "Return a full-path of the file including CA certificates.
 
 If it does not exist, create it. The directory includes root certificates
 in \"hash format\". In detail, see verify(1SSL)."
-  (unless twittering-cert-file
+  (unless twindrill-cert-file
     (let ((coding-system-for-write 'iso-safe)
 	  (file (make-temp-file "twmode-cacert")))
       (with-temp-file file
-	(apply 'insert twittering-ca-cert-list))
-      (setq twittering-cert-file file)
-      (add-hook 'kill-emacs-hook 'twittering-delete-ca-cert)))
-  twittering-cert-file)
+	(apply 'insert twindrill-ca-cert-list))
+      (setq twindrill-cert-file file)
+      (add-hook 'kill-emacs-hook 'twindrill-delete-ca-cert)))
+  twindrill-cert-file)
 
 ;;;;
 ;;;; User agent
 ;;;;
 
-(defvar twittering-user-agent-function 'twittering-user-agent-default-function)
+(defvar twindrill-user-agent-function 'twindrill-user-agent-default-function)
 
-(defun twittering-user-agent-default-function ()
-  "Twittering mode default User-Agent function."
-  (format "Emacs/%d.%d Twittering-mode/%s"
+(defun twindrill-user-agent-default-function ()
+  "Twindrill mode default User-Agent function."
+  (format "Emacs/%d.%d Twindrill-mode/%s"
 	  emacs-major-version emacs-minor-version
-	  twittering-mode-version))
+	  twindrill-mode-version))
 
-(defun twittering-user-agent ()
+(defun twindrill-user-agent ()
   "Return User-Agent header string."
-  (funcall twittering-user-agent-function))
+  (funcall twindrill-user-agent-function))
 
 ;;;;
 ;;;; Basic HTTP functions (general)
 ;;;;
 
-(defun twittering-percent-encode (str &optional coding-system)
+(defun twindrill-percent-encode (str &optional coding-system)
   "Encode STR according to Percent-Encoding defined in RFC 3986."
-  (twittering-oauth-url-encode str coding-system))
+  (twindrill-oauth-url-encode str coding-system))
 
-(defun twittering-lookup-connection-type (use-ssl &optional order table)
+(defun twindrill-lookup-connection-type (use-ssl &optional order table)
   "Return available entry extracted fron connection type table.
 TABLE is connection type table, which is an alist of type symbol and its
 item alist, such as
  '((native (check . t)
-           (https . twittering-start-http-session-native-tls-p)
-           (start . twittering-start-http-session-native))
-   (curl (check . twittering-start-http-session-curl-p)
-         (https . twittering-start-http-session-curl-https-p)
-         (start . twittering-start-http-session-curl))) .
+           (https . twindrill-start-http-session-native-tls-p)
+           (start . twindrill-start-http-session-native))
+   (curl (check . twindrill-start-http-session-curl-p)
+         (https . twindrill-start-http-session-curl-https-p)
+         (start . twindrill-start-http-session-curl))) .
 ORDER means the priority order of type symbols.
 If USE-SSL is nil, the item `https' is ignored.
 When the type `curl' has priority and is available for the above table,
 the function returns
- '((check . twittering-start-http-session-curl-p)
-   (https . twittering-start-http-session-curl-https-p)
-   (start . twittering-start-http-session-curl)) ."
-  (let ((rest (or order twittering-connection-type-order))
-	(table (or table twittering-connection-type-table))
+ '((check . twindrill-start-http-session-curl-p)
+   (https . twindrill-start-http-session-curl-https-p)
+   (start . twindrill-start-http-session-curl)) ."
+  (let ((rest (or order twindrill-connection-type-order))
+	(table (or table twindrill-connection-type-table))
 	(result nil))
     (while (and rest (null result))
       (let* ((candidate (car rest))
@@ -1793,38 +1796,38 @@ the function returns
 	  (setq rest nil))))
     result))
 
-(defun twittering-get-connection-method-name (use-ssl)
+(defun twindrill-get-connection-method-name (use-ssl)
   "Return a name of the preferred connection method.
 If USE-SSL is non-nil, return a connection method for HTTPS.
 If USE-SSL is nil, return a connection method for HTTP."
-  (cdr (assq 'display-name (twittering-lookup-connection-type use-ssl))))
+  (cdr (assq 'display-name (twindrill-lookup-connection-type use-ssl))))
 
-(defun twittering-lookup-http-start-function (&optional order table)
+(defun twindrill-lookup-http-start-function (&optional order table)
   "Decide a connection method from currently available methods."
   (let ((entry
-	 (twittering-lookup-connection-type twittering-use-ssl order table)))
+	 (twindrill-lookup-connection-type twindrill-use-ssl order table)))
     (cdr (assq 'send-http-request entry))))
 
-(defun twittering-ensure-connection-method (&optional order table)
+(defun twindrill-ensure-connection-method (&optional order table)
   "Ensure a connection method with a compromise.
 Return nil if no connection methods are available with a compromise."
-  (let* ((use-ssl (or twittering-use-ssl twittering-oauth-use-ssl))
-	 (entry (twittering-lookup-connection-type use-ssl order table)))
+  (let* ((use-ssl (or twindrill-use-ssl twindrill-oauth-use-ssl))
+	 (entry (twindrill-lookup-connection-type use-ssl order table)))
     (cond
      (entry
       t)
      ((and (null entry) use-ssl
 	   (yes-or-no-p "HTTPS(SSL) is unavailable. Use HTTP instead? "))
       ;; Fall back on connection without SSL.
-      (setq twittering-use-ssl nil)
-      (setq twittering-oauth-use-ssl nil)
-      (twittering-update-mode-line)
-      (twittering-ensure-connection-method order table))
+      (setq twindrill-use-ssl nil)
+      (setq twindrill-oauth-use-ssl nil)
+      (twindrill-update-mode-line)
+      (twindrill-ensure-connection-method order table))
      (t
       (message "No connection methods are available.")
       nil))))
 
-(defun twittering-make-http-request (method header-list host port path query-parameters post-body use-ssl)
+(defun twindrill-make-http-request (method header-list host port path query-parameters post-body use-ssl)
   "Returns an alist specifying a HTTP request.
 METHOD specifies HTTP method. It must be \"GET\" or \"POST\".
 HEADER-LIST is a list of (field-name . field-value) specifying HTTP header
@@ -1866,12 +1869,12 @@ The result alist includes the following keys, where a key is a symbol.
 	    (mapconcat (lambda (pair)
 			 (cond
 			  ((stringp pair)
-			   (twittering-percent-encode pair))
+			   (twindrill-percent-encode pair))
 			  ((consp pair)
 			   (format
 			    "%s=%s"
-			    (twittering-percent-encode (car pair))
-			    (twittering-percent-encode (cdr pair))))
+			    (twindrill-percent-encode (car pair))
+			    (twindrill-percent-encode (cdr pair))))
 			  (t
 			   nil)))
 		       query-parameters
@@ -1893,10 +1896,10 @@ The result alist includes the following keys, where a key is a symbol.
 	    (mapcar (lambda (pair)
 		      (cond
 		       ((stringp pair)
-			(cons (twittering-percent-encode pair) nil))
+			(cons (twindrill-percent-encode pair) nil))
 		       ((consp pair)
-			(cons (twittering-percent-encode (car pair))
-			      (twittering-percent-encode (cdr pair))))
+			(cons (twindrill-percent-encode (car pair))
+			      (twindrill-percent-encode (cdr pair))))
 		       (t
 			nil)))
 		    query-parameters))
@@ -1919,7 +1922,7 @@ The result alist includes the following keys, where a key is a symbol.
 	    ,@(unless (assoc "Host" header-list)
 		`(("Host" . ,host)))
 	    ,@(unless (assoc "User-Agent" header-list)
-		`(("User-Agent" . ,(twittering-user-agent))))
+		`(("User-Agent" . ,(twindrill-user-agent))))
 	    ,@header-list)))
     (cond
      ((not (member method '("POST" "GET")))
@@ -1941,10 +1944,10 @@ The result alist includes the following keys, where a key is a symbol.
 	(header-list . ,header-list)
 	(post-body . ,post-body))))))
 
-(defun twittering-make-http-request-from-uri (method header-list uri &optional post-body)
+(defun twindrill-make-http-request-from-uri (method header-list uri &optional post-body)
   "Returns an alist specifying a HTTP request.
 The result alist has the same form as an alist generated by
-`twittering-make-http-request'.
+`twindrill-make-http-request'.
 
 METHOD specifies HTTP method. It must be \"GET\" or \"POST\".
 HEADER-LIST is a list of (field-name . field-value) specifying HTTP header
@@ -1980,7 +1983,7 @@ If POST-BODY is nil, no body is posted."
 			 (if (string-match "\\?\\(.*\\)\\'" path)
 			     (match-string 1 path)
 			   nil))))
-    (twittering-make-http-request method header-list
+    (twindrill-make-http-request method header-list
 				  (cdr (assq 'host parts-alist))
 				  (cdr (assq 'port parts-alist))
 				  path
@@ -1989,17 +1992,17 @@ If POST-BODY is nil, no body is posted."
 				  (string= "https"
 					   (cdr (assq 'scheme parts-alist))))))
 
-(defun twittering-make-connection-info (request &optional additional order table)
+(defun twindrill-make-connection-info (request &optional additional order table)
   "Make an alist specifying the information of connection for REQUEST.
 REQUEST must be an alist that has the same keys as that generated by
-`twittering-make-http-request'.
+`twindrill-make-http-request'.
 
 ADDITIONAL is appended to the tail of the result alist.
 Following ADDITIONAL, an entry in TABLE is also appended to the result alist,
-where `twittering-lookup-connection-type' determines the entry according to
+where `twindrill-lookup-connection-type' determines the entry according to
 the priority order ORDER.
-If ORDER is nil, `twittering-connection-type-order' is used in place of ORDER.
-If TABLE is nil, `twittering-connection-type-table' is used in place of TABLE.
+If ORDER is nil, `twindrill-connection-type-order' is used in place of ORDER.
+If TABLE is nil, `twindrill-connection-type-table' is used in place of TABLE.
 
 The parameter symbols are following:
   use-ssl: whether SSL is enabled or not.
@@ -2013,27 +2016,27 @@ The parameter symbols are following:
   proxy-user: a username for connecting the proxy or nil.
   proxy-password: a password for connecting the proxy or nil.
   request: an alist specifying a HTTP request."
-  (let* ((order (or order twittering-connection-type-order))
-	 (table (or table twittering-connection-type-table))
+  (let* ((order (or order twindrill-connection-type-order))
+	 (table (or table twindrill-connection-type-table))
 	 (scheme (cdr (assq 'scheme request)))
 	 (use-ssl (string= "https" scheme))
-	 (entry (twittering-lookup-connection-type use-ssl order table)))
+	 (entry (twindrill-lookup-connection-type use-ssl order table)))
     `((use-ssl . ,use-ssl)
       (allow-insecure-server-cert
-       . ,twittering-allow-insecure-server-cert)
+       . ,twindrill-allow-insecure-server-cert)
       (cacert-file-fullpath
-       . ,(when use-ssl (twittering-ensure-ca-cert)))
-      (use-proxy . ,twittering-proxy-use)
-      ,@(when twittering-proxy-use
-	  `((proxy-server . ,(twittering-proxy-info scheme 'server))
-	    (proxy-port . ,(twittering-proxy-info scheme 'port))
-	    (proxy-user . ,(twittering-proxy-info scheme 'user))
-	    (proxy-password . ,(twittering-proxy-info scheme 'password))))
+       . ,(when use-ssl (twindrill-ensure-ca-cert)))
+      (use-proxy . ,twindrill-proxy-use)
+      ,@(when twindrill-proxy-use
+	  `((proxy-server . ,(twindrill-proxy-info scheme 'server))
+	    (proxy-port . ,(twindrill-proxy-info scheme 'port))
+	    (proxy-user . ,(twindrill-proxy-info scheme 'user))
+	    (proxy-password . ,(twindrill-proxy-info scheme 'password))))
       (request . ,request)
       ,@additional
       ,@entry)))
 
-(defun twittering-get-response-header (buffer)
+(defun twindrill-get-response-header (buffer)
   "Extract HTTP response header from HTTP response.
 BUFFER may be a buffer or the name of an existing buffer which contains the HTTP response."
   (with-current-buffer buffer
@@ -2042,14 +2045,14 @@ BUFFER may be a buffer or the name of an existing buffer which contains the HTTP
       (if (search-forward-regexp "\r?\n\r?\n" nil t)
 	  (prog1
 	      (buffer-substring (point-min) (match-end 0))
-	    (when twittering-debug-mode
+	    (when twindrill-debug-mode
 	      (debug-printf "connection-info=%s\n" connection-info)
 	      (debug-print "HTTP response header:\n--BEGIN\n")
 	      (debug-print (buffer-substring (point-min) (match-end 0)))
 	      (debug-print "--END\n")))
 	nil))))
 
-(defun twittering-make-header-info-alist (header-str)
+(defun twindrill-make-header-info-alist (header-str)
   "Make HTTP header alist from HEADER-STR.
 The alist consists of pairs of field-name and field-value, such as
 '((\"Content-Type\" . \"application/xml\; charset=utf-8\")
@@ -2071,7 +2074,7 @@ The alist consists of pairs of field-name and field-value, such as
 			   (cons (match-string 1 line) (match-string 2 line))))
 		       header-lines))))))
 
-(defun twittering-get-content-subtype-symbol-from-header-info (header-info)
+(defun twindrill-get-content-subtype-symbol-from-header-info (header-info)
   "Return a symbol corresponding to the subtype of content-type."
   (let* ((content-type
 	  ;; According to RFC2616, field name of a HTTP header is
@@ -2096,7 +2099,7 @@ The alist consists of pairs of field-name and field-value, such as
 	    ("xml" . xml))))
     (cdr (assoc subtype symbol-alist))))
 
-(defun twittering-decode-response-body (header-info)
+(defun twindrill-decode-response-body (header-info)
   "Decode the current buffer according to the content-type in HEADER-INFO."
   (let* ((content-type
 	  ;; According to RFC2616, field name of a HTTP header is
@@ -2123,25 +2126,25 @@ The alist consists of pairs of field-name and field-value, such as
     (when encoded-with-utf-8
       (decode-coding-region (point-min) (point-max) 'utf-8))))
 
-(defun twittering-send-http-request-internal (request additional-info sentinel &optional order table)
+(defun twindrill-send-http-request-internal (request additional-info sentinel &optional order table)
   "Open a connection and return a subprocess object for the connection.
 REQUEST must be an alist that has the same keys as that generated by
-`twittering-make-http-request'.
+`twindrill-make-http-request'.
 SENTINEL is called as a function when the process changes state.
 It gets three arguments: the process, a string describing the change, and
-the connection-info, which is generated by `twittering-make-connection-info'
+the connection-info, which is generated by `twindrill-make-connection-info'
 and also includes an alist ADDITIONAL-INFO.
 
 How to perform the request is selected from TABLE according to the priority
 order ORDER. ORDER and TABLE are directly sent to
-`twittering-make-connection-info'.
-If ORDER is nil, `twittering-connection-type-order' is used in place of ORDER.
-If TABLE is nil, `twittering-connection-type-table' is used in place of TABLE.
+`twindrill-make-connection-info'.
+If ORDER is nil, `twindrill-connection-type-order' is used in place of ORDER.
+If TABLE is nil, `twindrill-connection-type-table' is used in place of TABLE.
 "
-  (let* ((order (or order twittering-connection-type-order))
-	 (table (or table twittering-connection-type-table))
+  (let* ((order (or order twindrill-connection-type-order))
+	 (table (or table twindrill-connection-type-table))
 	 (connection-info
-	  (twittering-make-connection-info request additional-info
+	  (twindrill-make-connection-info request additional-info
 					   order table))
 	 (func (cdr (assq 'send-http-request connection-info)))
 	 (temp-buffer (generate-new-buffer "*twmode-http-buffer*"))
@@ -2162,19 +2165,19 @@ If TABLE is nil, `twittering-connection-type-table' is used in place of TABLE.
       (error "No valid connection method is found")
       nil))))
 
-(defun twittering-send-http-request (request additional-info func &optional clean-up-func)
+(defun twindrill-send-http-request (request additional-info func &optional clean-up-func)
   "Send a HTTP request and return a subprocess object for the connection.
 REQUEST must be an alist that has the same keys as that generated by
-`twittering-make-http-request'.
+`twindrill-make-http-request'.
 
 FUNC is called when a HTTP response has been received without errors.
 It is called with the current buffer containing the HTTP response (without
 HTTP headers). FUNC is called with four arguments: the process, a symbol
 describing the status of the process, a connection-info generated by
-`twittering-make-connection-info', and a header-info generated by
-`twittering-get-response-header' and `twittering-make-header-info-alist'.
+`twindrill-make-connection-info', and a header-info generated by
+`twindrill-get-response-header' and `twindrill-make-header-info-alist'.
 The connection-info also includes an alist ADDITIONAL-INFO.
-If FUNC returns non-nil and `twittering-buffer-related-p' is non-nil, the
+If FUNC returns non-nil and `twindrill-buffer-related-p' is non-nil, the
 returned value is displayed as a message.
 And also, if FUNC returns a string and it matches the regular expression
 \"^\\\\(Failuare\\\\|Response\\\\): \", the returned value is displayed
@@ -2184,7 +2187,7 @@ CLEAN-UP-FUNC is called whenever the sentinel of the subprocess for the
 connection is called (as `set-process-sentinel').
 It is called with three arguments: the process, a symbol describing the status
 of the proess, and a connection-info generated by
-`twittering-make-connection-info'.
+`twindrill-make-connection-info'.
 They are the same as arguments for FUNC.
 When a HTTP response has been received, FUNC is called in advance of
 CLEAN-UP-FUNC. CLEAN-UP-FUNC can overwrite the message displayed by FUNC.
@@ -2193,11 +2196,11 @@ If the subprocess has exited, the buffer bound to it is automatically killed
 after calling CLEAN-UP-FUNC.
 
 The method to perform the request is determined from
-`twittering-connection-type-table' according to the priority order
-`twittering-connection-type-order'."
+`twindrill-connection-type-table' according to the priority order
+`twindrill-connection-type-order'."
   (lexical-let ((func func)
 		(clean-up-func clean-up-func))
-    (twittering-send-http-request-internal
+    (twindrill-send-http-request-internal
      request additional-info
      (lambda (proc status-str connection-info)
        (let ((status (cond
@@ -2234,10 +2237,10 @@ The method to perform the request is determined from
 		     (when (functionp pre-process-func)
 		       ;; Pre-process buffer.
 		       (funcall pre-process-func proc buffer connection-info))
-		     (let* ((header (twittering-get-response-header buffer))
+		     (let* ((header (twindrill-get-response-header buffer))
 			    (header-info
 			     (and header
-				  (twittering-make-header-info-alist header))))
+				  (twindrill-make-header-info-alist header))))
 		       (with-current-buffer buffer
 			 (goto-char (point-min))
 			 (when (search-forward-regexp "\r?\n\r?\n" nil t)
@@ -2245,10 +2248,10 @@ The method to perform the request is determined from
 			   (delete-region (point-min) (match-end 0)))
 			 ;; It may be necessary to decode the contents of
 			 ;; the buffer by UTF-8 because
-			 ;; `twittering-http-application-headers' specifies
+			 ;; `twindrill-http-application-headers' specifies
 			 ;; utf-8 as one of acceptable charset.
 			 ;; For the present, only UTF-8 is taken into account.
-			 (twittering-decode-response-body header-info)
+			 (twindrill-decode-response-body header-info)
 			 (apply func proc status connection-info
 				header-info nil))))))
 	   ;; unwind-forms
@@ -2261,7 +2264,7 @@ The method to perform the request is determined from
 			  (method (cdr (assq 'method request)))
 			  (uri (cdr (assq 'uri request))))
 		     (concat mes " for " method " " uri)))
-		  ((twittering-buffer-related-p)
+		  ((twindrill-buffer-related-p)
 		   mes)))
 	   (when mes
 	     ;; CLEAN-UP-FUNC can overwrite a message from the return value
@@ -2271,7 +2274,7 @@ The method to perform the request is determined from
 	     (funcall clean-up-func proc status connection-info))
 	   (when (and (memq status '(exit signal closed failed))
 		      (buffer-live-p buffer)
-		      (not twittering-debug-mode))
+		      (not twindrill-debug-mode))
 	     (kill-buffer buffer))))))))
 
 ;;;;
@@ -2279,10 +2282,10 @@ The method to perform the request is determined from
 ;;;;
 
 (eval-when-compile (require 'tls nil t))
-(defun twittering-start-http-session-native-tls-p ()
-  (when (and (not twittering-proxy-use)
+(defun twindrill-start-http-session-native-tls-p ()
+  (when (and (not twindrill-proxy-use)
 	     (require 'tls nil t))
-    (unless twittering-tls-program
+    (unless twindrill-tls-program
       (let ((programs
 	     (remove nil
 		     (mapcar (lambda (cmd)
@@ -2290,8 +2293,8 @@ The method to perform the request is determined from
 				 (when (executable-find (match-string 1 cmd))
 				   cmd)))
 			     tls-program))))
-	(setq twittering-tls-program
-	      (if twittering-allow-insecure-server-cert
+	(setq twindrill-tls-program
+	      (if twindrill-allow-insecure-server-cert
 		  (mapcar
 		   (lambda (str)
 		     (cond
@@ -2305,10 +2308,10 @@ The method to perform the request is determined from
 		       str)))
 		   programs)
 		programs))))
-    (not (null twittering-tls-program))))
+    (not (null twindrill-tls-program))))
 
 ;; TODO: proxy
-(defun twittering-send-http-request-native (name buffer connection-info sentinel)
+(defun twindrill-send-http-request-native (name buffer connection-info sentinel)
   (let* ((request (cdr (assq 'request connection-info)))
 	 (uri (cdr (assq 'uri connection-info)))
 	 (method (cdr (assq 'method request)))
@@ -2357,7 +2360,7 @@ The method to perform the request is determined from
 		  (or post-body "")))
 	 (coding-system-for-read 'binary)
 	 (coding-system-for-write 'binary)
-	 (tls-program twittering-tls-program)
+	 (tls-program twindrill-tls-program)
 	 (proc
 	  (funcall (if use-ssl
 		       'open-tls-stream
@@ -2367,13 +2370,13 @@ The method to perform the request is determined from
     (when proc
       (set-process-buffer proc buffer)
       (when (functionp sentinel)
-	(if (twittering-process-alive-p proc)
+	(if (twindrill-process-alive-p proc)
 	    (set-process-sentinel proc sentinel)
 	  (funcall sentinel proc "finished")))
       (process-send-string proc request-str)
       proc)))
 
-(defun twittering-pre-process-buffer-native (proc buffer connection-info)
+(defun twindrill-pre-process-buffer-native (proc buffer connection-info)
   (let ((use-ssl (cdr (assq 'use-ssl connection-info)))
 	(args (process-command proc)))
     (cond
@@ -2412,7 +2415,7 @@ The method to perform the request is determined from
 ;;;; Basic HTTP functions with curl
 ;;;;
 
-(defun twittering-find-curl-program ()
+(defun twindrill-find-curl-program ()
   "Returns an appropriate `curl' program pathname or nil if not found."
   (or (executable-find "curl")
       (let ((windows-p (memq system-type '(windows-nt cygwin)))
@@ -2425,16 +2428,16 @@ The method to perform the request is determined from
 	(and windows-p
 	     (file-exists-p curl.exe) curl.exe))))
 
-(defun twittering-start-http-session-curl-p ()
+(defun twindrill-start-http-session-curl-p ()
   "Return t if curl was installed, otherwise nil."
-  (unless twittering-curl-program
-    (setq twittering-curl-program (twittering-find-curl-program)))
-  (not (null twittering-curl-program)))
+  (unless twindrill-curl-program
+    (setq twindrill-curl-program (twindrill-find-curl-program)))
+  (not (null twindrill-curl-program)))
 
-(defun twittering-start-http-session-curl-https-p ()
+(defun twindrill-start-http-session-curl-https-p ()
   "Return t if curl was installed and the curl support HTTPS, otherwise nil."
-  (when (twittering-start-http-session-curl-p)
-    (unless twittering-curl-program-https-capability
+  (when (twindrill-start-http-session-curl-p)
+    (unless twindrill-curl-program-https-capability
       (with-temp-buffer
 	(let ((coding-system-for-read 'iso-safe)
 	      (coding-system-for-write 'iso-safe)
@@ -2442,17 +2445,17 @@ The method to perform the request is determined from
 	      ;; because it is possible that the directory pointed by
 	      ;; `default-directory' has been already removed.
 	      (default-directory temporary-file-directory))
-	  (call-process twittering-curl-program
+	  (call-process twindrill-curl-program
 			nil (current-buffer) nil
 			"--version")
 	  (goto-char (point-min))
-	  (setq twittering-curl-program-https-capability
+	  (setq twindrill-curl-program-https-capability
 		(if (search-forward-regexp "^Protocols: .*https" nil t)
 		    'capable
 		  'incapable)))))
-    (eq twittering-curl-program-https-capability 'capable)))
+    (eq twindrill-curl-program-https-capability 'capable)))
 
-(defun twittering-send-http-request-curl (name buffer connection-info sentinel)
+(defun twindrill-send-http-request-curl (name buffer connection-info sentinel)
   (let* ((request (cdr (assq 'request connection-info)))
 	 (method (cdr (assq 'method request)))
 	 (uri (cdr (assq 'uri request)))
@@ -2519,11 +2522,11 @@ The method to perform the request is determined from
 	   (if use-ssl
 	       cacert-file-base-directory
 	     default-directory)))
-    (twittering-start-process-with-sentinel name buffer
-					    twittering-curl-program
+    (twindrill-start-process-with-sentinel name buffer
+					    twindrill-curl-program
 					    curl-args sentinel)))
 
-(defun twittering-pre-process-buffer-curl (proc buffer connection-info)
+(defun twindrill-pre-process-buffer-curl (proc buffer connection-info)
   (let ((use-ssl (cdr (assq 'use-ssl connection-info)))
 	(use-proxy (cdr (assq 'use-proxy connection-info))))
     (when (and use-ssl use-proxy)
@@ -2549,17 +2552,17 @@ The method to perform the request is determined from
 ;;;; Basic HTTP functions with wget
 ;;;;
 
-(defun twittering-find-wget-program ()
+(defun twindrill-find-wget-program ()
   "Returns an appropriate `wget' program pathname or nil if not found."
   (executable-find "wget"))
 
-(defun twittering-start-http-session-wget-p ()
+(defun twindrill-start-http-session-wget-p ()
   "Return t if `wget' was installed, otherwise nil."
-  (unless twittering-wget-program
-    (setq twittering-wget-program (twittering-find-wget-program)))
-  (not (null twittering-wget-program)))
+  (unless twindrill-wget-program
+    (setq twindrill-wget-program (twindrill-find-wget-program)))
+  (not (null twindrill-wget-program)))
 
-(defun twittering-send-http-request-wget (name buffer connection-info sentinel)
+(defun twindrill-send-http-request-wget (name buffer connection-info sentinel)
   (let* ((request (cdr (assq 'request connection-info)))
 	 (method (cdr (assq 'method request)))
 	 (scheme (cdr (assq 'scheme request)))
@@ -2626,11 +2629,11 @@ The method to perform the request is determined from
 		`(,(format "%s_proxy=%s://%s:%s/" scheme
 			   scheme proxy-server proxy-port)))
 	    ,@process-environment)))
-    (twittering-start-process-with-sentinel name buffer
-					    twittering-wget-program args
+    (twindrill-start-process-with-sentinel name buffer
+					    twindrill-wget-program args
 					    sentinel)))
 
-(defun twittering-pre-process-buffer-wget (proc buffer connection-info)
+(defun twindrill-pre-process-buffer-wget (proc buffer connection-info)
   (with-current-buffer buffer
     (save-excursion
       (goto-char (point-min))
@@ -2650,18 +2653,18 @@ The method to perform the request is determined from
 ;;;; Basic HTTP functions with url library
 ;;;;
 
-(defun twittering-start-http-session-urllib-p ()
+(defun twindrill-start-http-session-urllib-p ()
   "Return t if url library is available, otherwise nil."
   (require 'url nil t))
 
-(defun twittering-start-http-session-urllib-https-p ()
+(defun twindrill-start-http-session-urllib-https-p ()
   "Return t if url library can be used for HTTPS, otherwise nil."
-  (and (not twittering-proxy-use)
+  (and (not twindrill-proxy-use)
        (require 'url nil t)
        (cond
 	((<= 22 emacs-major-version)
 	 ;; On Emacs22 and later, `url' requires `tls'.
-	 (twittering-start-http-session-native-tls-p))
+	 (twindrill-start-http-session-native-tls-p))
 	((require 'ssl nil t)
 	 ;; On Emacs21, `url' requires `ssl'.
 	 t)
@@ -2677,14 +2680,14 @@ The method to perform the request is determined from
 	     ;; `open-ssl-stream', which is included in `ssl.el'.
 	     ;; Even if `ssl' cannot be loaded, `open-tls-stream' can be
 	     ;; used as an alternative of the function.
-	     (and (twittering-start-http-session-native-tls-p)
+	     (and (twindrill-start-http-session-native-tls-p)
 		  (defalias 'open-ssl-stream 'open-tls-stream)))
 	 (provide 'ssl)
 	 t)
 	(t
 	 nil))))
 
-(defun twittering-send-http-request-urllib (name buffer connection-info sentinel)
+(defun twindrill-send-http-request-urllib (name buffer connection-info sentinel)
   (let* ((request (cdr (assq 'request connection-info)))
 	 (method (cdr (assq 'method request)))
 	 (scheme (cdr (assq 'scheme request)))
@@ -2724,9 +2727,9 @@ The method to perform the request is determined from
 			      header-list)
 			   header-list))))
 	 (url-request-data post-body)
-	 (url-show-status twittering-url-show-status)
+	 (url-show-status twindrill-url-show-status)
 	 (url-http-attempt-keepalives nil)
-	 (tls-program twittering-tls-program)
+	 (tls-program twindrill-tls-program)
 	 (coding-system-for-read 'binary)
 	 (coding-system-for-write 'binary))
     (lexical-let ((sentinel sentinel)
@@ -2745,8 +2748,8 @@ The method to perform the request is determined from
 			 "finished")))
 		  ;; Callback may be called multiple times.
 		  ;; (as filter and sentinel?)
-		  (unless (local-variable-if-set-p 'twittering-retrieved)
-		    (set (make-local-variable 'twittering-retrieved)
+		  (unless (local-variable-if-set-p 'twindrill-retrieved)
+		    (set (make-local-variable 'twindrill-retrieved)
 			 'not-completed)
 		    (with-current-buffer buffer
 		      (set-buffer-multibyte nil)
@@ -2755,9 +2758,9 @@ The method to perform the request is determined from
 		    (unwind-protect
 			(apply sentinel proc status-str nil)
 		      (set-process-buffer proc url-buffer)
-		      (if (eq twittering-retrieved 'exited)
+		      (if (eq twindrill-retrieved 'exited)
 			  (url-mark-buffer-as-dead url-buffer)
-			(setq twittering-retrieved 'completed))))
+			(setq twindrill-retrieved 'completed))))
 		  (when (memq (process-status proc)
 			      '(nil closed exit failed signal))
 		    ;; Mark `url-buffer' as dead when the process exited
@@ -2767,20 +2770,20 @@ The method to perform the request is determined from
 		    ;; `(apply sentinel ...)'. In the case, `buffer' should
 		    ;; not be killed. It should be killed after the
 		    ;; evaluation of `sentinel'.
-		    (if (eq twittering-retrieved 'completed)
+		    (if (eq twindrill-retrieved 'completed)
 			(url-mark-buffer-as-dead url-buffer)
-		      (setq twittering-retrieved 'exited))))))))
+		      (setq twindrill-retrieved 'exited))))))))
 	(when (buffer-live-p result-buffer)
 	  (with-current-buffer result-buffer
 	    (set (make-local-variable 'url-show-status)
-		 twittering-url-show-status)
+		 twindrill-url-show-status)
 	    ;; Make `url-http-attempt-keepalives' buffer-local
 	    ;; in order to send the current value of the variable
 	    ;; to the sentinel invoked for HTTP redirection,
 	    (make-local-variable 'url-http-attempt-keepalives))
 	  (get-buffer-process result-buffer))))))
 
-(defun twittering-pre-process-buffer-urllib (proc buffer connection-info)
+(defun twindrill-pre-process-buffer-urllib (proc buffer connection-info)
   (with-current-buffer buffer
     (save-excursion
       (goto-char (point-max))
@@ -2801,13 +2804,13 @@ The method to perform the request is determined from
 ;;;; HTTP functions for twitter-like serivce
 ;;;;
 
-(defun twittering-http-application-headers (&optional method headers)
-  "Return an assoc list of HTTP headers for twittering-mode."
+(defun twindrill-http-application-headers (&optional method headers)
+  "Return an assoc list of HTTP headers for twindrill-mode."
   (unless method
     (setq method "GET"))
 
   (let ((headers headers))
-    (push (cons "User-Agent" (twittering-user-agent)) headers)
+    (push (cons "User-Agent" (twindrill-user-agent)) headers)
     (when (string= "GET" method)
       (push (cons "Accept"
 		  (concat
@@ -2825,25 +2828,25 @@ The method to perform the request is determined from
     headers
     ))
 
-(defun twittering-add-application-header-to-http-request (request account-info)
+(defun twindrill-add-application-header-to-http-request (request account-info)
   "Make a new HTTP request based on REQUEST with the authorization header.
 The authorization header is generated from ACCOUNT-INFO.
 ACCOUNT-INFO must be an alist that includes the following keys;
-  \"screen_name\" and \"password\" if `twittering-auth-method' is 'basic,
+  \"screen_name\" and \"password\" if `twindrill-auth-method' is 'basic,
   \"screen_name\", \"oauth_token\" and \"oauth_token_secret\" if
-  `twittering-auth-method' is 'oauth or 'xauth."
+  `twindrill-auth-method' is 'oauth or 'xauth."
   (let* ((method (cdr (assq 'method request)))
 	 (auth-str
 	  (cond
-	   ((eq twittering-auth-method 'basic)
-	    (twittering-make-basic-authentication-string account-info))
-	   ((memq twittering-auth-method '(oauth xauth))
-	    (twittering-make-oauth-authentication-string account-info request))
+	   ((eq twindrill-auth-method 'basic)
+	    (twindrill-make-basic-authentication-string account-info))
+	   ((memq twindrill-auth-method '(oauth xauth))
+	    (twindrill-make-oauth-authentication-string account-info request))
 	   (t
 	    nil)))
-	 (cookie-str (twittering-make-cookie-string request account-info))
+	 (cookie-str (twindrill-make-cookie-string request account-info))
 	 (application-headers
-	  `(,@(twittering-http-application-headers method)
+	  `(,@(twindrill-http-application-headers method)
 	    ("Authorization" . ,auth-str)
 	    ,@(when cookie-str
 		`(("Cookie" . ,cookie-str))))))
@@ -2854,12 +2857,12 @@ ACCOUNT-INFO must be an alist that includes the following keys;
 		entry))
 	    request)))
 
-(defun twittering-get-error-message (header-info connection-info &optional buffer)
+(defun twindrill-get-error-message (header-info connection-info &optional buffer)
   "Return an error message generated from the arguments.
-HEADER-INFO must be an alist generated by `twittering-get-response-header'.
+HEADER-INFO must be an alist generated by `twindrill-get-response-header'.
 CONNECTION-INFO must be an alist generated by
-`twittering-make-connection-info'. It may include some additional information
-which is added by `twittering-send-http-request'.
+`twindrill-make-connection-info'. It may include some additional information
+which is added by `twindrill-send-http-request'.
 BUFFER must be nil or a HTTP response body, which includes error messages from
 the server when the HTTP status code equals to 400 or 403.
 If BUFFER is nil, the current buffer is used instead."
@@ -2867,7 +2870,7 @@ If BUFFER is nil, the current buffer is used instead."
 	(status-line (cdr (assq 'status-line header-info)))
 	(status-code (cdr (assq 'status-code header-info)))
 	(format
-	 (twittering-get-content-subtype-symbol-from-header-info header-info)))
+	 (twindrill-get-content-subtype-symbol-from-header-info header-info)))
     (cond
      ((and (buffer-live-p buffer)
 	   (member status-code '("400" "401" "403" "404")))
@@ -2883,13 +2886,13 @@ If BUFFER is nil, the current buffer is used instead."
 	       ((eq format 'xml)
 		(let ((xmltree
 		       (with-current-buffer buffer
-			 (twittering-xml-parse-region (point-min)
+			 (twindrill-xml-parse-region (point-min)
 						      (point-max)))))
 		  (car (cddr (assq 'error (or (assq 'errors xmltree)
 					      (assq 'hash xmltree)))))))
 	       ((eq format 'json)
 		(let ((json-object (with-current-buffer buffer
-				     (twittering-json-read))))
+				     (twindrill-json-read))))
 		  (cdr (assq 'error json-object))))
 	       (t
 		;; ATOM is not supported.
@@ -2900,12 +2903,12 @@ If BUFFER is nil, the current buffer is used instead."
      (t
       status-line))))
 
-(defun twittering-http-get (account-info-alist host method &optional parameters format additional-info sentinel clean-up-sentinel)
+(defun twindrill-http-get (account-info-alist host method &optional parameters format additional-info sentinel clean-up-sentinel)
   "Send a HTTP GET request with application headers.
 ACCOUNT-INFO-ALIST is an alist used by
-`twittering-add-application-header-to-http-request'.
+`twindrill-add-application-header-to-http-request'.
 The alist made by `((account-info . ,ACCOUNT-INFO-ALIST) ,@ADDITIONAL-INFO)'
-is used as the argument `additional-info' of `twittering-send-http-request'.
+is used as the argument `additional-info' of `twindrill-send-http-request'.
 HOST is hostname of remote side, api.twitter.com (or search.twitter.com).
 METHOD must be one of Twitter API method classes
  (statuses, users or direct_messages).
@@ -2915,31 +2918,31 @@ FORMAT is a response data format (\"xml\", \"atom\", \"json\")"
   (let* ((format (or format "xml"))
 	 (sentinel
 	  (lexical-let ((sentinel (or sentinel
-				      'twittering-http-get-default-sentinel)))
+				      'twindrill-http-get-default-sentinel)))
 	    (lambda (proc status connection-info header-info)
-	      (twittering-update-server-info connection-info header-info)
+	      (twindrill-update-server-info connection-info header-info)
 	      (apply sentinel proc status connection-info header-info nil))))
 	 (path (concat "/" method "." format))
 	 (headers nil)
 	 (port nil)
 	 (post-body "")
 	 (request
-	  (twittering-add-application-header-to-http-request
-	   (twittering-make-http-request "GET" headers host port path
+	  (twindrill-add-application-header-to-http-request
+	   (twindrill-make-http-request "GET" headers host port path
 					 parameters post-body
-					 twittering-use-ssl)
+					 twindrill-use-ssl)
 	   account-info-alist))
 	 (additional-info
 	  `((account-info . ,account-info-alist)
 	    ,@additional-info)))
-    (twittering-send-http-request request additional-info
+    (twindrill-send-http-request request additional-info
 				  sentinel clean-up-sentinel)))
 
-(defun twittering-http-get-default-sentinel (proc status connection-info header-info)
+(defun twindrill-http-get-default-sentinel (proc status connection-info header-info)
   (let ((status-line (cdr (assq 'status-line header-info)))
 	(status-code (cdr (assq 'status-code header-info)))
 	(format
-	 (twittering-get-content-subtype-symbol-from-header-info header-info)))
+	 (twindrill-get-content-subtype-symbol-from-header-info header-info)))
     (case-string
      status-code
      (("200")
@@ -2950,46 +2953,46 @@ FORMAT is a response data format (\"xml\", \"atom\", \"json\")"
 	     (statuses
 	      (cond
 	       ((eq format 'json)
-		(let ((json-array (twittering-json-read)))
+		(let ((json-array (twindrill-json-read)))
 		  (cond
 		   ((null json-array)
 		    nil)
 		   ((eq (car spec) 'search)
 		    (cond
 		     ((memq service-method '(twitter statusnet))
-		      (mapcar 'twittering-json-object-to-a-status-on-search
+		      (mapcar 'twindrill-json-object-to-a-status-on-search
 			      (cdr (assq 'results json-array))))
 		     ((eq service-method 'twitter-api-v1.1)
-		      (mapcar 'twittering-json-object-to-a-status
+		      (mapcar 'twindrill-json-object-to-a-status
 			      (cdr (assq 'statuses json-array))))))
-		   ((twittering-timeline-spec-is-direct-messages-p spec)
+		   ((twindrill-timeline-spec-is-direct-messages-p spec)
 		    (mapcar
-		     'twittering-json-object-to-a-status-on-direct-messages
+		     'twindrill-json-object-to-a-status-on-direct-messages
 		     json-array))
 		   (t
-		    (mapcar 'twittering-json-object-to-a-status
+		    (mapcar 'twindrill-json-object-to-a-status
 			    json-array)))))
 	       ((eq format 'xml)
 		(let ((xmltree
-		       (twittering-xml-parse-region (point-min) (point-max))))
+		       (twindrill-xml-parse-region (point-min) (point-max))))
 		  (when xmltree
-		    (twittering-xmltree-to-status xmltree))))
+		    (twindrill-xmltree-to-status xmltree))))
 	       ((eq format 'atom)
 		(let ((xmltree
-		       (twittering-xml-parse-region (point-min) (point-max))))
+		       (twindrill-xml-parse-region (point-min) (point-max))))
 		  (when xmltree
-		    (twittering-atom-xmltree-to-status xmltree))))
+		    (twindrill-atom-xmltree-to-status xmltree))))
 	       (t
 		nil)))
 	     (rendered-tweets nil))
 	(let ((updated-timeline-info
-	       (twittering-add-statuses-to-timeline-data statuses spec))
-	      (buffer (twittering-get-buffer-from-spec spec)))
+	       (twindrill-add-statuses-to-timeline-data statuses spec))
+	      (buffer (twindrill-get-buffer-from-spec spec)))
 	  ;; FIXME: We should retrieve un-retrieved statuses until
 	  ;; statuses is nil. twitter server returns nil as
 	  ;; xmltree with HTTP status-code is "200" when we
 	  ;; retrieved all un-retrieved statuses.
-	  (if twittering-notify-successful-http-get
+	  (if twindrill-notify-successful-http-get
 	      (if updated-timeline-info
 		  (concat
 		   (format "Fetching %s. Success. " spec-string)
@@ -3010,24 +3013,24 @@ FORMAT is a response data format (\"xml\", \"atom\", \"json\")"
 	;; Remove specs related to the invalid spec from history.
 	(mapc
 	 (lambda (buffer)
-	   (let ((other-spec (twittering-get-timeline-spec-for-buffer buffer))
+	   (let ((other-spec (twindrill-get-timeline-spec-for-buffer buffer))
 		 (other-spec-string
-		  (twittering-get-timeline-spec-string-for-buffer buffer)))
-	     (when (twittering-timeline-spec-depending-on-p other-spec spec)
-	       (twittering-remove-timeline-spec-string-from-history
+		  (twindrill-get-timeline-spec-string-for-buffer buffer)))
+	     (when (twindrill-timeline-spec-depending-on-p other-spec spec)
+	       (twindrill-remove-timeline-spec-string-from-history
 		other-spec-string))))
-	 (twittering-get-buffer-list)))
+	 (twindrill-get-buffer-list)))
       (format "Response: %s"
-	      (twittering-get-error-message header-info connection-info)))
+	      (twindrill-get-error-message header-info connection-info)))
      (t
       (format "Response: %s"
-	      (twittering-get-error-message header-info connection-info))))))
+	      (twindrill-get-error-message header-info connection-info))))))
 
-(defun twittering-retrieve-single-tweet-sentinel (proc status connection-info header-info)
+(defun twindrill-retrieve-single-tweet-sentinel (proc status connection-info header-info)
   (let ((status-line (cdr (assq 'status-line header-info)))
 	(status-code (cdr (assq 'status-code header-info)))
 	(format
-	 (twittering-get-content-subtype-symbol-from-header-info header-info)))
+	 (twindrill-get-content-subtype-symbol-from-header-info header-info)))
     (case-string
      status-code
      (("200" "403" "404")
@@ -3038,72 +3041,72 @@ FORMAT is a response data format (\"xml\", \"atom\", \"json\")"
 	      (cond
 	       ((string= status-code "403")
 		;; Forbidden. Maybe a protected tweet?
-		(twittering-make-alist-of-forbidden-tweet id
+		(twindrill-make-alist-of-forbidden-tweet id
 							  user-screen-name))
 	       ((string= status-code "404")
 		;; The requested resource does not exist.
-		(twittering-make-alist-of-non-existent-tweet id
+		(twindrill-make-alist-of-non-existent-tweet id
 							     user-screen-name))
 	       ((eq format 'json)
-		(let ((json-object (twittering-json-read)))
-		  (twittering-json-object-to-a-status json-object)))
+		(let ((json-object (twindrill-json-read)))
+		  (twindrill-json-object-to-a-status json-object)))
 	       ((eq format 'xml)
 		(let ((xmltree
-		       (twittering-xml-parse-region (point-min) (point-max))))
+		       (twindrill-xml-parse-region (point-min) (point-max))))
 		  (when xmltree
 		    (car
-		     (twittering-xmltree-to-status
+		     (twindrill-xmltree-to-status
 		      `((statuses nil ,@xmltree)))))))
 	       (t
 		nil))))
 	(when status
-	  (twittering-add-statuses-to-timeline-data `(,status) '(:single))
+	  (twindrill-add-statuses-to-timeline-data `(,status) '(:single))
 	  (let ((buffer (cdr (assq 'buffer connection-info)))
 		(spec (cdr (assq 'timeline-spec connection-info)))
 		(prop
 		 (cdr (assq 'property-to-be-redisplayed connection-info))))
 	    (cond
 	     ((null prop)
-	      ;; The process has been invoked via `twittering-call-api' with
+	      ;; The process has been invoked via `twindrill-call-api' with
 	      ;; the command `retrieve-timeline', not the command
 	      ;; `retrieve-single-tweet' for rendering a replied tweet.
 	      ;; No special property that specifies regions being re-rendered
 	      ;; is given.
 	      (let ((new-statuses `(,status))
-		    (buffer (twittering-get-buffer-from-spec spec)))
+		    (buffer (twindrill-get-buffer-from-spec spec)))
 		(when (and new-statuses buffer)
-		  (twittering-render-timeline buffer new-statuses t))))
+		  (twindrill-render-timeline buffer new-statuses t))))
 	     ((and buffer prop (buffer-live-p buffer))
-	      (twittering-redisplay-status-on-each-buffer buffer prop)
+	      (twindrill-redisplay-status-on-each-buffer buffer prop)
 	      (with-current-buffer buffer
 		(save-excursion
 		  (let ((buffer-read-only nil))
 		    (lexical-let ((prop prop))
-		      (twittering-for-each-property-region
+		      (twindrill-for-each-property-region
 		       prop
 		       (lambda (beg end value)
 			 ;; Remove the property required no longer.
 			 (remove-text-properties beg end `(,prop nil))
 			 (goto-char beg)
-			 (twittering-render-replied-statuses)))))))))))
+			 (twindrill-render-replied-statuses)))))))))))
 	(cond
 	 ((string= status-code "403")
 	  (format "You are not authorized to see this tweet (ID %s)." id))
 	 ((string= status-code "404")
 	  (format "The tweet with ID %s does not exist." id))
-	 (twittering-notify-successful-http-get
+	 (twindrill-notify-successful-http-get
 	  (format "Fetching %s.  Success." id))
 	 (t
 	  nil))))
      (t
       (format "Response: %s"
-	      (twittering-get-error-message header-info connection-info))))))
+	      (twindrill-get-error-message header-info connection-info))))))
 
-(defmacro twittering-http-get-list-sentinel-base (what)
+(defmacro twindrill-http-get-list-sentinel-base (what)
   `(let ((status-line (cdr (assq 'status-line header-info)))
 	 (status-code (cdr (assq 'status-code header-info)))
 	 (format
-	  (twittering-get-content-subtype-symbol-from-header-info header-info))
+	  (twindrill-get-content-subtype-symbol-from-header-info header-info))
 	 (indexes nil)
 	 (mes nil))
      (case-string
@@ -3111,7 +3114,7 @@ FORMAT is a response data format (\"xml\", \"atom\", \"json\")"
       (("200")
        (cond
 	((eq format 'xml)
-	 (let ((xmltree (twittering-xml-parse-region (point-min) (point-max))))
+	 (let ((xmltree (twindrill-xml-parse-region (point-min) (point-max))))
 	   (when xmltree
 	     (setq indexes
 		   (mapcar
@@ -3127,7 +3130,7 @@ FORMAT is a response data format (\"xml\", \"atom\", \"json\")"
 			    ))
 		   ))))
 	((eq format 'json)
-	 (let* ((json-object (twittering-json-read))
+	 (let* ((json-object (twindrill-json-read))
 		(json-list
 		 (cond
 		  ((arrayp json-object)
@@ -3148,33 +3151,33 @@ FORMAT is a response data format (\"xml\", \"atom\", \"json\")"
 	 nil)))
       (t
        (setq mes (format "Response: %s"
-			 (twittering-get-error-message header-info
+			 (twindrill-get-error-message header-info
 						       connection-info)))))
-     (setq twittering-list-index-retrieved
+     (setq twindrill-list-index-retrieved
 	   (or indexes
 	       mes
 	       "")) ;; set "" explicitly if user does not have a list.
      mes))
 
-(defun twittering-http-get-list-index-sentinel (proc status connection-info header-info)
-  (twittering-http-get-list-sentinel-base 'slug))
+(defun twindrill-http-get-list-index-sentinel (proc status connection-info header-info)
+  (twindrill-http-get-list-sentinel-base 'slug))
 
-(defun twittering-http-get-list-subscriptions-sentinel (proc status connection-info header-info)
-  (let ((result (twittering-http-get-list-sentinel-base 'full_name)))
-    (when (listp twittering-list-index-retrieved)
-      (setq twittering-list-index-retrieved
+(defun twindrill-http-get-list-subscriptions-sentinel (proc status connection-info header-info)
+  (let ((result (twindrill-http-get-list-sentinel-base 'full_name)))
+    (when (listp twindrill-list-index-retrieved)
+      (setq twindrill-list-index-retrieved
 	    (mapcar (lambda (str)
 		      (and (string-match "\\`@\\(.*\\)\\'" str)
 			   (match-string 1 str)))
-		    twittering-list-index-retrieved)))
+		    twindrill-list-index-retrieved)))
     result))
 
-(defun twittering-http-post (account-info-alist host method &optional parameters format additional-info sentinel clean-up-sentinel)
+(defun twindrill-http-post (account-info-alist host method &optional parameters format additional-info sentinel clean-up-sentinel)
   "Send HTTP POST request to api.twitter.com (or search.twitter.com)
 ACCOUNT-INFO-ALIST is an alist used by
-`twittering-add-application-header-to-http-request'.
+`twindrill-add-application-header-to-http-request'.
 The alist made by `((account-info . ,ACCOUNT-INFO-ALIST) ,@ADDITIONAL-INFO)'
-is used as the argument `additional-info' of `twittering-send-http-request'.
+is used as the argument `additional-info' of `twindrill-send-http-request'.
 HOST is hostname of remote side, api.twitter.com (or search.twitter.com).
 METHOD must be one of Twitter API method classes
  (statuses, users or direct_messages).
@@ -3184,26 +3187,26 @@ FORMAT is a response data format (\"xml\", \"atom\", \"json\")"
   (let* ((format (or format "xml"))
 	 (sentinel
 	  (lexical-let ((sentinel (or sentinel
-				      'twittering-http-post-default-sentinel)))
+				      'twindrill-http-post-default-sentinel)))
 	    (lambda (proc status connection-info header-info)
-	      (twittering-update-server-info connection-info header-info)
+	      (twindrill-update-server-info connection-info header-info)
 	      (apply sentinel proc status connection-info header-info nil))))
 	 (path (concat "/" method "." format))
 	 (headers nil)
 	 (port nil)
 	 (post-body "")
 	 (request
-	  (twittering-add-application-header-to-http-request
-	   (twittering-make-http-request "POST" headers host port path
+	  (twindrill-add-application-header-to-http-request
+	   (twindrill-make-http-request "POST" headers host port path
 					 parameters post-body
-					 twittering-use-ssl)
+					 twindrill-use-ssl)
 	   account-info-alist))
 	 (additional-info `((account-info . ,account-info-alist)
 			    ,@additional-info)))
-    (twittering-send-http-request request additional-info
+    (twindrill-send-http-request request additional-info
 				  sentinel clean-up-sentinel)))
 
-(defun twittering-http-post-default-sentinel (proc status connection-info header-info)
+(defun twindrill-http-post-default-sentinel (proc status connection-info header-info)
   (let ((status-line (cdr (assq 'status-line header-info)))
 	(status-code (cdr (assq 'status-code header-info))))
     (case-string
@@ -3212,14 +3215,14 @@ FORMAT is a response data format (\"xml\", \"atom\", \"json\")"
       "Success: Post.")
      (t
       (format "Response: %s"
-	      (twittering-get-error-message header-info connection-info))))))
+	      (twindrill-get-error-message header-info connection-info))))))
 
-(defun twittering-http-post-destroy-status-sentinel (proc status connection-info header-info)
-  "A sentinel for deleting a status invoked via `twittering-call-api'."
+(defun twindrill-http-post-destroy-status-sentinel (proc status connection-info header-info)
+  "A sentinel for deleting a status invoked via `twindrill-call-api'."
   (let ((status-line (cdr (assq 'status-line header-info)))
 	(status-code (cdr (assq 'status-code header-info)))
 	(format
-	 (twittering-get-content-subtype-symbol-from-header-info header-info)))
+	 (twindrill-get-content-subtype-symbol-from-header-info header-info)))
     (case-string
      status-code
      (("200")
@@ -3227,11 +3230,11 @@ FORMAT is a response data format (\"xml\", \"atom\", \"json\")"
 	      (cond
 	       ((eq format 'xml)
 		(let ((xml
-		       (twittering-xml-parse-region (point-min) (point-max))))
+		       (twindrill-xml-parse-region (point-min) (point-max))))
 		  `((id . ,(elt (assq 'id (assq 'status xml)) 2))
 		    (text . ,(elt (assq 'text (assq 'status xml)) 2)))))
 	       ((eq format 'json)
-		(let ((json-object (twittering-json-read)))
+		(let ((json-object (twindrill-json-read)))
 		  `((id . ,(cdr (assq 'id_str json-object)))
 		    (text . ,(cdr (assq 'text json-object))))))
 	       (t
@@ -3241,19 +3244,19 @@ FORMAT is a response data format (\"xml\", \"atom\", \"json\")"
 	     (text (cdr (assq 'text params))))
 	(cond
 	 (id
-	  (twittering-delete-status-from-data-table id)
+	  (twindrill-delete-status-from-data-table id)
 	  (format "Deleting \"%s\". Success." text))
 	 (t
 	  "Failure: the response for deletion could not be parsed."))))
      (t
       (format "Response: %s"
-	      (twittering-get-error-message header-info connection-info))))))
+	      (twindrill-get-error-message header-info connection-info))))))
 
 ;;;;
 ;;;; OAuth
 ;;;;
 
-(defun twittering-oauth-url-encode (str &optional coding-system)
+(defun twindrill-oauth-url-encode (str &optional coding-system)
   "Encode string according to Percent-Encoding defined in RFC 3986."
   (let ((coding-system (or (when (and coding-system
 				      (coding-system-p coding-system))
@@ -3274,7 +3277,7 @@ FORMAT is a response data format (\"xml\", \"atom\", \"json\")"
      (encode-coding-string str coding-system)
      "")))
 
-(defun twittering-oauth-unhex (c)
+(defun twindrill-oauth-unhex (c)
   (cond
    ((and (<= ?0 c) (<= c ?9))
     (- c ?0))
@@ -3284,7 +3287,7 @@ FORMAT is a response data format (\"xml\", \"atom\", \"json\")"
     (+ 10 (- c ?a)))
    ))
 
-(defun twittering-oauth-url-decode (str &optional coding-system)
+(defun twindrill-oauth-url-decode (str &optional coding-system)
   (let* ((coding-system (or (when (and coding-system
 				       (coding-system-p coding-system))
 			      coding-system)
@@ -3302,15 +3305,15 @@ FORMAT is a response data format (\"xml\", \"atom\", \"json\")"
 	     (let* ((c1 (string-to-char (match-string 1 substr)))
 		    (c0 (string-to-char (match-string 2 substr)))
 		    (tail (match-string 3 substr))
-		    (ch (+ (* 16 (twittering-oauth-unhex c1))
-			   (twittering-oauth-unhex c0))))
+		    (ch (+ (* 16 (twindrill-oauth-unhex c1))
+			   (twindrill-oauth-unhex c0))))
 	       (concat (char-to-string ch) tail))
 	   substr))
        tail
        ""))
      coding-system)))
 
-(defun twittering-oauth-make-signature-base-string (method base-url parameters)
+(defun twindrill-oauth-make-signature-base-string (method base-url parameters)
   ;; "OAuth Core 1.0a"
   ;; http://oauth.net/core/1.0a/#anchor13
   (let* ((sorted-parameters (copy-sequence parameters))
@@ -3321,19 +3324,19 @@ FORMAT is a response data format (\"xml\", \"atom\", \"json\")"
     (concat
      method
      "&"
-     (twittering-oauth-url-encode base-url)
+     (twindrill-oauth-url-encode base-url)
      "&"
      (mapconcat
       (lambda (entry)
 	(let ((key (car entry))
 	      (value (cdr entry)))
-	  (concat (twittering-oauth-url-encode key)
+	  (concat (twindrill-oauth-url-encode key)
 		  "%3D"
-		  (twittering-oauth-url-encode value))))
+		  (twindrill-oauth-url-encode value))))
       sorted-parameters
       "%26"))))
 
-(defun twittering-oauth-make-random-string (len)
+(defun twindrill-oauth-make-random-string (len)
   (let* ((table
 	  (concat
 	   "0123456789"
@@ -3347,7 +3350,7 @@ FORMAT is a response data format (\"xml\", \"atom\", \"json\")"
       (setq l (1+ l)))
     result))
 
-(defun twittering-sha1 (&rest args)
+(defun twindrill-sha1 (&rest args)
   "Return the SHA1 (Secure Hash Algorithm) of an object.
 
 This is equivalent to the function `sha1' except that
@@ -3376,7 +3379,7 @@ This function avoid the dependency by binding `coding-system-for-read' and
 ;;; The below function is derived from `hmac-sha1' retrieved
 ;;; from http://www.emacswiki.org/emacs/HmacShaOne.
 ;;;
-(defun twittering-hmac-sha1 (key message)
+(defun twindrill-hmac-sha1 (key message)
   "Return an HMAC-SHA1 authentication code for KEY and MESSAGE.
 
 KEY and MESSAGE must be unibyte strings.  The result is a unibyte
@@ -3399,7 +3402,7 @@ encoding, which we can generate as follows:
 
   (let ((unibyte-key   (encode-coding-string key   'utf-8 t))
         (unibyte-value (encode-coding-string value 'utf-8 t)))
-    (twittering-hmac-sha1 unibyte-key unibyte-value))
+    (twindrill-hmac-sha1 unibyte-key unibyte-value))
 
 For keys and values that are already unibyte, the
 `encode-coding-string' calls just return the same string."
@@ -3448,7 +3451,7 @@ For keys and values that are already unibyte, the
 
   (let ((+hmac-sha1-block-size-bytes+ 64)) ; SHA-1 uses 512-bit blocks
     (when (< +hmac-sha1-block-size-bytes+ (length key))
-      (setq key (twittering-sha1 key nil nil t)))
+      (setq key (twindrill-sha1 key nil nil t)))
 
     (let ((key-block (make-vector +hmac-sha1-block-size-bytes+ 0)))
       (dotimes (i (length key))
@@ -3471,18 +3474,18 @@ For keys and values that are already unibyte, the
 	  (setq opad (apply 'unibyte-string (mapcar 'identity opad)))
 	  (setq ipad (apply 'unibyte-string (mapcar 'identity ipad))))
 
-	(twittering-sha1 (concat opad
-				 (twittering-sha1 (concat ipad message)
+	(twindrill-sha1 (concat opad
+				 (twindrill-sha1 (concat ipad message)
 						  nil nil t))
 			 nil nil t)))))
 
-(defun twittering-oauth-auth-str (method base-url query-parameters oauth-parameters key)
+(defun twindrill-oauth-auth-str (method base-url query-parameters oauth-parameters key)
   "Generate the value for HTTP Authorization header on OAuth.
 QUERY-PARAMETERS is an alist for query parameters, where name and value
 must be encoded into the same as they will be sent."
   (let* ((parameters (append query-parameters oauth-parameters))
 	 (base-string
-	  (twittering-oauth-make-signature-base-string method base-url parameters))
+	  (twindrill-oauth-make-signature-base-string method base-url parameters))
 	 (key (if (multibyte-string-p key)
 		  (string-make-unibyte key)
 		key))
@@ -3490,7 +3493,7 @@ must be encoded into the same as they will be sent."
 			  (string-make-unibyte base-string)
 			base-string))
 	 (signature
-	  (base64-encode-string (twittering-hmac-sha1 key base-string))))
+	  (base64-encode-string (twindrill-hmac-sha1 key base-string))))
     (concat
      "OAuth "
      (mapconcat
@@ -3498,34 +3501,34 @@ must be encoded into the same as they will be sent."
 	(concat (car entry) "=\"" (cdr entry) "\""))
       oauth-parameters
       ",")
-     ",oauth_signature=\"" (twittering-oauth-url-encode signature) "\"")))
+     ",oauth_signature=\"" (twindrill-oauth-url-encode signature) "\"")))
 
-(defun twittering-oauth-auth-str-request-token (url query-parameters consumer-key consumer-secret &optional oauth-parameters)
+(defun twindrill-oauth-auth-str-request-token (url query-parameters consumer-key consumer-secret &optional oauth-parameters)
   (let ((key (concat consumer-secret "&"))
 	(oauth-params
 	 (or oauth-parameters
-	     `(("oauth_nonce" . ,(twittering-oauth-make-random-string 43))
+	     `(("oauth_nonce" . ,(twindrill-oauth-make-random-string 43))
 	       ("oauth_callback" . "oob")
 	       ("oauth_signature_method" . "HMAC-SHA1")
 	       ("oauth_timestamp" . ,(format-time-string "%s"))
 	       ("oauth_consumer_key" . ,consumer-key)
 	       ("oauth_version" . "1.0")))))
-    (twittering-oauth-auth-str "POST" url query-parameters oauth-params key)))
+    (twindrill-oauth-auth-str "POST" url query-parameters oauth-params key)))
 
-(defun twittering-oauth-auth-str-exchange-token (url query-parameters consumer-key consumer-secret request-token request-token-secret verifier &optional oauth-parameters)
+(defun twindrill-oauth-auth-str-exchange-token (url query-parameters consumer-key consumer-secret request-token request-token-secret verifier &optional oauth-parameters)
   (let ((key (concat consumer-secret "&" request-token-secret))
 	(oauth-params
 	 (or oauth-parameters
 	     `(("oauth_consumer_key" . ,consumer-key)
-	       ("oauth_nonce" . ,(twittering-oauth-make-random-string 43))
+	       ("oauth_nonce" . ,(twindrill-oauth-make-random-string 43))
 	       ("oauth_signature_method" . "HMAC-SHA1")
 	       ("oauth_timestamp" . ,(format-time-string "%s"))
 	       ("oauth_version" . "1.0")
 	       ("oauth_token" . ,request-token)
 	       ("oauth_verifier" . ,verifier)))))
-    (twittering-oauth-auth-str "POST" url query-parameters oauth-params key)))
+    (twindrill-oauth-auth-str "POST" url query-parameters oauth-params key)))
 
-(defun twittering-oauth-auth-str-access (method url query-parameters consumer-key consumer-secret access-token access-token-secret &optional oauth-parameters)
+(defun twindrill-oauth-auth-str-access (method url query-parameters consumer-key consumer-secret access-token access-token-secret &optional oauth-parameters)
   "Generate a string for Authorization in HTTP header on OAuth.
 METHOD means HTTP method such as \"GET\", \"POST\", etc. URL means a simple
 URL without port number and query parameters.
@@ -3540,20 +3543,20 @@ function."
 	(oauth-params
 	 (or oauth-parameters
 	     `(("oauth_consumer_key" . ,consumer-key)
-	       ("oauth_nonce" . ,(twittering-oauth-make-random-string 43))
+	       ("oauth_nonce" . ,(twindrill-oauth-make-random-string 43))
 	       ("oauth_signature_method" . "HMAC-SHA1")
 	       ("oauth_timestamp" . ,(format-time-string "%s"))
 	       ("oauth_version" . "1.0")
 	       ("oauth_token" . ,access-token)))))
-    (twittering-oauth-auth-str method url query-parameters oauth-params key)))
+    (twindrill-oauth-auth-str method url query-parameters oauth-params key)))
 
 ;; "Using xAuth | dev.twitter.com"
 ;; http://dev.twitter.com/pages/xauth
-(defun twittering-xauth-auth-str-access-token (url query-parameters consumer-key consumer-secret username password &optional oauth-parameters)
+(defun twindrill-xauth-auth-str-access-token (url query-parameters consumer-key consumer-secret username password &optional oauth-parameters)
   (let ((key (concat consumer-secret "&"))
 	(oauth-params
 	 (or oauth-parameters
-	     `(("oauth_nonce" . ,(twittering-oauth-make-random-string 43))
+	     `(("oauth_nonce" . ,(twindrill-oauth-make-random-string 43))
 	       ("oauth_signature_method" . "HMAC-SHA1")
 	       ("oauth_timestamp" . ,(format-time-string "%s"))
 	       ("oauth_consumer_key" . ,consumer-key)
@@ -3562,26 +3565,26 @@ function."
 	 (append query-parameters
 		 `(("x_auth_mode" . "client_auth")
 		   ("x_auth_password"
-		    . ,(twittering-oauth-url-encode password))
+		    . ,(twindrill-oauth-url-encode password))
 		   ("x_auth_username"
-		    . ,(twittering-oauth-url-encode username))))))
-    (twittering-oauth-auth-str "POST" url query-params oauth-params key)))
+		    . ,(twindrill-oauth-url-encode username))))))
+    (twindrill-oauth-auth-str "POST" url query-params oauth-params key)))
 
 ;; "OAuth Core 1.0a"
 ;; http://oauth.net/core/1.0a/#response_parameters
-(defun twittering-oauth-make-response-alist (str)
+(defun twindrill-oauth-make-response-alist (str)
   (mapcar
    (lambda (entry)
      (let* ((pair (split-string entry "="))
 	    (name-entry (car pair))
 	    (value-entry (cadr pair))
-	    (name (and name-entry (twittering-oauth-url-decode name-entry)))
+	    (name (and name-entry (twindrill-oauth-url-decode name-entry)))
 	    (value (and value-entry
-			(twittering-oauth-url-decode value-entry))))
+			(twindrill-oauth-url-decode value-entry))))
        `(,name . ,value)))
    (split-string str "&")))
 
-(defun twittering-oauth-get-response-alist (buffer)
+(defun twindrill-oauth-get-response-alist (buffer)
   (with-current-buffer buffer
     (goto-char (point-min))
     (when (search-forward-regexp
@@ -3598,12 +3601,12 @@ function."
 	 ((search-forward-regexp "\r?\n\r?\n" nil t)
 	  (let ((beg (match-end 0))
 		(end (point-max)))
-	    (twittering-oauth-make-response-alist (buffer-substring beg end))))
+	    (twindrill-oauth-make-response-alist (buffer-substring beg end))))
 	 (t
 	  (message "Response: %s" status-line)
 	  nil))))))
 
-(defun twittering-oauth-get-token-alist-url (url auth-str post-body)
+(defun twindrill-oauth-get-token-alist-url (url auth-str post-body)
   (let* ((url-request-method "POST")
 	 (url-request-extra-headers
 	  `(("Authorization" . ,auth-str)
@@ -3625,17 +3628,17 @@ function."
 					args))
 		       (response-buffer (current-buffer)))
 		  (setq result
-			(twittering-oauth-get-response-alist response-buffer))
+			(twindrill-oauth-get-response-alist response-buffer))
 		  )))))
 	(while (eq result 'queried)
 	  (sleep-for 0.1))
-	(unless twittering-debug-mode
+	(unless twindrill-debug-mode
 	  (kill-buffer buffer))
 	result))))
 
-(defun twittering-oauth-get-token-alist (url auth-str &optional post-body)
+(defun twindrill-oauth-get-token-alist (url auth-str &optional post-body)
   (let ((request
-	 (twittering-make-http-request-from-uri
+	 (twindrill-make-http-request-from-uri
 	  "POST"
 	  `(("Authorization" . ,auth-str)
 	    ("Accept-Charset" . "us-ascii")
@@ -3643,7 +3646,7 @@ function."
 	  url post-body)))
     (lexical-let ((result 'queried))
       (let ((proc
-	     (twittering-send-http-request
+	     (twindrill-send-http-request
 	      request nil
 	      (lambda (proc status connection-info header-info)
 		(let ((status-line (cdr (assq 'status-line header-info)))
@@ -3651,49 +3654,49 @@ function."
 		  (case-string
 		   status-code
 		   (("200")
-		    (when twittering-debug-mode
+		    (when twindrill-debug-mode
 		      (let ((buffer (current-buffer)))
-			(with-current-buffer (twittering-debug-buffer)
+			(with-current-buffer (twindrill-debug-buffer)
 			  (insert-buffer-substring buffer))))
 		    (setq result
-			  (twittering-oauth-make-response-alist
+			  (twindrill-oauth-make-response-alist
 			   (buffer-string)))
 		    nil)
 		   (t
 		    (setq result nil)
 		    (format "Response: %s" status-line)))))
 	      (lambda (proc status connection-info)
-		(when (and (not (twittering-process-alive-p proc))
+		(when (and (not (twindrill-process-alive-p proc))
 			   (eq result 'queried))
 		  (setq result nil))))))
-	(twittering-wait-while nil 0.1
+	(twindrill-wait-while nil 0.1
 			       (and (eq result 'queried)
-				    (twittering-process-alive-p proc)))
+				    (twindrill-process-alive-p proc)))
 	(when (and (eq result 'queried)
-		   (not (twittering-process-alive-p proc)))
+		   (not (twindrill-process-alive-p proc)))
 	  ;; If the process has been dead, wait a moment because
 	  ;; Emacs may be in the middle of evaluating the sentinel.
-	  (twittering-wait-while 10 0.1
+	  (twindrill-wait-while 10 0.1
 				 (eq result 'queried)
 				 nil
 				 (setq result nil)))
 	result))))
 
-(defun twittering-oauth-get-request-token (url consumer-key consumer-secret)
+(defun twindrill-oauth-get-request-token (url consumer-key consumer-secret)
   (let ((auth-str
-	 (twittering-oauth-auth-str-request-token
+	 (twindrill-oauth-auth-str-request-token
 	  url nil consumer-key consumer-secret)))
-    (twittering-oauth-get-token-alist url auth-str)))
+    (twindrill-oauth-get-token-alist url auth-str)))
 
-(defun twittering-oauth-exchange-request-token (url consumer-key consumer-secret request-token request-token-secret verifier)
+(defun twindrill-oauth-exchange-request-token (url consumer-key consumer-secret request-token request-token-secret verifier)
   (let ((auth-str
-	 (twittering-oauth-auth-str-exchange-token
+	 (twindrill-oauth-auth-str-exchange-token
 	  url nil
 	  consumer-key consumer-secret
 	  request-token request-token-secret verifier)))
-    (twittering-oauth-get-token-alist url auth-str)))
+    (twindrill-oauth-get-token-alist url auth-str)))
 
-(defun twittering-oauth-get-access-token (request-token-url authorize-url-func access-token-url consumer-key consumer-secret consumer-name)
+(defun twindrill-oauth-get-access-token (request-token-url authorize-url-func access-token-url consumer-key consumer-secret consumer-name)
   "Return an alist of authorized access token.
 The function retrieves a request token from the site specified by
 REQUEST-TOKEN-URL. Then, The function asks a WWW browser to authorize the
@@ -3718,7 +3721,7 @@ like following:
   (\"screen_name\" . \"episod\"))
 ."
   (let* ((request-token-alist
-	  (twittering-oauth-get-request-token
+	  (twindrill-oauth-get-request-token
 	   request-token-url consumer-key consumer-secret))
 	 (request-token (cdr (assoc "oauth_token" request-token-alist)))
 	 (request-token-secret
@@ -3733,7 +3736,7 @@ like following:
 	   (propertize authorize-url 'url authorize-url 'face 'bold)
 	   "\n"
 	   "\n"
-	   (when twittering-oauth-invoke-browser
+	   (when twindrill-oauth-invoke-browser
 	     (concat
 	      "  Emacs invokes your browser by the function `browse-url'.\n"
 	      "  If the site is not opened automatically, you have to open\n"
@@ -3751,7 +3754,7 @@ like following:
 	       (height (max 0 (- (/ (- (window-text-height) 1) 2)
 				 (/ str-height 2)))))
 	  (insert (make-string height ?\n) str)
-	  (if twittering-oauth-invoke-browser
+	  (if twindrill-oauth-invoke-browser
 	      (browse-url authorize-url)
 	    (when (y-or-n-p "Open authorization URL with browser? (using `browse-url')")
 	      (browse-url authorize-url)))
@@ -3763,7 +3766,7 @@ like following:
 			  (return-from pin-input-block
 			    (match-string 1 pin-input)))))))
 		 (verifier pin))
-	    (twittering-oauth-exchange-request-token
+	    (twindrill-oauth-exchange-request-token
 	     access-token-url
 	     consumer-key consumer-secret
 	     request-token request-token-secret verifier)))))
@@ -3771,31 +3774,31 @@ like following:
       (error "Failed to retrieve a request token")
       nil))))
 
-(defun twittering-xauth-get-access-token (access-token-url consumer-key consumer-secret username password)
+(defun twindrill-xauth-get-access-token (access-token-url consumer-key consumer-secret username password)
   (let ((auth-str
-	 (twittering-xauth-auth-str-access-token
+	 (twindrill-xauth-auth-str-access-token
 	  access-token-url nil consumer-key consumer-secret
 	  username password))
 	(post-body
 	 (mapconcat (lambda (pair)
 		      (format "%s=%s" (car pair)
-			      (twittering-oauth-url-encode (cdr pair))))
+			      (twindrill-oauth-url-encode (cdr pair))))
 		    `(("x_auth_mode" . "client_auth")
 		      ("x_auth_password" . ,password)
 		      ("x_auth_username" . ,username))
 		    "&")))
-    (twittering-oauth-get-token-alist access-token-url auth-str post-body)))
+    (twindrill-oauth-get-token-alist access-token-url auth-str post-body)))
 
 ;;;;
 ;;;; Private storage
 ;;;;
 
-(defun twittering-private-info-loaded-p ()
-  twittering-private-info-file-loaded)
+(defun twindrill-private-info-loaded-p ()
+  twindrill-private-info-file-loaded)
 
-(defun twittering-load-private-info ()
-  (let* ((file twittering-private-info-file)
-	 (decrypted-str (twittering-read-from-encrypted-file file))
+(defun twindrill-load-private-info ()
+  (let* ((file twindrill-private-info-file)
+	 (decrypted-str (twindrill-read-from-encrypted-file file))
 	 (loaded-alist
 	  (when decrypted-str
 	    (condition-case nil
@@ -3811,17 +3814,17 @@ like following:
 	    (let ((sym (car pair))
 		  (value (cdr pair)))
 	      (cond
-	       ((memq sym twittering-variables-stored-with-encryption)
+	       ((memq sym twindrill-variables-stored-with-encryption)
 		(set sym value)
 		sym)
 	       (t
 		nil)))))
 	loaded-alist)))))
 
-(defun twittering-load-private-info-with-guide ()
+(defun twindrill-load-private-info-with-guide ()
   (let ((str (concat
 	      "Loading authorized access token for OAuth from\n"
-	      (format "%s.\n" twittering-private-info-file)
+	      (format "%s.\n" twindrill-private-info-file)
 	      "\n"
 	      (propertize "Please input the master password.\n" 'face 'bold)
 	      "\n"
@@ -3834,22 +3837,22 @@ like following:
 			       (/ str-height 2)))))
 	(insert (make-string height ?\n) str)
 	(set-buffer-modified-p nil)
-	(twittering-load-private-info)))))
+	(twindrill-load-private-info)))))
 
-(defun twittering-save-private-info ()
+(defun twindrill-save-private-info ()
   (let* ((obj (mapcar (lambda (sym)
 			`(,sym . ,(symbol-value sym)))
-		      twittering-variables-stored-with-encryption))
+		      twindrill-variables-stored-with-encryption))
 	 (str (with-output-to-string (pp obj)))
-	 (file twittering-private-info-file))
-    (when (twittering-write-and-encrypt file str)
+	 (file twindrill-private-info-file))
+    (when (twindrill-write-and-encrypt file str)
       (set-file-modes file #o600)
-      (setq twittering-private-info-file-loaded t))))
+      (setq twindrill-private-info-file-loaded t))))
 
-(defun twittering-save-private-info-with-guide ()
+(defun twindrill-save-private-info-with-guide ()
   (let ((str (concat
 	      "Saving authorized access token for OAuth to "
-	      (format "%s.\n" twittering-private-info-file)
+	      (format "%s.\n" twindrill-private-info-file)
 	      "\n"
 	      (propertize "Please input a master password twice."
 			  'face 'bold))))
@@ -3860,16 +3863,16 @@ like following:
 			       (/ str-height 2)))))
 	(insert (make-string height ?\n) str)
 	(set-buffer-modified-p nil)
-	(twittering-save-private-info)))))
+	(twindrill-save-private-info)))))
 
-(defun twittering-capable-of-encryption-p ()
+(defun twindrill-capable-of-encryption-p ()
   (and (or (require 'epa nil t) (require 'alpaca nil t))
        (executable-find "gpg")))
 
 (eval-when-compile
   (require 'epa nil t)
   (require 'alpaca nil t))
-(defun twittering-read-from-encrypted-file (file)
+(defun twindrill-read-from-encrypted-file (file)
   "Decrypt contents from FILE and return them.
 Read encrypted contents from FILE and return the decrypted contents.
 This function requires `epa' or `alpaca' library."
@@ -3928,7 +3931,7 @@ This function requires `epa' or `alpaca' library."
    (t
     nil)))
 
-(defun twittering-write-and-encrypt (file str)
+(defun twindrill-write-and-encrypt (file str)
   (cond
    ((require 'epg nil t)
     (let ((context (epg-make-context epa-protocol))
@@ -3987,31 +3990,31 @@ This function requires `epa' or `alpaca' library."
    (t
     nil)))
 
-(defun twittering-ensure-private-info ()
+(defun twindrill-ensure-private-info ()
   "Ensure that private information is loaded if necessary.
-Return non-nil if `twittering-use-master-password' is nil or private
+Return non-nil if `twindrill-use-master-password' is nil or private
 information has been already loaded. Also, return non-nil
-if `twittering-use-master-password' is non-nil and this function succeeded
+if `twindrill-use-master-password' is non-nil and this function succeeded
 in loading private information.
 Return nil if private information cannot be loaded."
-  (if (or (not twittering-use-master-password)
-	  (twittering-private-info-loaded-p))
+  (if (or (not twindrill-use-master-password)
+	  (twindrill-private-info-loaded-p))
       ;; The private information is unnecessary or already loaded.
       t
     (cond
-     ((not (twittering-capable-of-encryption-p))
+     ((not (twindrill-capable-of-encryption-p))
       (message "You need GnuPG and (EasyPG or alpaca.el) for master password!")
       nil)
-     ((and (memq twittering-auth-method '(oauth xauth))
-	   (file-exists-p twittering-private-info-file))
+     ((and (memq twindrill-auth-method '(oauth xauth))
+	   (file-exists-p twindrill-private-info-file))
       (cond
-       ((twittering-load-private-info-with-guide)
-	(setq twittering-private-info-file-loaded t)
+       ((twindrill-load-private-info-with-guide)
+	(setq twindrill-private-info-file-loaded t)
 	(message "The authorized token is loaded.")
 	t)
        (t
 	(message "Failed to load an authorized token from \"%s\"."
-		 twittering-private-info-file)
+		 twindrill-private-info-file)
 	nil)))
      (t
       ;; The file for private infomation does not exist now.
@@ -4021,107 +4024,107 @@ Return nil if private information cannot be loaded."
 ;;;; Asynchronous retrieval
 ;;;;
 
-(defvar twittering-url-data-hash (make-hash-table :test 'equal))
-(defvar twittering-url-request-list nil)
-(defvar twittering-url-request-sentinel-hash (make-hash-table :test 'equal))
-(defvar twittering-internal-url-queue nil)
-(defvar twittering-url-request-resolving-p nil)
-(defvar twittering-url-request-retry-limit 3)
-(defvar twittering-url-request-sentinel-delay 1.0
+(defvar twindrill-url-data-hash (make-hash-table :test 'equal))
+(defvar twindrill-url-request-list nil)
+(defvar twindrill-url-request-sentinel-hash (make-hash-table :test 'equal))
+(defvar twindrill-internal-url-queue nil)
+(defvar twindrill-url-request-resolving-p nil)
+(defvar twindrill-url-request-retry-limit 3)
+(defvar twindrill-url-request-sentinel-delay 1.0
   "*Delay from completing retrieval to invoking associated sentinels.
-Sentinels registered by `twittering-url-retrieve-async' will be invoked
+Sentinels registered by `twindrill-url-retrieve-async' will be invoked
 after retrieval is completed and Emacs remains idle a certain time, which
 this variable specifies. The unit is second.")
 
-(defun twittering-remove-redundant-queries (queue)
+(defun twindrill-remove-redundant-queries (queue)
   (remove nil
 	  (mapcar
 	   (lambda (url)
-	     (let ((current (gethash url twittering-url-data-hash)))
+	     (let ((current (gethash url twindrill-url-data-hash)))
 	       (when (or (null current)
 			 (and (integerp current)
-			      (< current twittering-url-request-retry-limit)))
+			      (< current twindrill-url-request-retry-limit)))
 		 url)))
-	   (twittering-remove-duplicates queue))))
+	   (twindrill-remove-duplicates queue))))
 
-(defun twittering-resolve-url-request ()
+(defun twindrill-resolve-url-request ()
   "Resolve requests of asynchronous URL retrieval."
-  (when (null twittering-url-request-resolving-p)
-    (setq twittering-url-request-resolving-p t)
+  (when (null twindrill-url-request-resolving-p)
+    (setq twindrill-url-request-resolving-p t)
     ;; It is assumed that the following part is not processed
     ;; in parallel.
-    (setq twittering-internal-url-queue
-	  (append twittering-internal-url-queue twittering-url-request-list))
-    (setq twittering-url-request-list nil)
-    (setq twittering-internal-url-queue
-	  (twittering-remove-redundant-queries twittering-internal-url-queue))
-    (if (null twittering-internal-url-queue)
-	(setq twittering-url-request-resolving-p nil)
-      (let* ((url (car twittering-internal-url-queue))
-	     (request (twittering-make-http-request-from-uri "GET" nil url))
+    (setq twindrill-internal-url-queue
+	  (append twindrill-internal-url-queue twindrill-url-request-list))
+    (setq twindrill-url-request-list nil)
+    (setq twindrill-internal-url-queue
+	  (twindrill-remove-redundant-queries twindrill-internal-url-queue))
+    (if (null twindrill-internal-url-queue)
+	(setq twindrill-url-request-resolving-p nil)
+      (let* ((url (car twindrill-internal-url-queue))
+	     (request (twindrill-make-http-request-from-uri "GET" nil url))
 	     (additional-info `((uri . ,url))))
-	(twittering-send-http-request
+	(twindrill-send-http-request
 	 request additional-info
-	 'twittering-url-retrieve-async-sentinel
-	 'twittering-url-retrieve-async-clean-up-sentinel)))))
+	 'twindrill-url-retrieve-async-sentinel
+	 'twindrill-url-retrieve-async-clean-up-sentinel)))))
 
-(defun twittering-url-retrieve-async-sentinel (proc status connection-info header-info)
+(defun twindrill-url-retrieve-async-sentinel (proc status connection-info header-info)
   (let ((status-line (cdr (assq 'status-line header-info)))
 	(status-code (cdr (assq 'status-code header-info)))
 	(uri (cdr (assq 'uri (assq 'request connection-info)))))
     (when (string= status-code "200")
       (let ((body (string-as-unibyte (buffer-string))))
-	(puthash uri body twittering-url-data-hash)
-	(setq twittering-internal-url-queue
-	      (remove uri twittering-internal-url-queue))
-	(let ((sentinels (gethash uri twittering-url-request-sentinel-hash)))
+	(puthash uri body twindrill-url-data-hash)
+	(setq twindrill-internal-url-queue
+	      (remove uri twindrill-internal-url-queue))
+	(let ((sentinels (gethash uri twindrill-url-request-sentinel-hash)))
 	  (when sentinels
-	    (remhash uri twittering-url-request-sentinel-hash))
-	  (twittering-run-on-idle twittering-url-request-sentinel-delay
+	    (remhash uri twindrill-url-request-sentinel-hash))
+	  (twindrill-run-on-idle twindrill-url-request-sentinel-delay
 				  (lambda (sentinels uri body)
 				    (mapc (lambda (func)
 					    (funcall func uri body))
 					  sentinels)
 				    ;; Resolve the rest of requests.
-				    (setq twittering-url-request-resolving-p
+				    (setq twindrill-url-request-resolving-p
 					  nil)
-				    (twittering-resolve-url-request))
+				    (twindrill-resolve-url-request))
 				  sentinels uri body)
 	  ;;  Without the following nil, it seems that the value of
 	  ;; `sentinels' is displayed.
 	  nil)))))
 
-(defun twittering-url-retrieve-async-clean-up-sentinel (proc status connection-info)
+(defun twindrill-url-retrieve-async-clean-up-sentinel (proc status connection-info)
   (when (memq status '(exit signal closed failed))
     (let* ((uri (cdr (assq 'uri connection-info)))
-	   (current (gethash uri twittering-url-data-hash)))
+	   (current (gethash uri twindrill-url-data-hash)))
       (when (or (null current) (integerp current))
 	;; Increment the counter on failure and then retry retrieval.
-	(puthash uri (1+ (or current 0)) twittering-url-data-hash)
-	(setq twittering-url-request-resolving-p nil)
-	(twittering-resolve-url-request)))))
+	(puthash uri (1+ (or current 0)) twindrill-url-data-hash)
+	(setq twindrill-url-request-resolving-p nil)
+	(twindrill-resolve-url-request)))))
 
-(defun twittering-url-retrieve-async (url &optional sentinel)
+(defun twindrill-url-retrieve-async (url &optional sentinel)
   "Retrieve URL asynchronously and call SENTINEL with the retrieved data.
 The request is placed at the last of queries queue. When the data has been
 retrieved and Emacs remains idle a certain time specified by
-`twittering-url-request-sentinel-delay', SENTINEL will be called as
+`twindrill-url-request-sentinel-delay', SENTINEL will be called as
  (funcall SENTINEL URL url-data).
-The retrieved data can be referred as (gethash URL twittering-url-data-hash)."
-  (let ((data (gethash url twittering-url-data-hash)))
+The retrieved data can be referred as (gethash URL twindrill-url-data-hash)."
+  (let ((data (gethash url twindrill-url-data-hash)))
     (cond
      ((or (null data) (integerp data))
-      (add-to-list 'twittering-url-request-list url t)
+      (add-to-list 'twindrill-url-request-list url t)
       (when sentinel
-	(let ((current (gethash url twittering-url-request-sentinel-hash)))
+	(let ((current (gethash url twindrill-url-request-sentinel-hash)))
 	  (unless (member sentinel current)
 	    (puthash url (cons sentinel current)
-		     twittering-url-request-sentinel-hash))))
-      (twittering-resolve-url-request)
+		     twindrill-url-request-sentinel-hash))))
+      (twindrill-resolve-url-request)
       nil)
      (t
       ;; URL has been already retrieved.
-      (twittering-run-on-idle twittering-url-request-sentinel-delay
+      (twindrill-run-on-idle twindrill-url-request-sentinel-delay
 			      sentinel url data)
       data))))
 
@@ -4129,7 +4132,7 @@ The retrieved data can be referred as (gethash URL twittering-url-data-hash)."
 ;;;; XML parser
 ;;;;
 
-(defun twittering-ucs-to-char-internal (code-point)
+(defun twindrill-ucs-to-char-internal (code-point)
   ;; Check (featurep 'unicode) is a workaround with navi2ch to avoid
   ;; error "error in process sentinel: Cannot open load file:
   ;; unicode".
@@ -4145,31 +4148,31 @@ The retrieved data can be referred as (gethash URL twittering-url-data-hash)."
     ;; only parts of a text with Japanese.
     (decode-char 'ucs code-point)))
 
-(defvar twittering-unicode-replacement-char
+(defvar twindrill-unicode-replacement-char
   ;; "Unicode Character 'REPLACEMENT CHARACTER' (U+FFFD)"
-  (or (twittering-ucs-to-char-internal #xFFFD)
+  (or (twindrill-ucs-to-char-internal #xFFFD)
       ??)
-  "*Replacement character returned by `twittering-ucs-to-char' when it fails
+  "*Replacement character returned by `twindrill-ucs-to-char' when it fails
 to decode a code.")
 
-(defun twittering-ucs-to-char (code-point)
+(defun twindrill-ucs-to-char (code-point)
   "Return a character specified by CODE-POINT in Unicode.
-If it fails to decode the code, return `twittering-unicode-replacement-char'."
-  (or (twittering-ucs-to-char-internal code-point)
-      twittering-unicode-replacement-char))
+If it fails to decode the code, return `twindrill-unicode-replacement-char'."
+  (or (twindrill-ucs-to-char-internal code-point)
+      twindrill-unicode-replacement-char))
 
-(defadvice decode-char (after twittering-add-fail-over-to-decode-char)
+(defadvice decode-char (after twindrill-add-fail-over-to-decode-char)
   (when (null ad-return-value)
-    (setq ad-return-value twittering-unicode-replacement-char)))
+    (setq ad-return-value twindrill-unicode-replacement-char)))
 
-(defun twittering-xml-parse-region (&rest args)
+(defun twindrill-xml-parse-region (&rest args)
   "Wrapped `xml-parse-region' in order to avoid decoding errors.
-After activating the advice `twittering-add-fail-over-to-decode-char',
+After activating the advice `twindrill-add-fail-over-to-decode-char',
 `xml-parse-region' is called. This prevents `xml-parse-region' from
 exiting abnormally by decoding unknown numeric character reference."
   (let ((activated (ad-is-active 'decode-char)))
     (ad-enable-advice
-     'decode-char 'after 'twittering-add-fail-over-to-decode-char)
+     'decode-char 'after 'twindrill-add-fail-over-to-decode-char)
     (ad-activate 'decode-char)
     (unwind-protect
 	(condition-case err
@@ -4178,7 +4181,7 @@ exiting abnormally by decoding unknown numeric character reference."
 	   (message "Failed to parse the retrieved XML.")
 	   nil))
       (ad-disable-advice 'decode-char 'after
-			 'twittering-add-fail-over-to-decode-char)
+			 'twindrill-add-fail-over-to-decode-char)
       (if activated
 	  (ad-activate 'decode-char)
 	(ad-deactivate 'decode-char)))))
@@ -4187,7 +4190,7 @@ exiting abnormally by decoding unknown numeric character reference."
 ;;;; JSON parser with a fallback character
 ;;;;
 
-(defconst twittering-surrogate-pair-regexp
+(defconst twindrill-surrogate-pair-regexp
   (if (<= 23 emacs-major-version)
       ;; Literal strings such as "\uXXXX" is not allowed in Emacs 21
       ;; and earlier. A character of invalid code point such as U+D800
@@ -4206,7 +4209,7 @@ In Emacs 22 and earlier, this variable is initialized by a regexp
 that never matches any string because code points for a surrogate pair,
 from U+D800 to U+DFFF, are invalid.")
 
-(defun twittering-decode-surrogate-pairs-as-cesu-8 (str)
+(defun twindrill-decode-surrogate-pairs-as-cesu-8 (str)
   "Decode surrogate pairs in STR similarly to CESU-8.
 If STR includes surrogate pairs represented by code points from U+D800 to
 U+DFFF, decode them with CESU-8 and return the result.
@@ -4221,7 +4224,7 @@ U+DFFF. This function decodes such invalid code points."
 	(current 0)
 	(result ""))
     (while (setq current
-		 (string-match twittering-surrogate-pair-regexp str prev))
+		 (string-match twindrill-surrogate-pair-regexp str prev))
       (let* ((next (match-end 0))
 	     (decoded-str
 	      (decode-coding-string
@@ -4242,24 +4245,24 @@ U+DFFF. This function decodes such invalid code points."
     (setq result (concat result (substring str prev)))
     result))
 
-(defadvice json-read-string (after twittering-decode-surrogate-pairs-as-cesu-8)
+(defadvice json-read-string (after twindrill-decode-surrogate-pairs-as-cesu-8)
   (when (<= 23 emacs-major-version)
     (setq ad-return-value
-	  (twittering-decode-surrogate-pairs-as-cesu-8 ad-return-value))))
+	  (twindrill-decode-surrogate-pairs-as-cesu-8 ad-return-value))))
 
-(defun twittering-json-read (&rest args)
+(defun twindrill-json-read (&rest args)
   "Wrapped `json-read' in order to avoid decoding errors.
 `json-read' is called after activating the advice
-`twittering-add-fail-over-to-decode-char'.
+`twindrill-add-fail-over-to-decode-char'.
 This prevents `json-read' from exiting abnormally by decoding an unknown
 numeric character reference."
   (let ((activated (ad-is-active 'decode-char))
 	(json-activated (ad-is-active 'json-read-string)))
     (ad-enable-advice
-     'decode-char 'after 'twittering-add-fail-over-to-decode-char)
+     'decode-char 'after 'twindrill-add-fail-over-to-decode-char)
     (ad-activate 'decode-char)
     (ad-enable-advice 'json-read-string 'after
-		      'twittering-decode-surrogate-pairs-as-cesu-8)
+		      'twindrill-decode-surrogate-pairs-as-cesu-8)
     (ad-activate 'json-read-string)
     (unwind-protect
 	(condition-case err
@@ -4268,9 +4271,9 @@ numeric character reference."
 	   (message "Failed to parse the retrieved JSON.")
 	   nil))
       (ad-disable-advice 'decode-char 'after
-			 'twittering-add-fail-over-to-decode-char)
+			 'twindrill-add-fail-over-to-decode-char)
       (ad-disable-advice 'json-read-string 'after
-			 'twittering-decode-surrogate-pairs-as-cesu-8)
+			 'twindrill-decode-surrogate-pairs-as-cesu-8)
       (if activated
 	  (ad-activate 'decode-char)
 	(ad-deactivate 'decode-char))
@@ -4283,7 +4286,7 @@ numeric character reference."
 ;;;; Window configuration
 ;;;;
 
-(defun twittering-set-window-end (window pos)
+(defun twindrill-set-window-end (window pos)
   (let* ((height (window-text-height window))
 	 (n (- (- height 1))))
     (while (progn (setq n (1+ n))
@@ -4295,7 +4298,7 @@ numeric character reference."
 		       (line-beginning-position n))))
 		  (not (pos-visible-in-window-p pos window))))))
 
-(defun twittering-current-window-config (window-list)
+(defun twindrill-current-window-config (window-list)
   "Return window parameters of WINDOW-LIST."
   (mapcar (lambda (win)
 	    (let ((start (window-start win))
@@ -4303,9 +4306,9 @@ numeric character reference."
 	      `(,win ,start ,point)))
 	  window-list))
 
-(defun twittering-restore-window-config-after-modification (config beg end)
+(defun twindrill-restore-window-config-after-modification (config beg end)
   "Restore window parameters changed by modification on given region.
-CONFIG is window parameters made by `twittering-current-window-config'.
+CONFIG is window parameters made by `twindrill-current-window-config'.
 BEG and END mean a region that had been modified."
   (mapc (lambda (entry)
 	  (let ((win (elt entry 0))
@@ -4317,21 +4320,21 @@ BEG and END mean a region that had been modified."
 	      (set-window-point win point))))
 	config))
 
-(defun twittering-pop-to-buffer (buf)
+(defun twindrill-pop-to-buffer (buf)
   "Select the buffer BUF in some window.
 The behavior is determined by the function specified by
-`twittering-pop-to-buffer-function'."
-  (funcall twittering-pop-to-buffer-function buf))
+`twindrill-pop-to-buffer-function'."
+  (funcall twindrill-pop-to-buffer-function buf))
 
-(defun twittering-pop-to-buffer-simple (buf)
+(defun twindrill-pop-to-buffer-simple (buf)
   "Select the buffer BUF by using `pop-to-buffer'."
   (let ((win (selected-window)))
     (pop-to-buffer buf)
     ;; This is required because the new window generated by `pop-to-buffer'
     ;; may hide the region following the current position.
-    (twittering-ensure-whole-of-status-is-visible win)))
+    (twindrill-ensure-whole-of-status-is-visible win)))
 
-(defun twittering-pop-to-buffer-in-current-window (buf &optional win)
+(defun twindrill-pop-to-buffer-in-current-window (buf &optional win)
   "Select the buffer BUF in the window WIN by splitting it.
 If WIN is nil, the selected window is splitted."
   (let* ((win (or win (selected-window)))
@@ -4345,7 +4348,7 @@ If WIN is nil, the selected window is splitted."
     (select-window new-win)
     (switch-to-buffer buf)))
 
-(defun twittering-pop-to-buffer-in-largest-window (buf)
+(defun twindrill-pop-to-buffer-in-largest-window (buf)
   "Select the buffer BUF in the largest window by splitting it."
   (let ((win
 	 (lexical-let ((max-area 0)
@@ -4357,9 +4360,9 @@ If WIN is nil, the selected window is splitted."
 		  (setq max-area area)
 		  (setq largest-win win)))))
 	   largest-win)))
-    (twittering-pop-to-buffer-in-current-window buf win)))
+    (twindrill-pop-to-buffer-in-current-window buf win)))
 
-(defun twittering-pop-to-buffer-in-bottom-largest-window (buf)
+(defun twindrill-pop-to-buffer-in-bottom-largest-window (buf)
   "Select the buffer BUF in the window largest on bottom by splitting it."
   (let* ((bottom-win-list
 	  (lexical-let ((win-list '())
@@ -4386,26 +4389,26 @@ If WIN is nil, the selected window is splitted."
 			(setq max-area area))))
 		  bottom-win-list)
 	    largest-win)))
-    (twittering-pop-to-buffer-in-current-window buf win)))
+    (twindrill-pop-to-buffer-in-current-window buf win)))
 
 ;;;;
 ;;;; URI shortening
 ;;;;
 
-(defun twittering-tinyurl-get (longurl &optional service)
-  "Shorten LONGURL with the service specified by `twittering-tinyurl-service'."
-  (let* ((service (or service twittering-tinyurl-service))
-	 (api (cdr (assq service twittering-tinyurl-services-map)))
+(defun twindrill-tinyurl-get (longurl &optional service)
+  "Shorten LONGURL with the service specified by `twindrill-tinyurl-service'."
+  (let* ((service (or service twindrill-tinyurl-service))
+	 (api (cdr (assq service twindrill-tinyurl-services-map)))
 	 (request-generator (when (listp api) (elt api 0)))
 	 (post-process (when (listp api) (elt api 1)))
-	 (encoded-url (twittering-percent-encode longurl))
+	 (encoded-url (twindrill-percent-encode longurl))
 	 (request
 	  (cond
 	   ((stringp api)
-	    (twittering-make-http-request-from-uri
+	    (twindrill-make-http-request-from-uri
 	     "GET" nil (concat api encoded-url)))
 	   ((stringp request-generator)
-	    (twittering-make-http-request-from-uri
+	    (twindrill-make-http-request-from-uri
 	     "GET" nil (concat request-generator encoded-url)))
 	   ((functionp request-generator)
 	    (funcall request-generator service longurl))
@@ -4413,7 +4416,7 @@ If WIN is nil, the selected window is splitted."
 	    (error "%s is invalid. try one of %s"
 		   (symbol-name service)
 		   (mapconcat (lambda (x) (symbol-name (car x)))
-			      twittering-tinyurl-services-map ", "))
+			      twindrill-tinyurl-services-map ", "))
 	    nil)))
 	 (additional-info `((longurl . ,longurl))))
     (cond
@@ -4424,7 +4427,7 @@ If WIN is nil, the selected window is splitted."
      (t
       (lexical-let ((result 'queried))
 	(let ((proc
-	       (twittering-send-http-request
+	       (twindrill-send-http-request
 		request additional-info
 		(lambda (proc status connection-info header-info)
 		  (let ((status-line (cdr (assq 'status-line header-info)))
@@ -4438,17 +4441,17 @@ If WIN is nil, the selected window is splitted."
 		      (setq result nil)
 		      (format "Response: %s" status-line)))))
 		(lambda (proc status connection-info)
-		  (when (and (not (twittering-process-alive-p proc))
+		  (when (and (not (twindrill-process-alive-p proc))
 			     (eq result 'queried))
 		    (setq result nil))))))
-	  (twittering-wait-while nil 0.1
+	  (twindrill-wait-while nil 0.1
 				 (and (eq result 'queried)
-				      (twittering-process-alive-p proc)))
+				      (twindrill-process-alive-p proc)))
 	  (when (and (eq result 'queried)
-		     (not (twittering-process-alive-p proc)))
+		     (not (twindrill-process-alive-p proc)))
 	    ;; If the process has been dead, wait a moment because
 	    ;; Emacs may be in the middle of evaluating the sentinel.
-	    (twittering-wait-while 10 0.1
+	    (twindrill-wait-while 10 0.1
 				   (eq result 'queried)
 				   nil
 				   ;; Reset `result' on timeout.
@@ -4462,36 +4465,36 @@ If WIN is nil, the selected window is splitted."
 		   longurl (symbol-name service))
 	    nil)))))))
 
-(defun twittering-tinyurl-replace-at-point ()
+(defun twindrill-tinyurl-replace-at-point ()
   "Replace the url at point with a tiny version."
   (interactive)
   (let ((url-bounds (bounds-of-thing-at-point 'url)))
     (when url-bounds
-      (let ((url (twittering-tinyurl-get (thing-at-point 'url))))
+      (let ((url (twindrill-tinyurl-get (thing-at-point 'url))))
 	(when url
 	  (save-restriction
 	    (narrow-to-region (car url-bounds) (cdr url-bounds))
 	    (delete-region (point-min) (point-max))
 	    (insert url)))))))
 
-(defun twittering-make-http-request-for-bitly (service longurl)
+(defun twindrill-make-http-request-for-bitly (service longurl)
   "Make a HTTP request for URL shortening service bit.ly or j.mp.
-Before calling this, you have to configure `twittering-bitly-login' and
-`twittering-bitly-api-key'."
+Before calling this, you have to configure `twindrill-bitly-login' and
+`twindrill-bitly-api-key'."
   (let* ((query-string
 	  (mapconcat
 	   (lambda (entry)
 	     (concat (car entry) "=" (cdr entry)))
-	   `(("login" . ,twittering-bitly-login)
-	     ("apiKey" . ,twittering-bitly-api-key)
+	   `(("login" . ,twindrill-bitly-login)
+	     ("apiKey" . ,twindrill-bitly-api-key)
 	     ("format" . "txt")
-	     ("longUrl" . ,(twittering-percent-encode longurl)))
+	     ("longUrl" . ,(twindrill-percent-encode longurl)))
 	   "&"))
 	 (prefix
 	  (cdr (assq service '((bit.ly . "http://api.bit.ly/v3/shorten?")
 			       (j.mp . "http://api.j.mp/v3/shorten?")))))
 	 (uri (concat prefix query-string)))
-    (twittering-make-http-request-from-uri "GET" nil uri)))
+    (twindrill-make-http-request-from-uri "GET" nil uri)))
 
 ;;;;
 ;;;; Timeline spec
@@ -4572,17 +4575,17 @@ Before calling this, you have to configure `twittering-bitly-login' and
 ;;; MERGED_SPECS ::= SPEC | SPEC "+" MERGED_SPECS
 ;;;
 
-(defvar twittering-regexp-hash
-  (let ((full-width-number-sign (twittering-ucs-to-char #xff03)))
+(defvar twindrill-regexp-hash
+  (let ((full-width-number-sign (twindrill-ucs-to-char #xff03)))
     ;; Unicode Character 'FULLWIDTH NUMBER SIGN' (U+FF03)
     (concat "\\(?:#\\|" (char-to-string full-width-number-sign) "\\)")))
 
-(defvar twittering-regexp-atmark
-  (let ((full-width-commercial-at (twittering-ucs-to-char #xff20)))
+(defvar twindrill-regexp-atmark
+  (let ((full-width-commercial-at (twindrill-ucs-to-char #xff20)))
     ;; Unicode Character 'FULLWIDTH COMMERCIAL AT' (U+FF20)
     (concat "\\(?:@\\|" (char-to-string full-width-commercial-at) "\\)")))
 
-(defun twittering-timeline-spec-to-string (timeline-spec &optional shorten)
+(defun twindrill-timeline-spec-to-string (timeline-spec &optional shorten)
   "Convert TIMELINE-SPEC into a string.
 If SHORTEN is non-nil, the abbreviated expression will be used."
   (let ((type (car timeline-spec))
@@ -4621,7 +4624,7 @@ If SHORTEN is non-nil, the abbreviated expression will be used."
 	    (spec (cadr value))
 	    (print-level nil))
 	(concat ":exclude-if/" (prin1-to-string func) "/"
-		(twittering-timeline-spec-to-string spec))))
+		(twindrill-timeline-spec-to-string spec))))
      ((eq type 'exclude-re)
       (let ((regexp-str (car value))
 	    (spec (cadr value))
@@ -4629,25 +4632,25 @@ If SHORTEN is non-nil, the abbreviated expression will be used."
 	(concat ":exclude-re/"
 		(replace-regexp-in-string "/" "\\\\\/" regexp-str)
 		"/"
-		(twittering-timeline-spec-to-string spec))))
+		(twindrill-timeline-spec-to-string spec))))
      ((eq type 'merge)
       (concat "("
-	      (mapconcat 'twittering-timeline-spec-to-string value "+")
+	      (mapconcat 'twindrill-timeline-spec-to-string value "+")
 	      ")"))
      (t
       nil))))
 
 (eval-and-compile
-  (defmacro twittering-make-user-timeline-spec-direct (user)
+  (defmacro twindrill-make-user-timeline-spec-direct (user)
     `(list 'user ,user))
-  (defmacro twittering-make-list-timeline-spec-direct (owner listname)
+  (defmacro twindrill-make-list-timeline-spec-direct (owner listname)
     `(list 'list ,owner ,listname))
-  (defmacro twittering-make-hashtag-timeline-spec-direct (tag)
+  (defmacro twindrill-make-hashtag-timeline-spec-direct (tag)
     `(list 'search (concat "#" ,tag)))
-  (defmacro twittering-make-hashtag-timeline-spec-string-direct (tag)
+  (defmacro twindrill-make-hashtag-timeline-spec-string-direct (tag)
     `(concat "#" ,tag)))
 
-(defun twittering-extract-timeline-spec (str &optional unresolved-aliases)
+(defun twindrill-extract-timeline-spec (str &optional unresolved-aliases)
   "Extract one timeline spec from STR.
 Return cons of the spec and the rest string."
   (cond
@@ -4658,20 +4661,20 @@ Return cons of the spec and the rest string."
     (let ((user (match-string 1 str))
 	  (listname (match-string 2 str))
 	  (rest (substring str (match-end 0))))
-      `(,(twittering-make-list-timeline-spec-direct user listname) . ,rest)))
+      `(,(twindrill-make-list-timeline-spec-direct user listname) . ,rest)))
    ((string-match "^\\([a-zA-Z0-9_-]+\\)" str)
     (let ((user (match-string 1 str))
 	  (rest (substring str (match-end 0))))
-      `(,(twittering-make-user-timeline-spec-direct user) . ,rest)))
+      `(,(twindrill-make-user-timeline-spec-direct user) . ,rest)))
    ((string-match "^~" str)
     `((home) . ,(substring str (match-end 0))))
-   ((string-match (concat "^" twittering-regexp-atmark) str)
+   ((string-match (concat "^" twindrill-regexp-atmark) str)
     `((mentions) . ,(substring str (match-end 0))))
-   ((string-match (concat "^" twittering-regexp-hash "\\([[:alpha:]0-9_-]+\\)")
+   ((string-match (concat "^" twindrill-regexp-hash "\\([[:alpha:]0-9_-]+\\)")
 		  str)
     (let* ((tag (match-string 1 str))
 	   (rest (substring str (match-end 0))))
-      `(,(twittering-make-hashtag-timeline-spec-direct tag) . ,rest)))
+      `(,(twindrill-make-hashtag-timeline-spec-direct tag) . ,rest)))
    ((string-match "^:\\([a-z_-]+\\)" str)
     (let ((type (match-string 1 str))
 	  (following (substring str (match-end 0)))
@@ -4741,7 +4744,7 @@ Return cons of the spec and the rest string."
 		  (error "\"%s\" has no delimiter" str)
 		  nil)
 		 (t
-		  (let* ((pair (twittering-extract-timeline-spec
+		  (let* ((pair (twindrill-extract-timeline-spec
 				(substring str (1+ pos)) unresolved-aliases))
 			 (spec (car pair))
 			 (rest (cdr pair)))
@@ -4761,7 +4764,7 @@ Return cons of the spec and the rest string."
 	      (error "\"%s\" has no valid regexp" str)
 	      nil)
 	     (t
-	      (let* ((pair (twittering-extract-timeline-spec
+	      (let* ((pair (twindrill-extract-timeline-spec
 			    following unresolved-aliases))
 		     (spec (car pair))
 		     (rest (cdr pair)))
@@ -4775,17 +4778,17 @@ Return cons of the spec and the rest string."
    ((string-match "^\\$\\([a-zA-Z0-9_-]+\\)\\(?:(\\([^)]*\\))\\)?" str)
     (let* ((name (match-string 1 str))
 	   (rest (substring str (match-end 0)))
-	   (value (cdr-safe (assoc name twittering-timeline-spec-alias)))
+	   (value (cdr-safe (assoc name twindrill-timeline-spec-alias)))
 	   (arg (match-string 2 str)))
       (if (member name unresolved-aliases)
 	  (error "Alias \"%s\" includes a recursive reference" name)
 	(cond
 	 ((stringp value)
-	  (twittering-extract-timeline-spec
+	  (twindrill-extract-timeline-spec
 	   (concat value rest)
 	   (cons name unresolved-aliases)))
 	 ((functionp value)
-	  (twittering-extract-timeline-spec
+	  (twindrill-extract-timeline-spec
 	   (funcall value arg)
 	   (cons name unresolved-aliases)))
 	 (t
@@ -4795,7 +4798,7 @@ Return cons of the spec and the rest string."
 	  (result '()))
       (while (and rest (string-match "^\\+" rest))
 	(let* ((spec-string (substring rest (match-end 0)))
-	       (pair (twittering-extract-timeline-spec
+	       (pair (twindrill-extract-timeline-spec
 		      spec-string unresolved-aliases))
 	       (spec (car pair))
 	       (next-rest (cdr pair)))
@@ -4803,7 +4806,7 @@ Return cons of the spec and the rest string."
 	  (setq rest next-rest)))
       (if (and rest (string-match "^)" rest))
 	  (let ((spec-list
-		 (twittering-remove-duplicates
+		 (twindrill-remove-duplicates
 		  (apply 'append
 			 (mapcar (lambda (x) (if (eq 'merge (car x))
 						 (cdr x)
@@ -4826,13 +4829,13 @@ Return cons of the spec and the rest string."
     nil)
    ))
 
-(defun twittering-string-to-timeline-spec (spec-str &optional noerror)
+(defun twindrill-string-to-timeline-spec (spec-str &optional noerror)
   "Convert SPEC-STR into a timeline spec.
 If SPEC-STR is invalid as a timeline spec string, raise an error or return
 nil if NOERROR is non-nil."
   (let ((result-pair
 	 (condition-case err
-	     (twittering-extract-timeline-spec spec-str)
+	     (twindrill-extract-timeline-spec spec-str)
 	   (error
 	    (if noerror
 		nil
@@ -4842,7 +4845,7 @@ nil if NOERROR is non-nil."
 	(car result-pair)
       nil)))
 
-(defun twittering-timeline-spec-primary-p (spec)
+(defun twindrill-timeline-spec-primary-p (spec)
   "Return non-nil if SPEC is a primary timeline spec.
 `primary' means that the spec is not a composite timeline spec such as
 `merge'."
@@ -4858,7 +4861,7 @@ nil if NOERROR is non-nil."
 	(type (car spec)))
     (memq type primary-spec-types)))
 
-(defun twittering-timeline-spec-composite-p (spec)
+(defun twindrill-timeline-spec-composite-p (spec)
   "Return non-nil if SPEC is a composite timeline spec.
 `composite' means that the spec depends on other timelines."
   (let ((composite-spec-types
@@ -4866,10 +4869,10 @@ nil if NOERROR is non-nil."
 	(type (car spec)))
     (memq type composite-spec-types)))
 
-(defun twittering-timeline-spec-depending-on-p (spec base-spec)
+(defun twindrill-timeline-spec-depending-on-p (spec base-spec)
   "Return non-nil if SPEC depends on BASE-SPEC."
   (cond
-   ((twittering-timeline-spec-primary-p spec)
+   ((twindrill-timeline-spec-primary-p spec)
     (equal spec base-spec))
    ((equal spec base-spec)
     t)
@@ -4878,47 +4881,47 @@ nil if NOERROR is non-nil."
      nil
      (mapcar
       (lambda (direct-base-spec)
-	(twittering-timeline-spec-depending-on-p direct-base-spec base-spec))
-      (twittering-get-base-timeline-specs spec))))))
+	(twindrill-timeline-spec-depending-on-p direct-base-spec base-spec))
+      (twindrill-get-base-timeline-specs spec))))))
 
-(defun twittering-timeline-spec-is-user-p (spec)
+(defun twindrill-timeline-spec-is-user-p (spec)
   "Return non-nil if SPEC is a user timeline."
   (and (consp spec) (eq 'user (car spec))))
 
-(defun twittering-timeline-spec-is-direct-messages-p (spec)
+(defun twindrill-timeline-spec-is-direct-messages-p (spec)
   "Return non-nil if SPEC is a timeline spec which is related of
 direct_messages."
   (and spec
        (memq (car spec) '(direct_messages direct_messages_sent))))
 
-(defun twittering-timeline-spec-is-search-p (spec)
+(defun twindrill-timeline-spec-is-search-p (spec)
   "Return non-nil if SPEC is a search timeline spec."
   (and (consp spec)
        (eq 'search (car spec))))
 
-(defun twittering-extract-query-string-from-search-timeline-spec (spec)
+(defun twindrill-extract-query-string-from-search-timeline-spec (spec)
   "Return the query string if SPEC is a search timeline spec.
 If SPEC is not a search timeline spec, return nil."
   (and (eq 'search (car spec))
        (cadr spec)))
 
-(defun twittering-equal-string-as-timeline (spec-str1 spec-str2)
+(defun twindrill-equal-string-as-timeline (spec-str1 spec-str2)
   "Return non-nil if SPEC-STR1 equals SPEC-STR2 as a timeline spec.
 If either SPEC-STR1 or SPEC-STR2 is invalid as a timeline spec string,
 return nil."
   (if (and (stringp spec-str1) (stringp spec-str2))
-      (let ((spec1 (twittering-string-to-timeline-spec spec-str1 t))
-	    (spec2 (twittering-string-to-timeline-spec spec-str2 t)))
+      (let ((spec1 (twindrill-string-to-timeline-spec spec-str1 t))
+	    (spec2 (twindrill-string-to-timeline-spec spec-str2 t)))
 	(equal spec1 spec2))
     nil))
 
-(defun twittering-get-base-timeline-specs (spec)
+(defun twindrill-get-base-timeline-specs (spec)
   "Return the timeline specs on which the timeline SPEC depends.
 If SPEC is primary, returns a list consisting of itself.
 The result timelines may be a composite timeline."
   (let ((type (car spec)))
     (cond
-     ((twittering-timeline-spec-primary-p spec)
+     ((twindrill-timeline-spec-primary-p spec)
       `(,spec))
      ((memq type '(exclude-if exclude-re))
       `(,(elt spec 2)))
@@ -4927,18 +4930,18 @@ The result timelines may be a composite timeline."
      (t
       nil))))
 
-(defun twittering-get-primary-base-timeline-specs (spec)
+(defun twindrill-get-primary-base-timeline-specs (spec)
   "Return the primary timeline specs on which the timeline SPEC depends.
 If SPEC is primary, returns a list consisting of itself.
 The result timelines are primary."
-  (if (twittering-timeline-spec-primary-p spec)
+  (if (twindrill-timeline-spec-primary-p spec)
       `(,spec)
-    (twittering-remove-duplicates
+    (twindrill-remove-duplicates
      (apply 'append
-	    (mapcar 'twittering-get-primary-base-timeline-specs
-		    (twittering-get-base-timeline-specs spec))))))
+	    (mapcar 'twindrill-get-primary-base-timeline-specs
+		    (twindrill-get-base-timeline-specs spec))))))
 
-(defun twittering-get-dependent-timeline-specs (base-spec)
+(defun twindrill-get-dependent-timeline-specs (base-spec)
   "Return a list of timeline specs that depend on BASE-SPEC.
 If BASE-SPEC is a primary timeline spec, the return value consists of
 BASE-SPEC and composite timeline specs that depend on BASE-SPEC and are
@@ -4946,37 +4949,37 @@ bound to a live buffer.
 If BASE-SPEC is a composite timeline spec, the return value consists of
 composite timeline specs that depend on BASE-SPEC and are bound to a live
 buffer."
-  (twittering-remove-duplicates
+  (twindrill-remove-duplicates
    `(;; BASE-SPEC may not be bound to a live buffer.
-     ,@(when (twittering-timeline-spec-primary-p base-spec)
+     ,@(when (twindrill-timeline-spec-primary-p base-spec)
 	 `(,base-spec))
      ,@(remove
 	nil
 	(mapcar
 	 (lambda (spec)
-	   (when (twittering-timeline-spec-depending-on-p spec base-spec)
+	   (when (twindrill-timeline-spec-depending-on-p spec base-spec)
 	     spec))
-	 (mapcar 'twittering-get-timeline-spec-for-buffer
-		 (twittering-get-buffer-list)))))))
+	 (mapcar 'twindrill-get-timeline-spec-for-buffer
+		 (twindrill-get-buffer-list)))))))
 
-(defun twittering-generate-composite-timeline (spec base-spec base-statuses)
+(defun twindrill-generate-composite-timeline (spec base-spec base-statuses)
   "Generate statuses for the timeline SPEC from BASE-STATUSES.
 BASE-STATUSES must originate from the BASE-SPEC timeline.
 If SPEC is a primary timeline and equals BASE-SPEC, just return BASE-STATUSES.
 If SPEC is a primary timeline and does not equal BASE-SPEC, return nil."
   (let ((type (car spec)))
     (cond
-     ((twittering-timeline-spec-primary-p spec)
+     ((twindrill-timeline-spec-primary-p spec)
       (if (equal spec base-spec)
 	  (let ((pattern-list
-		 (twittering-get-filter-list-for-timeline-spec
+		 (twindrill-get-filter-list-for-timeline-spec
 		  spec)))
 	    (if pattern-list
 		(remove
 		 nil
 		 (mapcar
 		  (lambda (status)
-		    (if (twittering-match-pattern-list status pattern-list)
+		    (if (twindrill-match-pattern-list status pattern-list)
 			(progn
 			  (debug-printf "Exclude the status: %s" status)
 			  nil)
@@ -4985,9 +4988,9 @@ If SPEC is a primary timeline and does not equal BASE-SPEC, return nil."
 	      base-statuses))
 	nil))
      ((eq type 'exclude-if)
-      (let* ((direct-base (car (twittering-get-base-timeline-specs spec)))
+      (let* ((direct-base (car (twindrill-get-base-timeline-specs spec)))
 	     (direct-base-statuses
-	      (twittering-generate-composite-timeline direct-base
+	      (twindrill-generate-composite-timeline direct-base
 						      base-spec base-statuses))
 	     (func (elt spec 1)))
 	(remove nil
@@ -4996,9 +4999,9 @@ If SPEC is a primary timeline and does not equal BASE-SPEC, return nil."
 			    status))
 			direct-base-statuses))))
      ((eq type 'exclude-re)
-      (let* ((direct-base (car (twittering-get-base-timeline-specs spec)))
+      (let* ((direct-base (car (twindrill-get-base-timeline-specs spec)))
 	     (direct-base-statuses
-	      (twittering-generate-composite-timeline direct-base
+	      (twindrill-generate-composite-timeline direct-base
 						      base-spec base-statuses))
 	     (regexp (elt spec 1)))
 	(remove nil
@@ -5018,13 +5021,13 @@ If SPEC is a primary timeline and does not equal BASE-SPEC, return nil."
 			;; which already retrieved tweets are registered
 			;; with. It must not be modified.
 			(copy-sequence
-			 (twittering-generate-composite-timeline
+			 (twindrill-generate-composite-timeline
 			  direct-base-spec base-spec base-statuses)))
-		      (twittering-get-base-timeline-specs spec)))
+		      (twindrill-get-base-timeline-specs spec)))
        (lambda (status1 status2)
 	 (let ((id1 (cdr (assq 'id status1)))
 	       (id2 (cdr (assq 'id status2))))
-	   (twittering-status-id< id2 id1)))))
+	   (twindrill-status-id< id2 id1)))))
      (t
       nil))))
 
@@ -5032,8 +5035,8 @@ If SPEC is a primary timeline and does not equal BASE-SPEC, return nil."
 ;;;; Filter
 ;;;;
 
-(defun twittering-get-filter-list-for-timeline-spec-string (spec-string)
-  (let ((entry-list twittering-filter-alist))
+(defun twindrill-get-filter-list-for-timeline-spec-string (spec-string)
+  (let ((entry-list twindrill-filter-alist))
     (remove
      nil
      (mapcar
@@ -5049,20 +5052,20 @@ If SPEC is a primary timeline and does not equal BASE-SPEC, return nil."
 	    pattern-list)))
       entry-list))))
 
-(defun twittering-get-filter-list-for-timeline-spec (spec)
-  (when twittering-filter-alist
-    (let* ((spec-string (twittering-timeline-spec-to-string spec))
-	   (short-spec-string (twittering-timeline-spec-to-string spec t))
+(defun twindrill-get-filter-list-for-timeline-spec (spec)
+  (when twindrill-filter-alist
+    (let* ((spec-string (twindrill-timeline-spec-to-string spec))
+	   (short-spec-string (twindrill-timeline-spec-to-string spec t))
 	   (regexp-list
-	    (twittering-get-filter-list-for-timeline-spec-string
+	    (twindrill-get-filter-list-for-timeline-spec-string
 	     spec-string)))
       (if (string= spec-string short-spec-string)
 	  regexp-list
 	(append regexp-list
-		(twittering-get-filter-list-for-timeline-spec-string
+		(twindrill-get-filter-list-for-timeline-spec-string
 		 short-spec-string))))))
 
-(defun twittering-match-pattern (status pattern)
+(defun twindrill-match-pattern (status pattern)
   (let* ((rest pattern)
 	 (matched t))
     (while (and rest matched)
@@ -5072,7 +5075,7 @@ If SPEC is a primary timeline and does not equal BASE-SPEC, return nil."
 	     (value (cdr (assq sym status)))
 	     (value
 	      (if (eq sym 'text)
-		  (twittering-make-fontified-tweet-text-with-entity status)
+		  (twindrill-make-fontified-tweet-text-with-entity status)
 		value)))
 	(unless (and (stringp value)
 		     (string-match regexp value))
@@ -5080,12 +5083,12 @@ If SPEC is a primary timeline and does not equal BASE-SPEC, return nil."
 	(setq rest (cdr rest))))
     matched))
 
-(defun twittering-match-pattern-list (status pattern-list)
+(defun twindrill-match-pattern-list (status pattern-list)
   (let* ((rest pattern-list)
 	 (matched nil))
     (while (and rest (not matched))
       (let ((current (car rest)))
-	(when (twittering-match-pattern status current)
+	(when (twindrill-match-pattern status current)
 	  (setq matched t))
 	(setq rest (cdr rest))))
     matched))
@@ -5094,16 +5097,16 @@ If SPEC is a primary timeline and does not equal BASE-SPEC, return nil."
 ;;;; Retrieved statuses (timeline data)
 ;;;;
 
-(defun twittering-current-timeline-id-table (&optional spec)
-  (let ((spec (or spec (twittering-current-timeline-spec))))
+(defun twindrill-current-timeline-id-table (&optional spec)
+  (let ((spec (or spec (twindrill-current-timeline-spec))))
     (if spec
-	(elt (gethash spec twittering-timeline-data-table) 0)
+	(elt (gethash spec twindrill-timeline-data-table) 0)
       nil)))
 
-(defun twittering-current-timeline-referring-id-table (&optional spec)
+(defun twindrill-current-timeline-referring-id-table (&optional spec)
   "Return the hash from a ID to the ID of the first observed status
 referring the former ID."
-  (let* ((spec (or spec (twittering-current-timeline-spec)))
+  (let* ((spec (or spec (twindrill-current-timeline-spec)))
 	 (type (car spec)))
     (cond
      ((null spec)
@@ -5115,30 +5118,30 @@ referring the former ID."
        (remove
 	nil
 	(mapcar (lambda (base-spec)
-		  (elt (gethash base-spec twittering-timeline-data-table) 1))
-		(twittering-get-primary-base-timeline-specs spec)))))
+		  (elt (gethash base-spec twindrill-timeline-data-table) 1))
+		(twindrill-get-primary-base-timeline-specs spec)))))
      ((eq type 'single)
       ;; Single tweet timelines are registered in a special way.
-      ;; See `twittering-retrieve-single-tweet-sentinel'.
-      (elt (gethash '(:single) twittering-timeline-data-table) 1))
+      ;; See `twindrill-retrieve-single-tweet-sentinel'.
+      (elt (gethash '(:single) twindrill-timeline-data-table) 1))
      (t
-      (elt (gethash spec twittering-timeline-data-table) 1)))))
+      (elt (gethash spec twindrill-timeline-data-table) 1)))))
 
-(defun twittering-current-timeline-data (&optional spec)
-  (let* ((spec (or spec (twittering-current-timeline-spec)))
+(defun twindrill-current-timeline-data (&optional spec)
+  (let* ((spec (or spec (twindrill-current-timeline-spec)))
 	 (type (car spec)))
     (cond
      ((null spec)
       nil)
      ((eq type 'single)
       (let* ((id (cadr spec))
-	     (status (twittering-find-status id)))
+	     (status (twindrill-find-status id)))
 	(if status
 	    `(,status)
 	  nil)))
      ((memq type '(exclude-if exclude-re merge))
       (let ((primary-base-specs
-	     (twittering-get-primary-base-timeline-specs spec)))
+	     (twindrill-get-primary-base-timeline-specs spec)))
 	(sort
 	 (apply
 	  'append
@@ -5146,37 +5149,37 @@ referring the former ID."
 	   (lambda (primary-spec)
 	     ;; `copy-sequence' is required to prevent `sort'
 	     ;; from modifying lists of statuses in the database
-	     ;; `twittering-timeline-data-table'.
-	     ;; The result of `twittering-generate-composite-timeline'
+	     ;; `twindrill-timeline-data-table'.
+	     ;; The result of `twindrill-generate-composite-timeline'
 	     ;; may include a list in the database. If so, the simply
 	     ;; appended list include it as a tail.
 	     (copy-sequence
-	      (twittering-generate-composite-timeline
+	      (twindrill-generate-composite-timeline
 	       spec
-	       primary-spec (twittering-current-timeline-data primary-spec))))
+	       primary-spec (twindrill-current-timeline-data primary-spec))))
 	   primary-base-specs))
 	 (lambda (status1 status2)
 	   (let ((id1 (cdr (assq 'id status1)))
 		 (id2 (cdr (assq 'id status2))))
-	     (twittering-status-id< id2 id1))))))
+	     (twindrill-status-id< id2 id1))))))
      ((eq type :single)
       ;; The timeline spec '(:single) does not correspond to an ordinary
       ;; timeline. It means an unordered set of tweets retrieved by the
-      ;; 'retrieve-single-tweet command of `twittering-call-api'.
+      ;; 'retrieve-single-tweet command of `twindrill-call-api'.
       ;; If this function is used with the spec '(:single), a specific tweet
       ;; will be required with the user's intention.
       ;; In this case, exclusion by patterns does not required.
-      (elt (gethash spec twittering-timeline-data-table) 2))
+      (elt (gethash spec twindrill-timeline-data-table) 2))
      (t
-      (let ((statuses (elt (gethash spec twittering-timeline-data-table) 2))
+      (let ((statuses (elt (gethash spec twindrill-timeline-data-table) 2))
 	    (pattern-list
-	     (twittering-get-filter-list-for-timeline-spec spec)))
+	     (twindrill-get-filter-list-for-timeline-spec spec)))
 	(if pattern-list
 	    (remove
 	     nil
 	     (mapcar
 	      (lambda (status)
-		(if (twittering-match-pattern-list status pattern-list)
+		(if (twindrill-match-pattern-list status pattern-list)
 		    (progn
 		      (debug-printf "Exclude the status: %s" status)
 		      nil)
@@ -5184,11 +5187,11 @@ referring the former ID."
 	      statuses))
 	  statuses))))))
 
-(defun twittering-remove-timeline-data (&optional spec)
-  (let ((spec (or spec (twittering-current-timeline-spec))))
-    (remhash spec twittering-timeline-data-table)))
+(defun twindrill-remove-timeline-data (&optional spec)
+  (let ((spec (or spec (twindrill-current-timeline-spec))))
+    (remhash spec twindrill-timeline-data-table)))
 
-(defun twittering-find-status (id)
+(defun twindrill-find-status (id)
   (let ((result nil))
     (maphash
      (lambda (spec pair)
@@ -5198,10 +5201,10 @@ referring the former ID."
 	 (when (and entry
 		    (or (null result) (< (length result) (length entry))))
 	   (setq result entry))))
-     twittering-timeline-data-table)
+     twindrill-timeline-data-table)
     result))
 
-(defun twittering-delete-status-from-data-table (id)
+(defun twindrill-delete-status-from-data-table (id)
   (let ((modified-spec nil))
     (maphash
      (lambda (spec data)
@@ -5220,39 +5223,39 @@ referring the former ID."
 			 ,referring-id-table
 			 ,(remove status timeline-data))
 		       modified-spec)))))
-     twittering-timeline-data-table)
+     twindrill-timeline-data-table)
     (mapc
      (lambda (spec)
-       (let ((buffer (twittering-get-buffer-from-spec spec)))
+       (let ((buffer (twindrill-get-buffer-from-spec spec)))
 	 (when (buffer-live-p buffer)
 	   (with-current-buffer buffer
 	     (save-excursion
-	       (twittering-for-each-property-region
+	       (twindrill-for-each-property-region
 		'id
 		(lambda (beg end value)
-		  (when (twittering-status-id= id value)
+		  (when (twindrill-status-id= id value)
 		    (let ((buffer-read-only nil)
 			  (separator-pos (min (point-max) (1+ end))))
 		      (delete-region beg separator-pos)
 		      (goto-char beg))))
 		buffer))))))
-     (twittering-remove-duplicates
+     (twindrill-remove-duplicates
       (apply 'append
 	     (mapcar
 	      (lambda (data)
 		(let ((spec (car data)))
 		  ;; Update the entry for `spec' in
-		  ;; `twittering-timeline-data-table' with the new
+		  ;; `twindrill-timeline-data-table' with the new
 		  ;; timeline-data that does not include `status'.
-		  (puthash spec (cdr data) twittering-timeline-data-table)
-		  (twittering-get-dependent-timeline-specs spec)))
+		  (puthash spec (cdr data) twindrill-timeline-data-table)
+		  (twindrill-get-dependent-timeline-specs spec)))
 	      modified-spec))))))
 
-(defun twittering-get-replied-statuses (id &optional count)
+(defun twindrill-get-replied-statuses (id &optional count)
   "Return a list of replied statuses starting from the status specified by ID.
 Statuses are stored in ascending-order with respect to their IDs."
   (let ((result nil)
-	(status (twittering-find-status id)))
+	(status (twindrill-find-status id)))
     (while
 	(and (if (numberp count)
 		 (<= 0 (setq count (1- count)))
@@ -5260,31 +5263,31 @@ Statuses are stored in ascending-order with respect to their IDs."
 	     (let ((replied-id (or (cdr (assq 'in-reply-to-status-id status))
 				   "")))
 	       (unless (string= "" replied-id)
-		 (let ((replied-status (twittering-find-status replied-id)))
+		 (let ((replied-status (twindrill-find-status replied-id)))
 		   (when replied-status
 		     (setq result (cons replied-status result))
 		     (setq status replied-status)
 		     t))))))
     result))
 
-(defun twittering-have-replied-statuses-p (id)
-  (let ((status (twittering-find-status id)))
+(defun twindrill-have-replied-statuses-p (id)
+  (let ((status (twindrill-find-status id)))
     (when status
       (let ((replied-id (cdr (assq 'in-reply-to-status-id status))))
 	(and replied-id (not (string= "" replied-id)))))))
 
-(defun twittering-add-statuses-to-timeline-data (statuses &optional spec)
+(defun twindrill-add-statuses-to-timeline-data (statuses &optional spec)
   "Add STATUSES as new statuses for SPEC and update derived timelines.
 The function returns a list of lists including an updated timeline spec
 string and the number of new statuses for the timeline."
-  (let* ((spec (or spec (twittering-current-timeline-spec)))
+  (let* ((spec (or spec (twindrill-current-timeline-spec)))
 	 (id-table
-	  (or (twittering-current-timeline-id-table spec)
+	  (or (twindrill-current-timeline-id-table spec)
 	      (make-hash-table :test 'equal)))
 	 (referring-id-table
-	  (or (twittering-current-timeline-referring-id-table spec)
+	  (or (twindrill-current-timeline-referring-id-table spec)
 	      (make-hash-table :test 'equal)))
-	 (timeline-data (twittering-current-timeline-data spec)))
+	 (timeline-data (twindrill-current-timeline-data spec)))
     (let* ((new-statuses
 	    (remove nil
 		    (mapcar
@@ -5305,66 +5308,66 @@ string and the number of new statuses for the timeline."
 		     statuses)))
 	   (new-statuses
 	    ;; Sort tweets by ID.
-	    ;; This is necessary because `twittering-render-timeline' assumes
+	    ;; This is necessary because `twindrill-render-timeline' assumes
 	    ;; that given tweets are ordered.
 	    (sort new-statuses
 		  (lambda (status1 status2)
 		    (let ((id1 (cdr (assq 'id status1)))
 			  (id2 (cdr (assq 'id status2))))
-		      (twittering-status-id< id2 id1))))))
+		      (twindrill-status-id< id2 id1))))))
       (when new-statuses
 	(let ((new-timeline-data
 	       (sort (append new-statuses timeline-data)
 		     (lambda (status1 status2)
 		       (let ((id1 (cdr (assq 'id status1)))
 			     (id2 (cdr (assq 'id status2))))
-			 (twittering-status-id< id2 id1))))))
+			 (twindrill-status-id< id2 id1))))))
 	  (puthash spec `(,id-table ,referring-id-table ,new-timeline-data)
-		   twittering-timeline-data-table))
-	(let ((twittering-new-tweets-spec spec)
-	      (twittering-new-tweets-statuses new-statuses)
-	      (twittering-new-tweets-count (length new-statuses)))
-	  (run-hooks 'twittering-new-tweets-hook)))
+		   twindrill-timeline-data-table))
+	(let ((twindrill-new-tweets-spec spec)
+	      (twindrill-new-tweets-statuses new-statuses)
+	      (twindrill-new-tweets-count (length new-statuses)))
+	  (run-hooks 'twindrill-new-tweets-hook)))
       ;; Update timelines derived from SPEC and return the number of
       ;; new tweets for each updated timeline.
       (remove
        nil
        (mapcar
 	(lambda (buffer)
-	  (let ((other-spec (twittering-get-timeline-spec-for-buffer buffer))
+	  (let ((other-spec (twindrill-get-timeline-spec-for-buffer buffer))
 		(other-spec-string
-		 (twittering-get-timeline-spec-string-for-buffer buffer)))
-	    (when (twittering-timeline-spec-depending-on-p other-spec spec)
-	      (let* ((twittering-new-tweets-spec other-spec)
-		     (twittering-new-tweets-statuses
-		      (twittering-generate-composite-timeline
+		 (twindrill-get-timeline-spec-string-for-buffer buffer)))
+	    (when (twindrill-timeline-spec-depending-on-p other-spec spec)
+	      (let* ((twindrill-new-tweets-spec other-spec)
+		     (twindrill-new-tweets-statuses
+		      (twindrill-generate-composite-timeline
 		       other-spec spec new-statuses))
-		     (twittering-new-tweets-count
-		      (length twittering-new-tweets-statuses))
+		     (twindrill-new-tweets-count
+		      (length twindrill-new-tweets-statuses))
 		     (rendered-tweets
-		      (twittering-render-timeline
-		       buffer twittering-new-tweets-statuses t)))
+		      (twindrill-render-timeline
+		       buffer twindrill-new-tweets-statuses t)))
 		(when rendered-tweets
 		  (when (not (equal spec other-spec))
 		    ;; The hook has been alreadly invoked for `spec'.
-		    (run-hooks 'twittering-new-tweets-hook))
+		    (run-hooks 'twindrill-new-tweets-hook))
 		  `(,other-spec-string ,(length rendered-tweets)))))))
-	(twittering-get-buffer-list))))))
+	(twindrill-get-buffer-list))))))
 
 ;;;;
 ;;;; URIs related to a tweet
 ;;;;
 
-(defun twittering-get-status-url (username &optional id)
+(defun twindrill-get-status-url (username &optional id)
   "Generate a URL of a user or a specific status."
   (let ((func
 	 (cdr (assq
 	       'status-url
-	       (assq twittering-service-method
-		     twittering-service-method-table)))))
+	       (assq twindrill-service-method
+		     twindrill-service-method-table)))))
     (funcall func username id)))
 
-(defun twittering-get-status-url-from-alist (status)
+(defun twindrill-get-status-url-from-alist (status)
   "Generate a URL of a tweet specified by an alist STATUS."
   (let ((username (cdr (or (assq 'retweeted-user-screen-name status)
 			   (assq 'user-screen-name status))))
@@ -5373,53 +5376,53 @@ string and the number of new statuses for the timeline."
 	(func
 	 (cdr (assq
 	       'status-url
-	       (assq twittering-service-method
-		     twittering-service-method-table)))))
+	       (assq twindrill-service-method
+		     twindrill-service-method-table)))))
     (funcall func username id)))
 
-(defun twittering-get-list-url (username listname)
+(defun twindrill-get-list-url (username listname)
   "Generate a URL of a specific list."
   (let ((func
 	 (cdr (assq
 	       'status-url
-	       (assq twittering-service-method
-		     twittering-service-method-table))))
+	       (assq twindrill-service-method
+		     twindrill-service-method-table))))
 	(str (concat username "/" listname)))
     (funcall func str nil)))
 
-(defun twittering-get-status-url-twitter (username &optional id)
+(defun twindrill-get-status-url-twitter (username &optional id)
   "Generate status URL for Twitter."
   (if id
-      (format "http://%s/%s/status/%s" twittering-web-host username id)
-    (format "http://%s/%s" twittering-web-host username)))
+      (format "http://%s/%s/status/%s" twindrill-web-host username id)
+    (format "http://%s/%s" twindrill-web-host username)))
 
-(defun twittering-get-status-url-statusnet (username &optional id)
+(defun twindrill-get-status-url-statusnet (username &optional id)
   "Generate status URL for StatusNet."
   (if id
-      (format "http://%s/%s/notice/%s" twittering-web-host twittering-web-path-prefix id)
-    (format "http://%s/%s/%s" twittering-web-host twittering-web-path-prefix username)))
+      (format "http://%s/%s/notice/%s" twindrill-web-host twindrill-web-path-prefix id)
+    (format "http://%s/%s/%s" twindrill-web-host twindrill-web-path-prefix username)))
 
-(defun twittering-get-search-url (query-string)
+(defun twindrill-get-search-url (query-string)
   "Generate a URL for searching QUERY-STRING."
   (let ((func (cdr (assq
-		    'search-url (assq twittering-service-method
-				      twittering-service-method-table)))))
+		    'search-url (assq twindrill-service-method
+				      twindrill-service-method-table)))))
     (funcall func query-string)))
 
-(defun twittering-get-search-url-twitter (query-string)
+(defun twindrill-get-search-url-twitter (query-string)
   (format "http://%s/search?q=%s"
-	  twittering-web-host (twittering-percent-encode query-string)))
+	  twindrill-web-host (twindrill-percent-encode query-string)))
 
-(defun twittering-get-search-url-statusnet (query-string)
+(defun twindrill-get-search-url-statusnet (query-string)
   (if (string-match "^#\\(.+\\)" query-string)
       (format "http://%s/%s/tag/%s"
-	      twittering-web-host
-	      twittering-web-path-prefix
-	      (twittering-percent-encode (match-string 1 query-string)))
+	      twindrill-web-host
+	      twindrill-web-path-prefix
+	      (twindrill-percent-encode (match-string 1 query-string)))
     (format "http://%s/search?q=%s"
-	    twittering-web-host (twittering-percent-encode query-string))))
+	    twindrill-web-host (twindrill-percent-encode query-string))))
 
-(defun twittering-extract-id-from-url (url-string)
+(defun twindrill-extract-id-from-url (url-string)
   "Extract the ID from URL-STRING.
 Return nil if URL-STRING cannot be interpreted as a URL pointing a tweet."
   (when (string-match
@@ -5431,7 +5434,7 @@ Return nil if URL-STRING cannot be interpreted as a URL pointing a tweet."
 ;;;; Utility of status IDs
 ;;;;
 
-(defun twittering-status-id< (id1 id2)
+(defun twindrill-status-id< (id1 id2)
   (let ((len1 (length id1))
 	(len2 (length id2)))
     (cond
@@ -5439,10 +5442,10 @@ Return nil if URL-STRING cannot be interpreted as a URL pointing a tweet."
      ((< len1 len2) t)
      (t nil))))
 
-(defun twittering-status-id= (id1 id2)
+(defun twindrill-status-id= (id1 id2)
   (equal id1 id2))
 
-(defun twittering-snowflake-epoch-time ()
+(defun twindrill-snowflake-epoch-time ()
   "Return the epoch time of Snowflake."
   (require 'calc)
   (let ((epoch-str
@@ -5461,7 +5464,7 @@ Return nil if URL-STRING cannot be interpreted as a URL pointing a tweet."
 	      `(,(substring str 3 7) ,(substring str 7)
 		,milisec-str)))))
 
-(defun twittering-id-to-time (id)
+(defun twindrill-id-to-time (id)
   "Return the time corresonding to ID generated by Snowflake.
 If ID is a string consisting of 12 or more digits, return the corresponding
 time in Emacs internal representation the same as `encode-time'.
@@ -5499,7 +5502,7 @@ by Snowflake."
     ;; 2010-11-04 01:43:17+00:00.
     nil)
    (t
-    (let* ((epoch (twittering-snowflake-epoch-time))
+    (let* ((epoch (twindrill-snowflake-epoch-time))
 	   (str (calc-eval
 		 `(,(format "floor(rsh(10#%s,22)/1000)" id)
 		   calc-word-size 64 calc-number-radix 16)))
@@ -5523,13 +5526,13 @@ by Snowflake."
 		      ,(* milisec 1000)
 		      ))))))))
 
-(defun twittering-time-to-id (time)
+(defun twindrill-time-to-id (time)
   "Return the ID corresponding to TIME by Snowflake.
 Bits other than timestamp are zero. The least significant 22 bits are zero.
 TIME must be an Emacs internal representation as a return value of
 `current-time'."
   (require 'calc)
-  (let* ((epoch-time (twittering-snowflake-epoch-time))
+  (let* ((epoch-time (twindrill-snowflake-epoch-time))
 	 (dt (if (time-less-p epoch-time time)
 		 (time-subtract time epoch-time)
 	       nil))
@@ -5546,29 +5549,29 @@ TIME must be an Emacs internal representation as a return value of
 ;;;; Process info
 ;;;;
 
-(defun twittering-register-process (proc spec &optional str)
-  (let ((str (or str (twittering-timeline-spec-to-string spec))))
-    (add-to-list 'twittering-process-info-alist `(,proc ,spec ,str))))
+(defun twindrill-register-process (proc spec &optional str)
+  (let ((str (or str (twindrill-timeline-spec-to-string spec))))
+    (add-to-list 'twindrill-process-info-alist `(,proc ,spec ,str))))
 
-(defun twittering-release-process (proc)
-  (let ((pair (assoc proc twittering-process-info-alist)))
+(defun twindrill-release-process (proc)
+  (let ((pair (assoc proc twindrill-process-info-alist)))
     (when pair
-      (setq twittering-process-info-alist
-	    (delq pair twittering-process-info-alist)))))
+      (setq twindrill-process-info-alist
+	    (delq pair twindrill-process-info-alist)))))
 
-(defun twittering-get-timeline-spec-from-process (proc)
-  (let ((entry (assoc proc twittering-process-info-alist)))
+(defun twindrill-get-timeline-spec-from-process (proc)
+  (let ((entry (assoc proc twindrill-process-info-alist)))
     (if entry
 	(elt entry 1)
       nil)))
 
-(defun twittering-get-timeline-spec-string-from-process (proc)
-  (let ((entry (assoc proc twittering-process-info-alist)))
+(defun twindrill-get-timeline-spec-string-from-process (proc)
+  (let ((entry (assoc proc twindrill-process-info-alist)))
     (if entry
 	(elt entry 2)
       nil)))
 
-(defun twittering-find-processes-for-timeline-spec (spec)
+(defun twindrill-find-processes-for-timeline-spec (spec)
   (apply 'append
 	 (mapcar
 	  (lambda (pair)
@@ -5577,11 +5580,11 @@ TIME must be an Emacs internal representation as a return value of
 	      (if (equal spec-info spec)
 		  `(,proc)
 		nil)))
-	  twittering-process-info-alist)))
+	  twindrill-process-info-alist)))
 
-(defun twittering-remove-inactive-processes ()
+(defun twindrill-remove-inactive-processes ()
   (let ((inactive-statuses '(nil closed exit failed signal)))
-    (setq twittering-process-info-alist
+    (setq twindrill-process-info-alist
 	  (apply 'append
 		 (mapcar
 		  (lambda (pair)
@@ -5591,29 +5594,29 @@ TIME must be an Emacs internal representation as a return value of
 		      (if (memq status inactive-statuses)
 			  nil
 			`((,proc ,@info)))))
-		  twittering-process-info-alist)))))
+		  twindrill-process-info-alist)))))
 
-(defun twittering-process-active-p (&optional spec)
-  (twittering-remove-inactive-processes)
+(defun twindrill-process-active-p (&optional spec)
+  (twindrill-remove-inactive-processes)
   (if spec
-      (twittering-find-processes-for-timeline-spec spec)
-    twittering-process-info-alist))
+      (twindrill-find-processes-for-timeline-spec spec)
+    twindrill-process-info-alist))
 
 ;;;;
 ;;;; Server info
 ;;;;
 
-(defun twittering-update-api-table (spec api-string)
+(defun twindrill-update-api-table (spec api-string)
   "Register a pair of a timeline spec and an API for retrieving the timeline.
 SPEC is a timeline spec. API-STRING is an identifier of an API for retrieving
 the timeline."
-  (let ((current (assoc spec twittering-timeline-spec-to-api-table)))
+  (let ((current (assoc spec twindrill-timeline-spec-to-api-table)))
     (if (null current)
-	(add-to-list 'twittering-timeline-spec-to-api-table
+	(add-to-list 'twindrill-timeline-spec-to-api-table
 		     `(,spec . ,api-string))
       (setcdr current api-string))))
 
-(defun twittering-make-rate-limit-alist (header-info)
+(defun twindrill-make-rate-limit-alist (header-info)
   "Make a rate-limit information alist from HEADER-INFO.
 Key symbols of a returned alist are following; limit, remaining, reset-time.
 Values bound to limit and remaining is a positive integer and
@@ -5631,7 +5634,7 @@ one bound to reset-time is an Emacs time (result of `seconds-to-time')."
      (mapcar (lambda (entry)
 	       (let ((sym
 		      (cdr
-		       (twittering-assoc-string (car entry) symbol-table t))))
+		       (twindrill-assoc-string (car entry) symbol-table t))))
 		 (cond
 		  ((memq sym '(limit remaining))
 		   `(,sym . ,(string-to-number (cdr entry))))
@@ -5642,55 +5645,55 @@ one bound to reset-time is an Emacs time (result of `seconds-to-time')."
 		   nil))))
 	     header-info))))
 
-(defun twittering-update-rate-limit-info (api-string spec header-info)
+(defun twindrill-update-rate-limit-info (api-string spec header-info)
   "Register rate-limit information.
 API-STRING is an identifier of an API. SPEC is a timeline spec that had been
 retrieved by the API. HEADER-INFO is an alist generated from the HTTP response
 header of the API."
   (let* ((api-string
-	  (if (eq twittering-service-method 'twitter)
+	  (if (eq twindrill-service-method 'twitter)
 	      ;; The key for Twitter API v1.0 is nil.
 	      nil
 	    api-string))
-	 (current (assoc api-string twittering-api-limit-info-alist))
-	 (rate-limit-alist (twittering-make-rate-limit-alist header-info)))
-    (twittering-update-api-table spec api-string)
+	 (current (assoc api-string twindrill-api-limit-info-alist))
+	 (rate-limit-alist (twindrill-make-rate-limit-alist header-info)))
+    (twindrill-update-api-table spec api-string)
     (if (null current)
-	(add-to-list 'twittering-api-limit-info-alist
+	(add-to-list 'twindrill-api-limit-info-alist
 		     `(,api-string . ,rate-limit-alist))
       (setcdr current rate-limit-alist))))
 
-(defun twittering-update-server-info (connection-info header-info)
+(defun twindrill-update-server-info (connection-info header-info)
   (let* ((new-entry-list (mapcar 'car header-info))
 	 (account-info (cdr (assq 'account-info connection-info)))
 	 (account
-	  (twittering-get-from-account-info "screen_name" account-info))
+	  (twindrill-get-from-account-info "screen_name" account-info))
 	 (spec (cdr (assq 'timeline-spec connection-info)))
 	 (api-string
 	  (cdr (assq 'uri-without-query (assq 'request connection-info)))))
-    (twittering-update-rate-limit-info api-string spec header-info)
+    (twindrill-update-rate-limit-info api-string spec header-info)
     (when (remove t (mapcar
 		     (lambda (entry)
 		       (equal (assoc entry header-info)
-			      (assoc entry twittering-server-info-alist)))
+			      (assoc entry twindrill-server-info-alist)))
 		     new-entry-list))
-      (setq twittering-server-info-alist
+      (setq twindrill-server-info-alist
 	    (append header-info
 		    (remove nil (mapcar
 				 (lambda (entry)
 				   (if (member (car entry) new-entry-list)
 				       nil
 				     entry))
-				 twittering-server-info-alist))))
-      (when twittering-display-remaining
+				 twindrill-server-info-alist))))
+      (when twindrill-display-remaining
 	(mapc (lambda (buffer)
 		(with-current-buffer buffer
-		  (twittering-update-mode-line)))
-	      (twittering-get-buffer-list))))
+		  (twindrill-update-mode-line)))
+	      (twindrill-get-buffer-list))))
     ;; cookie
     (let* ((new-cookies
-	    (twittering-extract-cookie connection-info header-info))
-	   (old-cookies (cdr (assoc account twittering-cookie-alist)))
+	    (twindrill-extract-cookie connection-info header-info))
+	   (old-cookies (cdr (assoc account twindrill-cookie-alist)))
 	   (updated-cookies
 	    (append new-cookies
 		    (remove nil
@@ -5698,16 +5701,16 @@ header of the API."
 				      (unless (assoc (car cookie) new-cookies)
 					cookie))
 				    old-cookies)))))
-      (setq twittering-cookie-alist
+      (setq twindrill-cookie-alist
 	    (cons (cons account updated-cookies)
 		  (remove nil
 			  (mapcar (lambda (entry)
 				    (unless (equal account (car entry))
 				      entry))
-				  twittering-cookie-alist)))))
+				  twindrill-cookie-alist)))))
     header-info))
 
-(defun twittering-extract-cookie (connection-info header-info)
+(defun twindrill-extract-cookie (connection-info header-info)
   (remove
    nil
    (mapcar
@@ -5760,9 +5763,9 @@ header of the API."
 	      ,@additional-attributes)))))
     header-info)))
 
-(defun twittering-make-cookie-string (request account-info)
+(defun twindrill-make-cookie-string (request account-info)
   (let ((account
-	 (twittering-get-from-account-info "screen_name" account-info))
+	 (twindrill-get-from-account-info "screen_name" account-info))
 	(current-time (current-time))
 	(host (cdr (assq 'host request))))
     (when account
@@ -5778,62 +5781,62 @@ header of the API."
 		    (when (and not-expired
 			       (string-match domain-regexp host))
 		      (format "%s=%s" (car entry) (cdr (assq 'value entry))))))
-		(cdr (assoc account twittering-cookie-alist))))
+		(cdr (assoc account twindrill-cookie-alist))))
        ";"))))
 
-(defun twittering-get-ratelimit-alist (&optional spec)
+(defun twindrill-get-ratelimit-alist (&optional spec)
   (let ((api-string
-	 (cdr (assoc spec twittering-timeline-spec-to-api-table))))
-    (cdr (assoc api-string twittering-api-limit-info-alist))))
+	 (cdr (assoc spec twindrill-timeline-spec-to-api-table))))
+    (cdr (assoc api-string twindrill-api-limit-info-alist))))
 
-(defun twittering-get-ratelimit-remaining (&optional spec)
-  (or (cdr (assq 'remaining (twittering-get-ratelimit-alist spec)))
+(defun twindrill-get-ratelimit-remaining (&optional spec)
+  (or (cdr (assq 'remaining (twindrill-get-ratelimit-alist spec)))
       0))
 
-(defun twittering-get-ratelimit-limit (&optional spec)
-  (or (cdr (assq 'limit (twittering-get-ratelimit-alist spec)))
+(defun twindrill-get-ratelimit-limit (&optional spec)
+  (or (cdr (assq 'limit (twindrill-get-ratelimit-alist spec)))
       0))
 
-(defun twittering-get-ratelimit-indicator-string (&optional spec)
+(defun twindrill-get-ratelimit-indicator-string (&optional spec)
   "Make an indicator string of rate-limit information of SPEC."
   (cond
-   ((eq twittering-service-method 'twitter)
+   ((eq twindrill-service-method 'twitter)
     ;; Twitter API v1.0.
     (format "%d/%d"
-	    (twittering-get-ratelimit-remaining)
-	    (twittering-get-ratelimit-limit)))
+	    (twindrill-get-ratelimit-remaining)
+	    (twindrill-get-ratelimit-limit)))
    (t
     (mapconcat
      (lambda (api-string)
-       (let* ((alist (cdr (assoc api-string twittering-api-limit-info-alist)))
+       (let* ((alist (cdr (assoc api-string twindrill-api-limit-info-alist)))
 	      (remaining (cdr (assq 'remaining alist)))
 	      (limit (cdr (assq 'limit alist))))
 	 (format "%s/%s"
 		 (if remaining (number-to-string remaining) "?")
 		 (if limit (number-to-string limit) "?"))))
-     (twittering-remove-duplicates
+     (twindrill-remove-duplicates
       (mapcar (lambda (spec)
-		(cdr (assoc spec twittering-timeline-spec-to-api-table)))
-	      (twittering-get-primary-base-timeline-specs spec)))
+		(cdr (assoc spec twindrill-timeline-spec-to-api-table)))
+	      (twindrill-get-primary-base-timeline-specs spec)))
      "+"))))
 
 ;;;;
 ;;;; Abstract layer for Twitter API
 ;;;;
 
-(defun twittering-api-path (&rest params)
-  (mapconcat 'identity `(,twittering-api-prefix ,@params) ""))
+(defun twindrill-api-path (&rest params)
+  (mapconcat 'identity `(,twindrill-api-prefix ,@params) ""))
 
-(defun twittering-call-api (command args-alist &optional additional-info)
+(defun twindrill-call-api (command args-alist &optional additional-info)
   "Call Twitter API and return the process object for the request.
-Invoke `twittering-call-api-with-account' with the main account specified
-by `twittering-get-main-account-info'.
-For details of arguments, see `twittering-call-api-with-account'."
-  (let ((account-info-alist (twittering-get-main-account-info)))
-    (twittering-call-api-with-account account-info-alist command args-alist
+Invoke `twindrill-call-api-with-account' with the main account specified
+by `twindrill-get-main-account-info'.
+For details of arguments, see `twindrill-call-api-with-account'."
+  (let ((account-info-alist (twindrill-get-main-account-info)))
+    (twindrill-call-api-with-account account-info-alist command args-alist
 				      additional-info)))
 
-(defun twittering-call-api-with-account (account-info-alist command args-alist &optional additional-info)
+(defun twindrill-call-api-with-account (account-info-alist command args-alist &optional additional-info)
   "Call Twitter API and return the process object for the request.
 COMMAND is a symbol specifying API. ARGS-ALIST is an alist specifying
 arguments for the API corresponding to COMMAND. Each key of ARGS-ALIST is a
@@ -5843,9 +5846,9 @@ the following key;
 \"screen_name\", \"oauth_token\" and \"oauth_token_secret\" for OAuth/xAuth,
 \"screen_name\" and \"password\" for basic authentication.
 ADDITIONAL-INFO is used as an argument ADDITIONAL-INFO of
-`twittering-send-http-request'. Sentinels associated to the returned process
+`twindrill-send-http-request'. Sentinels associated to the returned process
 receives it as the fourth argument. See also the function
-`twittering-send-http-request'.
+`twindrill-send-http-request'.
 
 The valid symbols as COMMAND follows:
 retrieve-timeline -- Retrieve a timeline.
@@ -5854,20 +5857,20 @@ retrieve-timeline -- Retrieve a timeline.
     timeline-spec-string -- the string representation of the timeline spec.
     format -- (optional) the symbol specifying the format.
     number -- (optional) how many tweets are retrieved. It must be an integer.
-      If nil, `twittering-number-of-tweets-on-retrieval' is used instead.
+      If nil, `twindrill-number-of-tweets-on-retrieval' is used instead.
       The maximum for search timeline is 100, and that for other timelines is
-      `twittering-max-number-of-tweets-on-retrieval'.
+      `twindrill-max-number-of-tweets-on-retrieval'.
       If the given number exceeds the maximum, the maximum is used instead.
     max_id -- (optional) the maximum ID of retrieved tweets.
     since_id -- (optional) the minimum ID of retrieved tweets.
     sentinel -- (optional) the sentinel that processes the buffer consisting
       of retrieved data.. This is used as an argument SENTINEL of
-      `twittering-send-http-request' via `twittering-http-get'.
-      If nil, `twittering-http-get-default-sentinel' is used.
+      `twindrill-send-http-request' via `twindrill-http-get'.
+      If nil, `twindrill-http-get-default-sentinel' is used.
     clean-up-sentinel -- (optional) the clean-up sentinel that post-processes
       the buffer associated to the process. This is used as an argument
-      CLEAN-UP-SENTINEL of `twittering-send-http-request' via
-      `twittering-http-get'.
+      CLEAN-UP-SENTINEL of `twindrill-send-http-request' via
+      `twindrill-http-get'.
     page -- (optional and valid only for favorites timeline) which page will
       be retrieved.
 retrieve-single-tweet -- Retrieve a single tweet.
@@ -5877,32 +5880,32 @@ retrieve-single-tweet -- Retrieve a single tweet.
     format -- (optional) the symbol specifying the format.
     sentinel -- (optional) the sentinel that processes the buffer consisting
       of retrieved data.. This is used as an argument SENTINEL of
-      `twittering-send-http-request' via `twittering-http-get'.
-      If nil, `twittering-http-get-default-sentinel' is used.
+      `twindrill-send-http-request' via `twindrill-http-get'.
+      If nil, `twindrill-http-get-default-sentinel' is used.
     clean-up-sentinel -- (optional) the clean-up sentinel that post-processes
       the buffer associated to the process. This is used as an argument
-      CLEAN-UP-SENTINEL of `twittering-send-http-request' via
-      `twittering-http-get'.
+      CLEAN-UP-SENTINEL of `twindrill-send-http-request' via
+      `twindrill-http-get'.
 get-list-index -- Retrieve list names owned by a user.
   Valid key symbols in ARGS-ALIST:
     username -- the username.
     sentinel -- the sentinel that processes retrieved strings. This is used
-      as an argument SENTINEL of `twittering-send-http-request'
-      via `twittering-http-get'.
+      as an argument SENTINEL of `twindrill-send-http-request'
+      via `twindrill-http-get'.
     clean-up-sentinel -- (optional) the clean-up sentinel that post-processes
       the buffer associated to the process. This is used as an argument
-      CLEAN-UP-SENTINEL of `twittering-send-http-request' via
-      `twittering-http-get'.
+      CLEAN-UP-SENTINEL of `twindrill-send-http-request' via
+      `twindrill-http-get'.
 get-list-subscriptions -- Retrieve list names followed by a user.
   Valid key symbols in ARGS-ALIST:
     username -- the username.
     sentinel -- the sentinel that processes retrieved strings. This is used
-      as an argument SENTINEL of `twittering-send-http-request'
-      via `twittering-http-get'.
+      as an argument SENTINEL of `twindrill-send-http-request'
+      via `twindrill-http-get'.
     clean-up-sentinel -- (optional) the clean-up sentinel that post-processes
       the buffer associated to the process. This is used as an argument
-      CLEAN-UP-SENTINEL of `twittering-send-http-request' via
-      `twittering-http-get'.
+      CLEAN-UP-SENTINEL of `twindrill-send-http-request' via
+      `twindrill-http-get'.
 create-friendships -- Follow a user.
   Valid key symbols in ARGS-ALIST:
     username -- the username which will be followed.
@@ -5929,11 +5932,11 @@ retweet -- Retweet a tweet.
 verify-credentials -- Verify the current credentials.
   Valid key symbols in ARGS-ALIST:
     sentinel -- the sentinel that processes returned information. This is used
-      as an argument SENTINEL of `twittering-send-http-request'
-      via `twittering-http-get'.
+      as an argument SENTINEL of `twindrill-send-http-request'
+      via `twindrill-http-get'.
     clean-up-sentinel -- the clean-up sentinel that post-processes the buffer
       associated to the process. This is used as an argument CLEAN-UP-SENTINEL
-      of `twittering-send-http-request' via `twittering-http-get'.
+      of `twindrill-send-http-request' via `twindrill-http-get'.
 send-direct-message -- Send a direct message.
   Valid key symbols in ARGS-ALIST:
     username -- the username who the message is sent to.
@@ -5965,33 +5968,33 @@ block-and-report-as-spammer -- Block a user and report him or her as a spammer.
 get-service-configuration -- Get the configuration of the server.
   Valid key symbols in ARGS-ALIST:
     sentinel -- the sentinel that processes retrieved strings. This is used
-      as an argument SENTINEL of `twittering-send-http-request'.
+      as an argument SENTINEL of `twindrill-send-http-request'.
     clean-up-sentinel -- (optional) the clean-up sentinel that post-processes
       the buffer associated to the process. This is used as an argument
-      CLEAN-UP-SENTINEL of `twittering-send-http-request'."
+      CLEAN-UP-SENTINEL of `twindrill-send-http-request'."
   (let* ((additional-info
 	  `(,@additional-info
-	    (service-method . ,twittering-service-method))))
+	    (service-method . ,twindrill-service-method))))
     (cond
-     ((memq twittering-service-method '(twitter statusnet))
-      (twittering-call-api-with-account-in-api1.0
+     ((memq twindrill-service-method '(twitter statusnet))
+      (twindrill-call-api-with-account-in-api1.0
        account-info-alist command args-alist additional-info))
-     ((eq twittering-service-method 'twitter-api-v1.1)
+     ((eq twindrill-service-method 'twitter-api-v1.1)
       (cond
        ((not (require 'json nil t))
 	(error "`json.el' is required to use the Twitter REST API v1.1")
 	nil)
-       ((not twittering-use-ssl)
+       ((not twindrill-use-ssl)
 	(error "SSL is required to use the Twitter REST API v1.1")
 	nil)
        (t
-	(twittering-call-api-with-account-in-api1.1
+	(twindrill-call-api-with-account-in-api1.1
 	 account-info-alist command args-alist additional-info))))
      (t
-      (error "`twittering-service-method' is an invalid service method")
+      (error "`twindrill-service-method' is an invalid service method")
       ))))
 
-(defun twittering-call-api-with-account-in-api1.0 (account-info-alist command args-alist &optional additional-info)
+(defun twindrill-call-api-with-account-in-api1.0 (account-info-alist command args-alist &optional additional-info)
   "Call the Twitter REST API v1.0 and return the process object for the request."
   (cond
    ((eq command 'retrieve-timeline)
@@ -6001,12 +6004,12 @@ get-service-configuration -- Get the configuration of the server.
 	   (spec-type (car-safe spec))
 	   (max-number (if (eq 'search spec-type)
 			   100 ;; FIXME: refer to defconst.
-			 twittering-max-number-of-tweets-on-retrieval))
+			 twindrill-max-number-of-tweets-on-retrieval))
 	   (number
 	    (let ((number
 		   (or (cdr (assq 'number args-alist))
 		       (let* ((default-number 20)
-			      (n twittering-number-of-tweets-on-retrieval))
+			      (n twindrill-number-of-tweets-on-retrieval))
 			 (cond
 			  ((integerp n) n)
 			  ((string-match "^[0-9]+$" n) (string-to-number n 10))
@@ -6097,25 +6100,25 @@ get-service-configuration -- Get the configuration of the server.
 	      (retweeted_to_me . "statuses/retweeted_to_me")
 	      (retweets_of_me . "statuses/retweets_of_me")
 	      (user . "statuses/user_timeline")))
-	   (host (cond ((eq spec-type 'search) twittering-api-search-host)
-		       (t twittering-api-host)))
+	   (host (cond ((eq spec-type 'search) twindrill-api-search-host)
+		       (t twindrill-api-host)))
 	   (method
 	    (cond
 	     ((eq spec-type 'list)
-	      (twittering-api-path "lists/statuses"))
+	      (twindrill-api-path "lists/statuses"))
 	     ((eq spec-type 'favorites)
 	      (let ((user (elt spec 1)))
 		(if user
-		    (twittering-api-path "favorites/" user)
-		  (twittering-api-path "favorites"))))
+		    (twindrill-api-path "favorites/" user)
+		  (twindrill-api-path "favorites"))))
 	     ((eq spec-type 'retweeted_by_user)
-	      (twittering-api-path "statuses/retweeted_by_user"))
+	      (twindrill-api-path "statuses/retweeted_by_user"))
 	     ((eq spec-type 'retweeted_to_user)
-	      (twittering-api-path "statuses/retweeted_to_user"))
+	      (twindrill-api-path "statuses/retweeted_to_user"))
 	     ((eq spec-type 'search)
-	      twittering-search-api-method)
+	      twindrill-search-api-method)
 	     ((assq spec-type simple-spec-list)
-	      (twittering-api-path (cdr (assq spec-type simple-spec-list))))
+	      (twindrill-api-path (cdr (assq spec-type simple-spec-list))))
 	     (t nil)))
 	   (sentinel (cdr (assq 'sentinel args-alist)))
 	   (clean-up-sentinel (cdr (assq 'clean-up-sentinel args-alist)))
@@ -6124,18 +6127,18 @@ get-service-configuration -- Get the configuration of the server.
        ((eq spec-type 'single)
 	(let ((id (cadr spec))
 	      (sentinel (or sentinel
-			    'twittering-retrieve-single-tweet-sentinel)))
-	  (if (twittering-find-status id)
+			    'twindrill-retrieve-single-tweet-sentinel)))
+	  (if (twindrill-find-status id)
 	      ;; If the status has already retrieved, do nothing.
 	      nil
-	    (twittering-call-api 'retrieve-single-tweet
+	    (twindrill-call-api 'retrieve-single-tweet
 				 `((id . ,id)
 				   (format . ,format)
 				   (sentinel . ,sentinel)
 				   (clean-up-sentinel . ,clean-up-sentinel))
 				 additional-info))))
        ((and host method)
-	(twittering-http-get account-info-alist host method parameters
+	(twindrill-http-get account-info-alist host method parameters
 			     format-str
 			     additional-info sentinel clean-up-sentinel))
        (t
@@ -6158,8 +6161,8 @@ get-service-configuration -- Get the configuration of the server.
 			      (id . ,id)
 			      (user-screen-name . ,user-screen-name)
 			      (format . ,format))))
-      (twittering-http-get account-info-alist twittering-api-host
-			   (twittering-api-path "statuses/show/" id)
+      (twindrill-http-get account-info-alist twindrill-api-host
+			   (twindrill-api-path "statuses/show/" id)
 			   parameters format-str additional-info
 			   sentinel clean-up-sentinel)))
    ((eq command 'get-list-index)
@@ -6169,8 +6172,8 @@ get-service-configuration -- Get the configuration of the server.
 	   (format (if (require 'json nil t) 'json 'xml))
 	   (format-str (symbol-name format))
 	   (clean-up-sentinel (cdr (assq 'clean-up-sentinel args-alist))))
-      (twittering-http-get account-info-alist twittering-api-host
-			   (twittering-api-path username "/lists")
+      (twindrill-http-get account-info-alist twindrill-api-host
+			   (twindrill-api-path username "/lists")
 			   nil format-str additional-info
 			   sentinel clean-up-sentinel)))
    ((eq command 'get-list-subscriptions)
@@ -6179,35 +6182,35 @@ get-service-configuration -- Get the configuration of the server.
 	   (format (if (require 'json nil t) 'json 'xml))
 	   (format-str (symbol-name format))
 	   (clean-up-sentinel (cdr (assq 'clean-up-sentinel args-alist))))
-      (twittering-http-get account-info-alist twittering-api-host
-			   (twittering-api-path username "/lists/subscriptions")
+      (twindrill-http-get account-info-alist twindrill-api-host
+			   (twindrill-api-path username "/lists/subscriptions")
 			   nil format-str additional-info
 			   sentinel clean-up-sentinel)))
    ((eq command 'create-friendships)
     ;; Create a friendship.
     (let ((username (cdr (assq 'username args-alist))))
-      (twittering-http-post account-info-alist twittering-api-host
-			    (twittering-api-path "friendships/create")
+      (twindrill-http-post account-info-alist twindrill-api-host
+			    (twindrill-api-path "friendships/create")
 			    `(("screen_name" . ,username))
 			    nil additional-info)))
    ((eq command 'destroy-friendships)
     ;; Destroy a friendship
     (let ((username (cdr (assq 'username args-alist))))
-      (twittering-http-post account-info-alist twittering-api-host
-			    (twittering-api-path "friendships/destroy")
+      (twindrill-http-post account-info-alist twindrill-api-host
+			    (twindrill-api-path "friendships/destroy")
 			    `(("screen_name" . ,username))
 			    nil additional-info)))
    ((eq command 'create-favorites)
     ;; Create a favorite.
     (let ((id (cdr (assq 'id args-alist))))
-      (twittering-http-post account-info-alist twittering-api-host
-			    (twittering-api-path "favorites/create/" id)
+      (twindrill-http-post account-info-alist twindrill-api-host
+			    (twindrill-api-path "favorites/create/" id)
 			    nil nil additional-info)))
    ((eq command 'destroy-favorites)
     ;; Destroy a favorite.
     (let ((id (cdr (assq 'id args-alist))))
-      (twittering-http-post account-info-alist twittering-api-host
-			    (twittering-api-path "favorites/destroy/" id)
+      (twindrill-http-post account-info-alist twindrill-api-host
+			    (twindrill-api-path "favorites/destroy/" id)
 			    nil nil additional-info)))
    ((eq command 'update-status)
     ;; Post a tweet.
@@ -6215,33 +6218,33 @@ get-service-configuration -- Get the configuration of the server.
 	   (id (cdr (assq 'in-reply-to-status-id args-alist)))
 	   (parameters
 	    `(("status" . ,status)
-	      ,@(when (eq twittering-auth-method 'basic)
+	      ,@(when (eq twindrill-auth-method 'basic)
 		  '(("source" . "twmode")))
 	      ,@(when id `(("in_reply_to_status_id" . ,id))))))
-      (twittering-http-post account-info-alist twittering-api-host
-			    (twittering-api-path "statuses/update")
+      (twindrill-http-post account-info-alist twindrill-api-host
+			    (twindrill-api-path "statuses/update")
 			    parameters nil additional-info)))
    ((eq command 'destroy-status)
     ;; Destroy a status.
     (let* ((id (cdr (assq 'id args-alist)))
 	   (format (if (require 'json nil t) 'json 'xml))
 	   (format-str (symbol-name format)))
-      (twittering-http-post account-info-alist twittering-api-host
-			    (twittering-api-path "statuses/destroy/" id)
+      (twindrill-http-post account-info-alist twindrill-api-host
+			    (twindrill-api-path "statuses/destroy/" id)
 			    nil format-str additional-info
-			    'twittering-http-post-destroy-status-sentinel)))
+			    'twindrill-http-post-destroy-status-sentinel)))
    ((eq command 'retweet)
     ;; Post a retweet.
     (let ((id (cdr (assq 'id args-alist))))
-      (twittering-http-post account-info-alist twittering-api-host
-			    (twittering-api-path "statuses/retweet/" id)
+      (twindrill-http-post account-info-alist twindrill-api-host
+			    (twindrill-api-path "statuses/retweet/" id)
 			    nil nil additional-info)))
    ((eq command 'verify-credentials)
     ;; Verify the account.
     (let ((sentinel (cdr (assq 'sentinel args-alist)))
 	  (clean-up-sentinel (cdr (assq 'clean-up-sentinel args-alist))))
-      (twittering-http-get account-info-alist twittering-api-host
-			   (twittering-api-path "account/verify_credentials")
+      (twindrill-http-get account-info-alist twindrill-api-host
+			   (twindrill-api-path "account/verify_credentials")
 			   nil nil additional-info
 			   sentinel clean-up-sentinel)))
    ((eq command 'send-direct-message)
@@ -6249,8 +6252,8 @@ get-service-configuration -- Get the configuration of the server.
     (let ((parameters
 	   `(("screen_name" . ,(cdr (assq 'username args-alist)))
 	     ("text" . ,(cdr (assq 'status args-alist))))))
-      (twittering-http-post account-info-alist twittering-api-host
-			    (twittering-api-path "direct_messages/new")
+      (twindrill-http-post account-info-alist twindrill-api-host
+			    (twindrill-api-path "direct_messages/new")
 			    parameters nil additional-info)))
    ((eq command 'block)
     ;; Block a user.
@@ -6259,8 +6262,8 @@ get-service-configuration -- Get the configuration of the server.
 	   (parameters (if user-id
 			   `(("user_id" . ,user-id))
 			 `(("screen_name" . ,username)))))
-      (twittering-http-post account-info-alist twittering-api-host
-			    (twittering-api-path "blocks/create")
+      (twindrill-http-post account-info-alist twindrill-api-host
+			    (twindrill-api-path "blocks/create")
 			    parameters nil additional-info)))
    ((eq command 'block-and-report-as-spammer)
     ;; Report a user as a spammer and block him or her.
@@ -6269,30 +6272,30 @@ get-service-configuration -- Get the configuration of the server.
 	   (parameters (if user-id
 			   `(("user_id" . ,user-id))
 			 `(("screen_name" . ,username)))))
-      (twittering-http-post account-info-alist twittering-api-host
-			    (twittering-api-path "report_spam")
+      (twindrill-http-post account-info-alist twindrill-api-host
+			    (twindrill-api-path "report_spam")
 			    parameters nil additional-info)))
    ((eq command 'get-service-configuration)
     (let* ((format (if (require 'json nil t) 'json 'xml))
 	   (format-str (symbol-name format))
 	   (request
-	    (twittering-make-http-request-from-uri
+	    (twindrill-make-http-request-from-uri
 	     "GET" nil
-	     (concat (if twittering-use-ssl
+	     (concat (if twindrill-use-ssl
 			 "https"
 		       "http")
-		     "://" twittering-api-host
+		     "://" twindrill-api-host
 		     "/"
-		     (twittering-api-path "help/configuration." format-str))))
+		     (twindrill-api-path "help/configuration." format-str))))
 	   (additional-info nil)
 	   (sentinel (cdr (assq 'sentinel args-alist)))
 	   (clean-up-sentinel (cdr (assq 'clean-up-sentinel args-alist))))
-      (twittering-send-http-request request additional-info
+      (twindrill-send-http-request request additional-info
 				    sentinel clean-up-sentinel)))
    (t
     nil)))
 
-(defun twittering-call-api-with-account-in-api1.1 (account-info-alist command args-alist &optional additional-info)
+(defun twindrill-call-api-with-account-in-api1.1 (account-info-alist command args-alist &optional additional-info)
   "Call the Twitter REST API v1.1 and return the process object for the request."
   (cond
    ((eq command 'retrieve-timeline)
@@ -6306,7 +6309,7 @@ get-service-configuration -- Get the configuration of the server.
 	       ((memq spec-type '(friends replies))
 		(let* ((alternative (cdr (assq spec-type table)))
 		       (alternative-str
-			(twittering-timeline-spec-to-string alternative)))
+			(twindrill-timeline-spec-to-string alternative)))
 		  (message
 		   "Timeline spec %s is not supported in the Twitter REST API v1.1"
 		   spec)
@@ -6320,12 +6323,12 @@ get-service-configuration -- Get the configuration of the server.
 	   (spec-type (car-safe spec))
 	   (max-number (if (eq 'search spec-type)
 			   100 ;; FIXME: refer to defconst.
-			 twittering-max-number-of-tweets-on-retrieval))
+			 twindrill-max-number-of-tweets-on-retrieval))
 	   (number
 	    (let ((number
 		   (or (cdr (assq 'number args-alist))
 		       (let* ((default-number 20)
-			      (n twittering-number-of-tweets-on-retrieval))
+			      (n twindrill-number-of-tweets-on-retrieval))
 			 (cond
 			  ((integerp n) n)
 			  ((string-match "^[0-9]+$" n) (string-to-number n 10))
@@ -6451,7 +6454,7 @@ get-service-configuration -- Get the configuration of the server.
 	   (id (cdr (assoc "id" http-parameters)))
 	   (sentinel (or sentinel
 			 (when (eq spec-type 'single)
-			   'twittering-retrieve-single-tweet-sentinel))))
+			   'twindrill-retrieve-single-tweet-sentinel))))
       (cond
        ((null parameters)
 	nil)
@@ -6460,11 +6463,11 @@ get-service-configuration -- Get the configuration of the server.
 	(error "The Twitter REST API v1.1 supports only JSON")
 	nil)
        ((and (eq spec-type 'single)
-	     (twittering-find-status id))
+	     (twindrill-find-status id))
 	;; If the status has already retrieved, do nothing.
 	nil)
        ((and host method)
-	(twittering-http-get account-info-alist host method http-parameters
+	(twindrill-http-get account-info-alist host method http-parameters
 			     format-str
 			     additional-info sentinel clean-up-sentinel))
        (t
@@ -6487,7 +6490,7 @@ get-service-configuration -- Get the configuration of the server.
 			      (id . ,id)
 			      (user-screen-name . ,user-screen-name)
 			      (format . ,format))))
-      (twittering-call-api-with-account-in-api1.1
+      (twindrill-call-api-with-account-in-api1.1
        account-info-alist 'retrieve-timeline
        `((timeline-spec . (single ,id))
 	 (format . ,format)
@@ -6503,7 +6506,7 @@ get-service-configuration -- Get the configuration of the server.
 	   (http-parameters `(("screen_name" . ,username)))
 	   (format-str "json")
 	   (clean-up-sentinel (cdr (assq 'clean-up-sentinel args-alist))))
-      (twittering-http-get account-info-alist host method http-parameters
+      (twindrill-http-get account-info-alist host method http-parameters
 			   format-str additional-info
 			   sentinel clean-up-sentinel)))
    ((eq command 'get-list-subscriptions)
@@ -6516,7 +6519,7 @@ get-service-configuration -- Get the configuration of the server.
 	      ("screen_name" . ,username)))
 	   (format-str "json")
 	   (clean-up-sentinel (cdr (assq 'clean-up-sentinel args-alist))))
-      (twittering-http-get account-info-alist host method http-parameters
+      (twindrill-http-get account-info-alist host method http-parameters
 			   format-str additional-info
 			   sentinel clean-up-sentinel)))
    ((eq command 'create-friendships)
@@ -6527,7 +6530,7 @@ get-service-configuration -- Get the configuration of the server.
 	   (http-parameters
 	    `(("screen_name" . ,username)))
 	   (format-str "json"))
-      (twittering-http-post account-info-alist host method http-parameters
+      (twindrill-http-post account-info-alist host method http-parameters
 			    format-str additional-info)))
    ((eq command 'destroy-friendships)
     ;; Destroy a friendship
@@ -6537,7 +6540,7 @@ get-service-configuration -- Get the configuration of the server.
 	   (http-parameters
 	    `(("screen_name" . ,username)))
 	   (format-str "json"))
-      (twittering-http-post account-info-alist host method http-parameters
+      (twindrill-http-post account-info-alist host method http-parameters
 			    format-str additional-info)))
    ((eq command 'create-favorites)
     ;; Create a favorite.
@@ -6546,7 +6549,7 @@ get-service-configuration -- Get the configuration of the server.
 	   (method "1.1/favorites/create")
 	   (http-parameters `(("id" . ,id)))
 	   (format-str "json"))
-      (twittering-http-post account-info-alist host method http-parameters
+      (twindrill-http-post account-info-alist host method http-parameters
 			    format-str additional-info)))
    ((eq command 'destroy-favorites)
     ;; Destroy a favorite.
@@ -6555,7 +6558,7 @@ get-service-configuration -- Get the configuration of the server.
 	   (method "1.1/favorites/destroy")
 	   (http-parameters `(("id" . ,id)))
 	   (format-str "json"))
-      (twittering-http-post account-info-alist host method http-parameters
+      (twindrill-http-post account-info-alist host method http-parameters
 			    format-str additional-info)))
    ((eq command 'update-status)
     ;; Post a tweet.
@@ -6567,7 +6570,7 @@ get-service-configuration -- Get the configuration of the server.
 	    `(("status" . ,status)
 	      ,@(when id `(("in_reply_to_status_id" . ,id)))))
 	   (format-str "json"))
-      (twittering-http-post account-info-alist host method http-parameters
+      (twindrill-http-post account-info-alist host method http-parameters
 			    format-str additional-info)))
    ((eq command 'destroy-status)
     ;; Destroy a status.
@@ -6576,9 +6579,9 @@ get-service-configuration -- Get the configuration of the server.
 	   (method (format "1.1/statuses/destroy/%s" id))
 	   (http-parameters nil)
 	   (format-str "json"))
-      (twittering-http-post account-info-alist host method http-parameters
+      (twindrill-http-post account-info-alist host method http-parameters
 			    format-str additional-info
-			    'twittering-http-post-destroy-status-sentinel)))
+			    'twindrill-http-post-destroy-status-sentinel)))
    ((eq command 'retweet)
     ;; Post a retweet.
     (let* ((id (cdr (assq 'id args-alist)))
@@ -6586,7 +6589,7 @@ get-service-configuration -- Get the configuration of the server.
 	   (method (format "1.1/statuses/retweet/%s" id))
 	   (http-parameters nil)
 	   (format-str "json"))
-      (twittering-http-post account-info-alist host method http-parameters
+      (twindrill-http-post account-info-alist host method http-parameters
 			    format-str additional-info)))
    ((eq command 'verify-credentials)
     ;; Verify the account.
@@ -6596,7 +6599,7 @@ get-service-configuration -- Get the configuration of the server.
 	   (format-str "json")
 	   (sentinel (cdr (assq 'sentinel args-alist)))
 	   (clean-up-sentinel (cdr (assq 'clean-up-sentinel args-alist))))
-      (twittering-http-get account-info-alist host method http-parameters
+      (twindrill-http-get account-info-alist host method http-parameters
 			   format-str additional-info
 			   sentinel clean-up-sentinel)))
    ((eq command 'send-direct-message)
@@ -6607,7 +6610,7 @@ get-service-configuration -- Get the configuration of the server.
 	    `(("screen_name" . ,(cdr (assq 'username args-alist)))
 	      ("text" . ,(cdr (assq 'status args-alist)))))
 	   (format-str "json"))
-      (twittering-http-post account-info-alist host method http-parameters
+      (twindrill-http-post account-info-alist host method http-parameters
 			    format-str additional-info)))
    ((memq command '(mute unmute))
     ;; Mute a user.
@@ -6621,7 +6624,7 @@ get-service-configuration -- Get the configuration of the server.
 				`(("user_id" . ,user-id))
 			      `(("screen_name" . ,username))))
 	   (format-str "json"))
-      (twittering-http-post account-info-alist host method http-parameters
+      (twindrill-http-post account-info-alist host method http-parameters
 			    format-str additional-info)))
    ((eq command 'block)
     ;; Block a user.
@@ -6633,7 +6636,7 @@ get-service-configuration -- Get the configuration of the server.
 				`(("user_id" . ,user-id))
 			      `(("screen_name" . ,username))))
 	   (format-str "json"))
-      (twittering-http-post account-info-alist host method http-parameters
+      (twindrill-http-post account-info-alist host method http-parameters
 			    format-str additional-info)))
    ((eq command 'block-and-report-as-spammer)
     ;; Report a user as a spammer and block him or her.
@@ -6645,7 +6648,7 @@ get-service-configuration -- Get the configuration of the server.
 				`(("user_id" . ,user-id))
 			      `(("screen_name" . ,username))))
 	   (format-str "json"))
-      (twittering-http-post account-info-alist host method http-parameters
+      (twindrill-http-post account-info-alist host method http-parameters
 			    format-str additional-info)))
    ((eq command 'get-service-configuration)
     (let* ((host "api.twitter.com")
@@ -6655,7 +6658,7 @@ get-service-configuration -- Get the configuration of the server.
 	   (additional-info nil)
 	   (sentinel (cdr (assq 'sentinel args-alist)))
 	   (clean-up-sentinel (cdr (assq 'clean-up-sentinel args-alist))))
-      (twittering-http-get account-info-alist host method http-parameters
+      (twindrill-http-get account-info-alist host method http-parameters
 			   format-str additional-info
 			   sentinel clean-up-sentinel)))
    (t
@@ -6665,49 +6668,49 @@ get-service-configuration -- Get the configuration of the server.
 ;;;; Service configuration
 ;;;;
 
-(defconst twittering-service-configuration-default
+(defconst twindrill-service-configuration-default
   '((short_url_length . 19)
     (short_url_length_https . 20))
-  "Default value of `twittering-service-configuration'.")
-(defvar twittering-service-configuration nil
+  "Default value of `twindrill-service-configuration'.")
+(defvar twindrill-service-configuration nil
   "Current server configuration.")
-(defvar twittering-service-configuration-queried nil)
-(defvar twittering-service-configuration-update-interval 86400
-  "*Interval of updating `twittering-service-configuration'.")
+(defvar twindrill-service-configuration-queried nil)
+(defvar twindrill-service-configuration-update-interval 86400
+  "*Interval of updating `twindrill-service-configuration'.")
 
-(defun twittering-get-service-configuration (entry)
-  (let ((pair (assq entry twittering-service-configuration)))
+(defun twindrill-get-service-configuration (entry)
+  (let ((pair (assq entry twindrill-service-configuration)))
     (if (null pair)
-	(cdr (assq entry twittering-service-configuration-default))
+	(cdr (assq entry twindrill-service-configuration-default))
       (cdr pair))))
 
-(defun twittering-update-service-configuration (&optional ignore-time)
-  "Update `twittering-service-configuration' if necessary."
+(defun twindrill-update-service-configuration (&optional ignore-time)
+  "Update `twindrill-service-configuration' if necessary."
   (when (and
-	 (memq twittering-service-method '(twitter twitter-api-v1.1))
-	 (null twittering-service-configuration-queried)
+	 (memq twindrill-service-method '(twitter twitter-api-v1.1))
+	 (null twindrill-service-configuration-queried)
 	 (or ignore-time
-	     (let ((current (twittering-get-service-configuration 'time))
+	     (let ((current (twindrill-get-service-configuration 'time))
 		   (interval
 		    (seconds-to-time
-		     twittering-service-configuration-update-interval)))
+		     twindrill-service-configuration-update-interval)))
 	       (if (null current)
 		   t
 		 ;; If time passed more than `interval',
 		 ;; update the configuration.
 		 (time-less-p interval (time-since current))))))
-    (setq twittering-service-configuration-queried t)
-    (twittering-call-api
+    (setq twindrill-service-configuration-queried t)
+    (twindrill-call-api
      'get-service-configuration
-     '((sentinel . twittering-update-service-configuration-sentinel)
+     '((sentinel . twindrill-update-service-configuration-sentinel)
        (clean-up-sentinel
-	. twittering-update-service-configuration-clean-up-sentinel)))))
+	. twindrill-update-service-configuration-clean-up-sentinel)))))
 
-(defun twittering-update-service-configuration-sentinel (proc status connection-info header-info)
+(defun twindrill-update-service-configuration-sentinel (proc status connection-info header-info)
   (let ((status-line (cdr (assq 'status-line header-info)))
 	(status-code (cdr (assq 'status-code header-info)))
 	(format
-	 (twittering-get-content-subtype-symbol-from-header-info header-info)))
+	 (twindrill-get-content-subtype-symbol-from-header-info header-info)))
     (case-string
      status-code
      (("200")
@@ -6715,18 +6718,18 @@ get-service-configuration -- Get the configuration of the server.
 	      (cond
 	       ((eq format 'xml)
 		(let ((xml
-		       (twittering-xml-parse-region (point-min) (point-max))))
+		       (twindrill-xml-parse-region (point-min) (point-max))))
 		  (mapcar
 		   (lambda (entry)
 		     `(,(car entry) . ,(elt entry 2)))
 		   (cddr (assq 'configuration xml)))))
 	       ((eq format 'json)
-		(twittering-json-read))
+		(twindrill-json-read))
 	       (t
 		(error "Format \"%s\" is not supported" format)
 		nil)))
 	     (entries '(short_url_length short_url_length_https)))
-	(setq twittering-service-configuration
+	(setq twindrill-service-configuration
 	      `((time . ,(current-time))
 		,@(mapcar (lambda (entry)
 			    (let ((value (cdr (assq entry conf-alist))))
@@ -6738,85 +6741,85 @@ get-service-configuration -- Get the configuration of the server.
 				(t
 				 value)))))
 			  entries)))
-	(setq twittering-service-configuration-queried nil)
+	(setq twindrill-service-configuration-queried nil)
 	nil))
      (("400")
       ;; Rate limit exceeded.
-      (setq twittering-service-configuration-queried nil)
+      (setq twindrill-service-configuration-queried nil)
       (format "Response: %s"
-	      (twittering-get-error-message header-info connection-info)))
+	      (twindrill-get-error-message header-info connection-info)))
      (t
-      (setq twittering-service-configuration-queried nil)
+      (setq twindrill-service-configuration-queried nil)
       (format "Response: %s"
-	      (twittering-get-error-message header-info connection-info))))))
+	      (twindrill-get-error-message header-info connection-info))))))
 
-(defun twittering-update-service-configuration-clean-up-sentinel (proc status connection-info)
-  (when (not (twittering-process-alive-p proc))
-    (setq twittering-service-configuration-queried nil)))
+(defun twindrill-update-service-configuration-clean-up-sentinel (proc status connection-info)
+  (when (not (twindrill-process-alive-p proc))
+    (setq twindrill-service-configuration-queried nil)))
 
 ;;;;
 ;;;; Account authorization
 ;;;;
 
-(defun twittering-register-account-info (account-info)
-  (setq twittering-oauth-access-token-alist account-info))
+(defun twindrill-register-account-info (account-info)
+  (setq twindrill-oauth-access-token-alist account-info))
 
-(defun twittering-get-main-account-info ()
+(defun twindrill-get-main-account-info ()
   (cond
-   ((eq twittering-auth-method 'basic)
-    `(("screen_name" . ,twittering-username)
-      ("password" . ,twittering-password)))
-   ((memq twittering-auth-method '(oauth xauth))
-    twittering-oauth-access-token-alist)))
+   ((eq twindrill-auth-method 'basic)
+    `(("screen_name" . ,twindrill-username)
+      ("password" . ,twindrill-password)))
+   ((memq twindrill-auth-method '(oauth xauth))
+    twindrill-oauth-access-token-alist)))
 
-(defun twittering-get-from-account-info (param account-info)
+(defun twindrill-get-from-account-info (param account-info)
   (cdr (assoc param account-info)))
 
-(defun twittering-get-username ()
-  (let ((account-info (twittering-get-main-account-info)))
-    (twittering-get-from-account-info "screen_name" account-info)))
+(defun twindrill-get-username ()
+  (let ((account-info (twindrill-get-main-account-info)))
+    (twindrill-get-from-account-info "screen_name" account-info)))
 
-(defun twittering-get-password ()
-  (let ((account-info (twittering-get-main-account-info)))
-    (twittering-get-from-account-info "password" account-info)))
+(defun twindrill-get-password ()
+  (let ((account-info (twindrill-get-main-account-info)))
+    (twindrill-get-from-account-info "password" account-info)))
 
-(defun twittering-make-basic-authentication-string (account-info)
+(defun twindrill-make-basic-authentication-string (account-info)
   (concat "Basic "
 	  (base64-encode-string
 	   (concat (cdr (assoc "screen_name" account-info))
 		   ":" (cdr (assoc "password" account-info))))))
 
-(defun twittering-make-oauth-authentication-string (account-info request)
+(defun twindrill-make-oauth-authentication-string (account-info request)
   (let ((method (cdr (assq 'method request)))
 	(access-token (cdr (assoc "oauth_token" account-info)))
 	(access-token-secret (cdr (assoc "oauth_token_secret" account-info))))
     (unless (and (stringp access-token)
 		 (stringp access-token-secret))
       (error "`account-info' has no valid OAuth token"))
-    (twittering-oauth-auth-str-access
+    (twindrill-oauth-auth-str-access
      method
      (cdr (assq 'uri-without-query request))
      (cdr (assq 'encoded-query-alist request))
-     twittering-oauth-consumer-key twittering-oauth-consumer-secret
+     twindrill-oauth-consumer-key twindrill-oauth-consumer-secret
      access-token access-token-secret)))
 
-(defun twittering-account-authorized-p ()
-  (eq twittering-account-authorization 'authorized))
-(defun twittering-account-authorization-queried-p ()
-  (eq twittering-account-authorization 'queried))
+(defun twindrill-account-authorized-p ()
+  (eq twindrill-account-authorization 'authorized))
+(defun twindrill-account-authorization-queried-p ()
+  (eq twindrill-account-authorization 'queried))
 
-(defun twittering-prepare-account-info ()
+(defun twindrill-prepare-account-info ()
   "Return a pair of username and password.
-If `twittering-username' is nil, read it from the minibuffer.
-If `twittering-password' is nil, read it from the minibuffer."
-  (let* ((username (or twittering-username
+If `twindrill-username' is nil, read it from the minibuffer.
+If `twindrill-password' is nil, read it from the minibuffer."
+  (let* ((username (or twindrill-username
 		       (read-string "your twitter username: ")))
-	 (password (or twittering-password
+	 (password (or twindrill-password
 		       (read-passwd (format "%s's twitter password: "
 					    username)))))
     `(,username . ,password)))
 
-(defun twittering-has-oauth-access-token-p ()
+(defun twindrill-has-oauth-access-token-p ()
   (let* ((required-entries '("oauth_token"
 			     "oauth_token_secret"
 			     "user_id"
@@ -6824,46 +6827,46 @@ If `twittering-password' is nil, read it from the minibuffer."
 	 (value-list
 	  (mapcar
 	   (lambda (key)
-	     (cdr (assoc key twittering-oauth-access-token-alist)))
+	     (cdr (assoc key twindrill-oauth-access-token-alist)))
 	   required-entries)))
     (null (remove t (mapcar 'stringp value-list)))))
 
-(defun twittering-verify-credentials ()
+(defun twindrill-verify-credentials ()
   "Verify the account.
 
 This function is an internal function, which should be called from
-`twittering-ensure-account-verification'.
+`twindrill-ensure-account-verification'.
 
 If the account has been authorized already, return t.
 Otherwise, this function tries to authorize the account.
 If the authorization succeeded, return t.
 If the authorization failed, return nil."
   (cond
-   ((twittering-account-authorized-p)
+   ((twindrill-account-authorized-p)
     ;; The account has been authorized already.
     t)
-   ((not (twittering-account-authorization-queried-p))
+   ((not (twindrill-account-authorization-queried-p))
     ;; This function must be invoked from
-    ;; `twittering-ensure-account-verification', which updates the variable
-    ;; `twittering-account-authorization' into the symbol `queried'.
-    (error "`twittering-verify-credentials' is invoked multiple times.")
+    ;; `twindrill-ensure-account-verification', which updates the variable
+    ;; `twindrill-account-authorization' into the symbol `queried'.
+    (error "`twindrill-verify-credentials' is invoked multiple times.")
     nil)
-   ((and (memq twittering-auth-method '(oauth xauth))
-	 (or (null twittering-oauth-consumer-key)
-	     (null twittering-oauth-consumer-secret)))
+   ((and (memq twindrill-auth-method '(oauth xauth))
+	 (or (null twindrill-oauth-consumer-key)
+	     (null twindrill-oauth-consumer-secret)))
     (message "Consumer for OAuth is not specified.")
     nil)
-   ((twittering-has-oauth-access-token-p)
+   ((twindrill-has-oauth-access-token-p)
     (let* ((username (cdr (assoc "screen_name"
-				 (twittering-get-main-account-info))))
+				 (twindrill-get-main-account-info))))
 	   (proc
-	    (twittering-call-api-with-account
-	     (twittering-get-main-account-info)
+	    (twindrill-call-api-with-account
+	     (twindrill-get-main-account-info)
 	     'verify-credentials
 	     `((sentinel
-		. twittering-http-get-verify-credentials-sentinel)
+		. twindrill-http-get-verify-credentials-sentinel)
 	       (clean-up-sentinel
-		. twittering-http-get-verify-credentials-clean-up-sentinel)))))
+		. twindrill-http-get-verify-credentials-clean-up-sentinel)))))
       (cond
        ((null proc)
 	(message "Process invocation for authorizing \"%s\" failed." username)
@@ -6871,18 +6874,18 @@ If the authorization failed, return nil."
 	nil)
        (t
 	;; wait for verification to finish.
-	(twittering-wait-while nil 0.1
+	(twindrill-wait-while nil 0.1
 			       (and
-				(twittering-account-authorization-queried-p)
-				(twittering-process-alive-p proc)))
-	(if (not (twittering-account-authorization-queried-p))
+				(twindrill-account-authorization-queried-p)
+				(twindrill-process-alive-p proc)))
+	(if (not (twindrill-account-authorization-queried-p))
 	    ;; The query is completed.
-	    (twittering-account-authorized-p)
+	    (twindrill-account-authorized-p)
 	  ;; If the process has been dead, wait a moment because
 	  ;; Emacs may be in the middle of evaluating the sentinel.
-	  (twittering-wait-while
+	  (twindrill-wait-while
 	   10 0.1
-	   (twittering-account-authorization-queried-p)
+	   (twindrill-account-authorization-queried-p)
 	   ;; Succeeded in authorizing the account.
 	   t
 	   ;; Display a message.
@@ -6891,36 +6894,36 @@ If the authorization failed, return nil."
 	    (process-status proc))
 	   ;; Failed to authorize the account.
 	   nil))))))
-   ((eq twittering-auth-method 'oauth)
-    (let* ((scheme (if twittering-oauth-use-ssl
+   ((eq twindrill-auth-method 'oauth)
+    (let* ((scheme (if twindrill-oauth-use-ssl
 		       "https"
 		     "http"))
 	   (request-token-url
-	    (concat scheme twittering-oauth-request-token-url-without-scheme))
+	    (concat scheme twindrill-oauth-request-token-url-without-scheme))
 	   (access-token-url
-	    (concat scheme twittering-oauth-access-token-url-without-scheme))
+	    (concat scheme twindrill-oauth-access-token-url-without-scheme))
 	   (token-alist
-	    (twittering-oauth-get-access-token
+	    (twindrill-oauth-get-access-token
 	     request-token-url
 	     (lambda (token)
 	       (concat scheme
-		       twittering-oauth-authorization-url-base-without-scheme
+		       twindrill-oauth-authorization-url-base-without-scheme
 		       token))
 	     access-token-url
-	     twittering-oauth-consumer-key twittering-oauth-consumer-secret
-	     "twittering-mode")))
+	     twindrill-oauth-consumer-key twindrill-oauth-consumer-secret
+	     "twindrill-mode")))
       (cond
        ((and (assoc "oauth_token" token-alist)
 	     (assoc "oauth_token_secret" token-alist)
 	     (assoc "screen_name" token-alist))
 	(let ((username (cdr (assoc "screen_name" token-alist))))
-	  (twittering-register-account-info token-alist)
+	  (twindrill-register-account-info token-alist)
 	  (message "Authorization for the account \"%s\" succeeded."
 		   username)
-	  (when (and twittering-use-master-password
-		     (twittering-capable-of-encryption-p)
-		     (not (file-exists-p twittering-private-info-file)))
-	    (twittering-save-private-info-with-guide))
+	  (when (and twindrill-use-master-password
+		     (twindrill-capable-of-encryption-p)
+		     (not (file-exists-p twindrill-private-info-file)))
+	    (twindrill-save-private-info-with-guide))
 	  ;; Succeeded in authorizing the account.
 	  t))
        (t
@@ -6928,17 +6931,17 @@ If the authorization failed, return nil."
 	;; Failed to authorize the account.
 	(message "Authorization via OAuth failed. Type M-x twit to retry.")
 	nil))))
-   ((eq twittering-auth-method 'xauth)
-    (let* ((account-info (twittering-prepare-account-info))
-	   (scheme (if twittering-oauth-use-ssl
+   ((eq twindrill-auth-method 'xauth)
+    (let* ((account-info (twindrill-prepare-account-info))
+	   (scheme (if twindrill-oauth-use-ssl
 		       "https"
 		     "http"))
 	   (access-token-url
-	    (concat scheme twittering-oauth-access-token-url-without-scheme))
+	    (concat scheme twindrill-oauth-access-token-url-without-scheme))
 	   (token-alist
-	    (twittering-xauth-get-access-token
+	    (twindrill-xauth-get-access-token
 	     access-token-url
-	     twittering-oauth-consumer-key twittering-oauth-consumer-secret
+	     twindrill-oauth-consumer-key twindrill-oauth-consumer-secret
 	     (car account-info)
 	     (cdr account-info))))
       ;; Dispose of password as recommended by Twitter.
@@ -6948,55 +6951,55 @@ If the authorization failed, return nil."
        ((and token-alist
 	     (assoc "oauth_token" token-alist)
 	     (assoc "oauth_token_secret" token-alist))
-	(twittering-register-account-info token-alist)
+	(twindrill-register-account-info token-alist)
 	(message "Authorization for the account \"%s\" succeeded."
-		 (twittering-get-username))
-	(when (and twittering-use-master-password
-		   (twittering-capable-of-encryption-p)
-		   (not (file-exists-p twittering-private-info-file)))
-	  (twittering-save-private-info-with-guide))
+		 (twindrill-get-username))
+	(when (and twindrill-use-master-password
+		   (twindrill-capable-of-encryption-p)
+		   (not (file-exists-p twindrill-private-info-file)))
+	  (twindrill-save-private-info-with-guide))
 	;; Succeeded in authorizing the account.
 	t)
        (t
 	;; Failed to authorize the account.
 	(message "Authorization via xAuth failed. Type M-x twit to retry.")
 	nil))))
-   ((eq twittering-auth-method 'basic)
+   ((eq twindrill-auth-method 'basic)
     (let* ((account-info
-	    (let ((pair (twittering-prepare-account-info)))
+	    (let ((pair (twindrill-prepare-account-info)))
 	      `(("screen_name" . ,(car pair))
 		("password" . ,(cdr pair)))))
 	   ;; Bind account information locally to ensure that
 	   ;; the variables are reset when the verification fails.
-	   (twittering-username (car account-info))
-	   (twittering-password (cdr account-info))
+	   (twindrill-username (car account-info))
+	   (twindrill-password (cdr account-info))
 	   (proc
-	    (twittering-call-api-with-account
+	    (twindrill-call-api-with-account
 	     account-info
 	     'verify-credentials
-	     `((sentinel . twittering-http-get-verify-credentials-sentinel)
+	     `((sentinel . twindrill-http-get-verify-credentials-sentinel)
 	       (clean-up-sentinel
-		. twittering-http-get-verify-credentials-clean-up-sentinel)))))
+		. twindrill-http-get-verify-credentials-clean-up-sentinel)))))
       (cond
        ((null proc)
 	(message "Process invocation for authorizing \"%s\" failed."
-		 (twittering-get-from-account-info "screen_name" account-info))
+		 (twindrill-get-from-account-info "screen_name" account-info))
 	;; Failed to authorize the account.
 	nil)
        (t
 	;; wait for verification to finish.
-	(twittering-wait-while nil 0.1
+	(twindrill-wait-while nil 0.1
 			       (and
-				(twittering-account-authorization-queried-p)
-				(twittering-process-alive-p proc)))
-	(if (not (twittering-account-authorization-queried-p))
+				(twindrill-account-authorization-queried-p)
+				(twindrill-process-alive-p proc)))
+	(if (not (twindrill-account-authorization-queried-p))
 	    ;; The query is finished.
-	    (twittering-account-authorized-p)
+	    (twindrill-account-authorized-p)
 	  ;; If the process has been dead, wait a moment because
 	  ;; Emacs may be in the middle of evaluating the sentinel.
-	  (twittering-wait-while
+	  (twindrill-wait-while
 	   10 0.1
-	   (twittering-account-authorization-queried-p)
+	   (twindrill-account-authorization-queried-p)
 	   ;; Succeeded in authorizing the account.
 	   t
 	   ;; Display a message.
@@ -7007,45 +7010,45 @@ If the authorization failed, return nil."
 	   nil))))))
    (t
     (message "%s is invalid as an authorization method."
-	     twittering-auth-method)
+	     twindrill-auth-method)
     nil)))
 
-(defun twittering-http-get-verify-credentials-sentinel (proc status connection-info header-info)
+(defun twindrill-http-get-verify-credentials-sentinel (proc status connection-info header-info)
   (let* ((status-line (cdr (assq 'status-line header-info)))
 	 (status-code (cdr (assq 'status-code header-info)))
 	 (account-info (cdr (assq 'account-info connection-info)))
 	 (username
-	  (twittering-get-from-account-info "screen_name" account-info))
+	  (twindrill-get-from-account-info "screen_name" account-info))
 	 (password
-	  (twittering-get-from-account-info "password" account-info)))
+	  (twindrill-get-from-account-info "password" account-info)))
     (case-string
      status-code
      (("200")
-      (twittering-register-account-info account-info)
-      (setq twittering-account-authorization 'authorized)
+      (twindrill-register-account-info account-info)
+      (setq twindrill-account-authorization 'authorized)
       (message "Authorization for the account \"%s\" succeeded." username)
       nil)
      (("401")
-      (setq twittering-account-authorization nil)
+      (setq twindrill-account-authorization nil)
       (let ((error-mes
 	     (format "Authorization for the account \"%s\" failed. Type M-x twit to retry with correct information."
 		     username)))
 	;; Invalidate the account info.
-	(twittering-register-account-info nil)
+	(twindrill-register-account-info nil)
 	(message "%s" error-mes)
 	nil))
      (t
-      (setq twittering-account-authorization nil)
+      (setq twindrill-account-authorization nil)
       (let ((error-mes
 	     (format "Authorization for the account \"%s\" failed due to \"%s\"."
 		     username status-line)))
 	(message "%s" error-mes)
 	nil)))))
 
-(defun twittering-http-get-verify-credentials-clean-up-sentinel (proc status connection-info)
+(defun twindrill-http-get-verify-credentials-clean-up-sentinel (proc status connection-info)
   (when (and (memq status '(exit signal closed failed))
-	     (eq twittering-account-authorization 'queried))
-    (setq twittering-account-authorization nil)
+	     (eq twindrill-account-authorization 'queried))
+    (setq twindrill-account-authorization nil)
     (let ((exit-status (cond
 			((processp proc) (process-exit-status proc))
 			(t 0)))
@@ -7054,64 +7057,64 @@ If the authorization failed, return nil."
 	  (message "Authorization failed. Type M-x twit to retry.")
 	(message "Authorization failed: %s exited abnormally (exit-status=%s)."
 		 (car command) exit-status)))
-    (setq twittering-username nil)
-    (setq twittering-password nil)))
+    (setq twindrill-username nil)
+    (setq twindrill-password nil)))
 
-(defun twittering-ensure-account-verification ()
+(defun twindrill-ensure-account-verification ()
   "Ensure verification of an account.
 
 If an account has been already authorized, return t.
 If a query of authorization is being processed, return nil.
 
 Otherwise, this function tries to authorize an account by calling
-`twittering-verify-credentials'.
+`twindrill-verify-credentials'.
 If the authorization succeeded, return t.
 If the authorization failed, return nil."
   (cond
-   ((twittering-account-authorized-p)
+   ((twindrill-account-authorized-p)
     ;; The account has been already authorized.
     t)
-   ((twittering-account-authorization-queried-p)
+   ((twindrill-account-authorization-queried-p)
     ;; The account has not been authorized yet.
     nil)
    (t
-    (setq twittering-account-authorization 'queried)
+    (setq twindrill-account-authorization 'queried)
     (let ((result nil))
       (unwind-protect
-	  (setq result (twittering-verify-credentials))
+	  (setq result (twindrill-verify-credentials))
 	(if result
-	    (setq twittering-account-authorization 'authorized)
-	  (setq twittering-account-authorization nil)))
+	    (setq twindrill-account-authorization 'authorized)
+	  (setq twindrill-account-authorization nil)))
       result))))
 
 ;;;;
 ;;;; Status retrieval
 ;;;;
 
-(defun twittering-add-timeline-history (spec-string)
-  (when (or (null twittering-timeline-history)
-	    (not (string= spec-string (car twittering-timeline-history))))
-    (twittering-add-to-history 'twittering-timeline-history spec-string))
-  (let ((spec (twittering-string-to-timeline-spec spec-string)))
-    (when (and (twittering-timeline-spec-is-user-p spec)
-	       (or (null twittering-user-history)
-		   (not (string= spec-string (car twittering-user-history)))))
-      (twittering-add-to-history 'twittering-user-history (cadr spec)))))
+(defun twindrill-add-timeline-history (spec-string)
+  (when (or (null twindrill-timeline-history)
+	    (not (string= spec-string (car twindrill-timeline-history))))
+    (twindrill-add-to-history 'twindrill-timeline-history spec-string))
+  (let ((spec (twindrill-string-to-timeline-spec spec-string)))
+    (when (and (twindrill-timeline-spec-is-user-p spec)
+	       (or (null twindrill-user-history)
+		   (not (string= spec-string (car twindrill-user-history)))))
+      (twindrill-add-to-history 'twindrill-user-history (cadr spec)))))
 
-(defun twittering-remove-timeline-spec-string-from-history (spec-string)
-  (setq twittering-timeline-history
+(defun twindrill-remove-timeline-spec-string-from-history (spec-string)
+  (setq twindrill-timeline-history
 	(remove nil
 		(mapcar
 		 (lambda (str)
-		   (if (twittering-equal-string-as-timeline spec-string str)
+		   (if (twindrill-equal-string-as-timeline spec-string str)
 		       nil
 		     str))
-		 twittering-timeline-history))))
+		 twindrill-timeline-history))))
 
-(defun twittering-make-alist-of-forbidden-tweet (id &optional user-screen-name)
+(defun twindrill-make-alist-of-forbidden-tweet (id &optional user-screen-name)
   (let ((created-at
 	 (or
-	  (twittering-id-to-time id)
+	  (twindrill-id-to-time id)
 	  (apply 'encode-time
 		 (parse-time-string "Jan 01 00:00:00 +0000 2012")))))
   `((forbidden . t)
@@ -7122,10 +7125,10 @@ If the authorization failed, return nil."
     (text . "SORRY, YOU ARE NOT AUTHORIZED TO SEE THIS TWEET.")
     )))
 
-(defun twittering-make-alist-of-non-existent-tweet (id &optional user-screen-name)
+(defun twindrill-make-alist-of-non-existent-tweet (id &optional user-screen-name)
   (let ((created-at
 	 (or
-	  (twittering-id-to-time id)
+	  (twindrill-id-to-time id)
 	  (apply 'encode-time
 		 (parse-time-string "Jan 01 00:00:00 +0000 2012")))))
   `((forbidden . t)
@@ -7136,7 +7139,7 @@ If the authorization failed, return nil."
     (text . ,(format "THE TWEET WITH ID %s DOES NOT EXIST." id))
     )))
 
-(defun twittering-atom-xmltree-to-status-datum (atom-xml-entry)
+(defun twindrill-atom-xmltree-to-status-datum (atom-xml-entry)
   (let* ((id-str (car (cddr (assq 'id atom-xml-entry))))
 	 (time-str (car (cddr (assq 'updated atom-xml-entry))))
 	 (author-str (car (cddr (assq 'name (assq 'author atom-xml-entry)))))
@@ -7164,7 +7167,7 @@ If the authorization failed, return nil."
       (id . ,(progn
 	       (string-match ":\\([0-9]+\\)$" id-str)
 	       (match-string 1 id-str)))
-      ,@(let ((source (twittering-decode-html-entities
+      ,@(let ((source (twindrill-decode-html-entities
 		       (car (cddr (assq 'twitter:source atom-xml-entry))))))
 	  `(,@(if (string-match "<a href=\"\\(.*?\\)\".*?>\\(.*\\)</a>"
 				source)
@@ -7174,10 +7177,10 @@ If the authorization failed, return nil."
 		      (source-uri . ,uri)))
 		`((source . ,source)
 		  (source-uri . "")))))
-      (text . ,(twittering-decode-html-entities
+      (text . ,(twindrill-decode-html-entities
 		(car (cddr (assq 'title atom-xml-entry)))))
       ,@(cond
-	 ((and (eq twittering-service-method 'statusnet)
+	 ((and (eq twindrill-service-method 'statusnet)
 	       (string-match "^\\([^ ]+\\)\\( (\\(.*\\))\\)?$" author-str))
 	  ;; StatusNet
 	  `((user-screen-name . ,(match-string 1 author-str))
@@ -7200,7 +7203,7 @@ If the authorization failed, return nil."
 		  (mapcar
 		   (lambda (item)
 		     (cond
-		      ((and (eq twittering-service-method 'statusnet)
+		      ((and (eq twindrill-service-method 'statusnet)
 			    (member '(rel . "related") item))
 		       ;; StatusNet
 		       (cdr (assq 'href item)))
@@ -7212,23 +7215,23 @@ If the authorization failed, return nil."
 		   link-items)))
 	    (car-safe (remq nil image-urls)))))))
 
-(defun twittering-atom-xmltree-to-status (atom-xmltree)
+(defun twindrill-atom-xmltree-to-status (atom-xmltree)
   (let ((entry-list
 	 (apply 'append
 		(mapcar (lambda (x)
 			  (if (eq (car-safe x) 'entry) `(,x) nil))
 			(cdar atom-xmltree)))))
-    (mapcar 'twittering-atom-xmltree-to-status-datum
+    (mapcar 'twindrill-atom-xmltree-to-status-datum
 	    entry-list)))
 
 (eval-and-compile
-  (defsubst twittering-make-gap-list (text)
+  (defsubst twindrill-make-gap-list (text)
     "Return a list representing index gaps between TEXT and the decoded and normalized text.
 Indices included in entities in a response from Twitter are calculated
 with the assumption that \"<\" and \">\" are encoded as \"&lt;\" and \"&gt;\"
 respectively and a Unicode combining character is considered as a character.
-On rendering a tweet, twittering-mode decode \"&lt;\" and \"&gt;\".
-And also twittering-mode normalize its text into canonically equivalent text
+On rendering a tweet, twindrill-mode decode \"&lt;\" and \"&gt;\".
+And also twindrill-mode normalize its text into canonically equivalent text
 without combining characters.
 Therefore, the indices in entities differ from the indices of the corresponding
 positions in the decoded text.
@@ -7261,9 +7264,9 @@ text."
 	(setq pos (match-end 0)))
       (reverse result)))
 
-  (defun twittering-get-gap (pos gap-list)
+  (defun twindrill-get-gap (pos gap-list)
     "Return the gap at the specific position.
-GAP-LIST must be generated by `twittering-make-gap-list'."
+GAP-LIST must be generated by `twindrill-make-gap-list'."
     (let ((rest-gaps gap-list)
 	  (gap 0))
       (while (and rest-gaps (< (caar rest-gaps) pos))
@@ -7271,16 +7274,16 @@ GAP-LIST must be generated by `twittering-make-gap-list'."
 	(setq rest-gaps (cdr rest-gaps)))
       gap)))
 
-(defun twittering-normalize-raw-status (raw-status &optional ignore-retweet)
+(defun twindrill-normalize-raw-status (raw-status &optional ignore-retweet)
   (let* ((status-data (cddr raw-status))
 	 (raw-retweeted-status (assq 'retweeted_status status-data)))
     (cond
      ((and raw-retweeted-status
 	   (not ignore-retweet))
       (let ((retweeted-status
-	     (twittering-normalize-raw-status raw-retweeted-status t))
+	     (twindrill-normalize-raw-status raw-retweeted-status t))
 	    (retweeting-status
-	     (twittering-normalize-raw-status raw-status t))
+	     (twindrill-normalize-raw-status raw-status t))
 	    (items-overwritten-by-retweet
 	     '(id)))
 	`(,@(mapcar
@@ -7319,7 +7322,7 @@ GAP-LIST must be generated by `twittering-make-gap-list'."
 		      (encoded (elt entry 2))
 		      (data (funcall assq-get sym-in-data status-data)))
 		 `(,sym . ,(if encoded
-			       (twittering-decode-entities-after-parsing-xml
+			       (twindrill-decode-entities-after-parsing-xml
 				data)
 			     data))))
 	     '(;; Raw entries.
@@ -7342,8 +7345,8 @@ GAP-LIST must be generated by `twittering-make-gap-list'."
 	  ,(let* ((entity-data (cddr (assq 'entities status-data)))
 		  (encoded-text (funcall assq-get 'text status-data))
 		  (text
-		   (twittering-decode-entities-after-parsing-xml encoded-text))
-		  (gap-list (twittering-make-gap-list text)))
+		   (twindrill-decode-entities-after-parsing-xml encoded-text))
+		  (gap-list (twindrill-make-gap-list text)))
 	     (list
 	      'entity
 	      ;; hashtags
@@ -7363,7 +7366,7 @@ GAP-LIST must be generated by `twittering-make-gap-list'."
 				   (end (if (stringp end-str)
 					    (string-to-number end-str)
 					  0))
-				   (gap (twittering-get-gap start gap-list)))
+				   (gap (twindrill-get-gap start gap-list)))
 			      `((start . ,(- start gap))
 				(end . ,(- end gap))
 				(text . ,(elt (assq 'text data) 2))))))
@@ -7385,7 +7388,7 @@ GAP-LIST must be generated by `twittering-make-gap-list'."
 				   (end (if (stringp end-str)
 					    (string-to-number end-str)
 					  0))
-				   (gap (twittering-get-gap start gap-list)))
+				   (gap (twindrill-get-gap start gap-list)))
 			      `((start . ,(- start gap))
 				(end . ,(- end gap))
 				(id . ,(elt (assq 'id data) 2))
@@ -7411,7 +7414,7 @@ GAP-LIST must be generated by `twittering-make-gap-list'."
 				   (end (if (stringp end-str)
 					    (string-to-number end-str)
 					  0))
-				   (gap (twittering-get-gap start gap-list)))
+				   (gap (twindrill-get-gap start gap-list)))
 			      `((start . ,(- start gap))
 				(end . ,(- end gap))
 				(url . ,(elt (assq 'url data) 2))
@@ -7421,7 +7424,7 @@ GAP-LIST must be generated by `twittering-make-gap-list'."
 				 . ,(elt (assq 'expanded_url data) 2))))))
 			(assq 'urls entity-data))))))
 	  ;; Source.
-	  ,@(let ((source (twittering-decode-html-entities
+	  ,@(let ((source (twindrill-decode-html-entities
 			   (funcall assq-get 'source status-data))))
 	      (if (and source
 		       (string-match "<a href=\"\\(.*?\\)\".*?>\\(.*\\)</a>"
@@ -7441,7 +7444,7 @@ GAP-LIST must be generated by `twittering-make-gap-list'."
 			(encoded (elt entry 2))
 			(value (funcall assq-get sym-in-user-data user-data)))
 		   `(,sym . ,(if encoded
-				 (twittering-decode-html-entities value)
+				 (twindrill-decode-html-entities value)
 			       value))))
 	       '(;; Raw entries.
 		 (user-id id)
@@ -7460,7 +7463,7 @@ GAP-LIST must be generated by `twittering-make-gap-list'."
 			      (funcall assq-get (cdr entry) user-data))))
 		      '((user-protected . protected))))))))))
 
-(defun twittering-xmltree-to-status (xmltree)
+(defun twindrill-xmltree-to-status (xmltree)
   (setq xmltree
 	(cond
 	 ((eq 'direct-messages (caar xmltree))
@@ -7493,14 +7496,14 @@ GAP-LIST must be generated by `twittering-make-gap-list'."
 	 (t ;; unknown format?
 	  nil)))
 
-  (mapcar #'twittering-normalize-raw-status
+  (mapcar #'twindrill-normalize-raw-status
  	  ;; quirk to treat difference between xml.el in Emacs21 and Emacs22
  	  ;; On Emacs22, there may be blank strings
 	  (remove nil (mapcar (lambda (x)
 				(if (consp x) x))
 			      xmltree))))
 
-(defun twittering-decode-entities-after-parsing-xml (encoded-str)
+(defun twindrill-decode-entities-after-parsing-xml (encoded-str)
   "Decode ENCODED-STR retrieved by parsing XML and return the result.
 On Emacs 22 and later, `xml-parse-region' resolves numeric character
 references. It is redundant to resolve numeric character references
@@ -7523,7 +7526,7 @@ references. This function decodes them."
 		(string-match "&#\\([0-9]+\\);" str)
 		(match-string 1 str))))
 	 (char-to-string
-	  (twittering-ucs-to-char (string-to-number number-entity)))))
+	  (twindrill-ucs-to-char (string-to-number number-entity)))))
      encoded-str))
    (t
     (replace-regexp-in-string
@@ -7534,7 +7537,7 @@ references. This function decodes them."
 	 "<"))
      encoded-str))))
 
-(defun twittering-decode-html-entities (encoded-str)
+(defun twindrill-decode-html-entities (encoded-str)
   (if encoded-str
       (let ((cursor 0)
 	    (found-at nil)
@@ -7549,7 +7552,7 @@ references. This function decodes them."
 	    (cond (number-entity
 		   (list-push
 		    (char-to-string
-		     (twittering-ucs-to-char
+		     (twindrill-ucs-to-char
 		      (string-to-number number-entity))) result))
 		  (letter-entity
 		   (cond ((string= "gt" letter-entity) (list-push ">" result))
@@ -7563,14 +7566,14 @@ references. This function decodes them."
     ""))
 
 ;; JSON
-(defun twittering-extract-common-element-from-json (json-object)
+(defun twindrill-extract-common-element-from-json (json-object)
   "Extract common parameters of a tweet from JSON-OBJECT.
 Return an alist including text, created_at and entities, which are common
 to JSON objects from ordinary timeline and search timeline."
   (let* ((encoded-text (cdr (assq 'text json-object)))
 	 (text
-	  (twittering-decode-entities-after-parsing-xml encoded-text))
-	 (gap-list (twittering-make-gap-list text))
+	  (twindrill-decode-entities-after-parsing-xml encoded-text))
+	 (gap-list (twindrill-make-gap-list text))
 	 (entities (cdr (assq 'entities json-object)))
 	 (urls (cdr (assq 'urls entities)))
 	 (hashtags (cdr (assq 'hashtags entities)))
@@ -7583,7 +7586,7 @@ to JSON objects from ordinary timeline and search timeline."
 			    (target (cdr sym-entry)))
 			`(,sym . ,(cdr (assq target entry)))))
 		    sym-table))))
-    `((text . ,(twittering-normalize-string text))
+    `((text . ,(twindrill-normalize-string text))
       (created-at
        . ,(apply 'encode-time
 		 (parse-time-string (cdr (assq 'created_at json-object)))))
@@ -7593,11 +7596,11 @@ to JSON objects from ordinary timeline and search timeline."
 				     (start (elt indices 0))
 				     (end (elt indices 1))
 				     (gap
-				      (twittering-get-gap start gap-list)))
+				      (twindrill-get-gap start gap-list)))
 				`((start . ,(- start gap))
 				  (end . ,(- end gap))
 				  (text
-				   . ,(twittering-normalize-string
+				   . ,(twindrill-normalize-string
 				       (cdr (assq 'text entry)))))))
 			    hashtags))
        (mentions . ,(mapcar (lambda (entry)
@@ -7605,12 +7608,12 @@ to JSON objects from ordinary timeline and search timeline."
 				     (start (elt indices 0))
 				     (end (elt indices 1))
 				     (gap
-				      (twittering-get-gap start gap-list)))
+				      (twindrill-get-gap start gap-list)))
 				`((start . ,(- start gap))
 				  (end . ,(- end gap))
 				  (id . ,(cdr (assq 'id_str entry)))
 				  (name
-				   . ,(twittering-normalize-string
+				   . ,(twindrill-normalize-string
 				       (cdr (assq 'name entry))))
 				  (screen-name
 				   . ,(cdr (assq 'screen_name entry))))))
@@ -7619,7 +7622,7 @@ to JSON objects from ordinary timeline and search timeline."
 			  (let* ((indices (cdr (assq 'indices entry)))
 				 (start (elt indices 0))
 				 (end (elt indices 1))
-				 (gap (twittering-get-gap start gap-list)))
+				 (gap (twindrill-get-gap start gap-list)))
 			    `((start . ,(- start gap))
 			      (end . ,(- end gap))
 			      (url . ,(cdr (assq 'url entry)))
@@ -7632,7 +7635,7 @@ to JSON objects from ordinary timeline and search timeline."
 			  (let* ((indices (cdr (assq 'indices entry)))
 				 (start (elt indices 0))
 				 (end (elt indices 1))
-				 (gap (twittering-get-gap start gap-list)))
+				 (gap (twindrill-get-gap start gap-list)))
 			    `((start . ,(- start gap))
 			      (end . ,(- end gap))
 			      (url . ,(cdr (assq 'url entry)))
@@ -7646,18 +7649,18 @@ to JSON objects from ordinary timeline and search timeline."
       (favorite-count . ,(cdr (assq 'favorite_count json-object)))
       )))
 
-(defun twittering-json-object-to-a-status (json-object)
+(defun twindrill-json-object-to-a-status (json-object)
   "Convert JSON-OBJECT representing a tweet into an alist representation.
 JSON-OBJECT must originate in an ordinary timeline, not a search timeline.
 To convert a JSON object from a search timeline, use
-`twittering-json-object-to-a-status-on-search'."
+`twindrill-json-object-to-a-status-on-search'."
   (let* ((raw-retweeted-status (cdr (assq 'retweeted_status json-object))))
     (cond
      (raw-retweeted-status
       (let ((retweeted-status
-	     (twittering-json-object-to-a-status-base raw-retweeted-status))
+	     (twindrill-json-object-to-a-status-base raw-retweeted-status))
 	    (retweeting-status
-	     (twittering-json-object-to-a-status-base json-object))
+	     (twindrill-json-object-to-a-status-base json-object))
 	    (items-overwritten-by-retweet
 	     '(id)))
 	`(,@(mapcar
@@ -7687,11 +7690,11 @@ To convert a JSON object from a search timeline, use
 		   . ,value)))
 	     retweeting-status))))
      (t
-      (twittering-json-object-to-a-status-base json-object)))))
+      (twindrill-json-object-to-a-status-base json-object)))))
 
-(defun twittering-json-object-to-a-status-base (json-object)
+(defun twindrill-json-object-to-a-status-base (json-object)
   (let ((user-data (cdr (assq 'user json-object))))
-    `(,@(twittering-extract-common-element-from-json json-object)
+    `(,@(twindrill-extract-common-element-from-json json-object)
       ,@(let ((symbol-table
 	       '((favorited . favorited)
 		 (id_str . id)
@@ -7720,9 +7723,9 @@ To convert a JSON object from a search timeline, use
 				 source))
 	      (let ((uri (match-string-no-properties 1 source))
 		    (caption (match-string-no-properties 2 source)))
-		`((source . ,(twittering-normalize-string caption))
+		`((source . ,(twindrill-normalize-string caption))
 		  (source-uri . ,uri)))
-	    `((source . ,(twittering-normalize-string source))
+	    `((source . ,(twindrill-normalize-string source))
 	      (source-uri . ""))))
       ;; user data
       ,@(let ((symbol-table
@@ -7744,7 +7747,7 @@ To convert a JSON object from a search timeline, use
 					   (eq value :json-false))
 				      nil)
 				     ((memq sym '(name location description))
-				      (twittering-normalize-string value))
+				      (twindrill-normalize-string value))
 				     (t
 				      value))))
 			      (when value
@@ -7753,12 +7756,12 @@ To convert a JSON object from a search timeline, use
 				    `(,dest . ,value))))))
 			  user-data))))))
 
-(defun twittering-json-object-to-a-status-on-search (json-object)
+(defun twindrill-json-object-to-a-status-on-search (json-object)
   "Convert JSON-OBJECT representing a tweet into an alist representation.
 JSON-OBJECT must originate in a search timeline.
 To convert a JSON object from other timelines, use
-`twittering-json-object-to-a-status'."
-  `(,@(twittering-extract-common-element-from-json json-object)
+`twindrill-json-object-to-a-status'."
+  `(,@(twindrill-extract-common-element-from-json json-object)
     ,@(let ((symbol-table
 	     '((id_str . id)
 	       (to_user . in-reply-to-screen-name)
@@ -7779,7 +7782,7 @@ To convert a JSON object from other timelines, use
 		   json-object)))
     ;; source
     ,@(let ((source
-	       (twittering-decode-html-entities
+	       (twindrill-decode-html-entities
 		(cdr (assq 'source json-object)))))
 	  (if (and source
 		   (string-match "<a href=\"\\(.*?\\)\".*?>\\(.*\\)</a>"
@@ -7791,12 +7794,12 @@ To convert a JSON object from other timelines, use
 	    `((source . ,source)
 	      (source-uri . ""))))))
 
-(defun twittering-json-object-to-a-status-on-direct-messages (json-object)
+(defun twindrill-json-object-to-a-status-on-direct-messages (json-object)
   "Convert JSON-OBJECT representing a tweet into an alist representation.
 JSON-OBJECT must originate in timelines related to direct messages.
 To convert a JSON object from other timelines, use
-`twittering-json-object-to-a-status'."
-  `(,@(twittering-extract-common-element-from-json json-object)
+`twindrill-json-object-to-a-status'."
+  `(,@(twindrill-extract-common-element-from-json json-object)
     ,@(let ((symbol-table
 	     '((id_str . id)
 	       (recipient_screen_name . recipient-screen-name))))
@@ -7841,355 +7844,355 @@ To convert a JSON object from other timelines, use
 ;;;; List info retrieval
 ;;;;
 
-(defun twittering-get-list-index (username)
-  (twittering-call-api
+(defun twindrill-get-list-index (username)
+  (twindrill-call-api
    'get-list-index
    `((username . ,username)
-     (sentinel . twittering-http-get-list-index-sentinel))))
+     (sentinel . twindrill-http-get-list-index-sentinel))))
 
-(defun twittering-get-list-subscriptions (username)
-  (twittering-call-api
+(defun twindrill-get-list-subscriptions (username)
+  (twindrill-call-api
    'get-list-subscriptions
    `((username . ,username)
-     (sentinel . twittering-http-get-list-subscriptions-sentinel))))
+     (sentinel . twindrill-http-get-list-subscriptions-sentinel))))
 
-(defun twittering-get-list-sync (username function)
-  (setq twittering-list-index-retrieved nil)
+(defun twindrill-get-list-sync (username function)
+  (setq twindrill-list-index-retrieved nil)
   (let ((proc (funcall function username)))
     (when proc
-      (twittering-wait-while nil 0.1
-			     (and (not twittering-list-index-retrieved)
-				  (twittering-process-alive-p proc)))
-      (when (and (not twittering-list-index-retrieved)
-		 (not (twittering-process-alive-p proc)))
+      (twindrill-wait-while nil 0.1
+			     (and (not twindrill-list-index-retrieved)
+				  (twindrill-process-alive-p proc)))
+      (when (and (not twindrill-list-index-retrieved)
+		 (not (twindrill-process-alive-p proc)))
 	;; If the process has been dead, wait a moment because
 	;; Emacs may be in the middle of evaluating the sentinel.
-	(twittering-wait-while 10 0.1
-			       (not twittering-list-index-retrieved)))))
+	(twindrill-wait-while 10 0.1
+			       (not twindrill-list-index-retrieved)))))
   (cond
-   ((null twittering-list-index-retrieved)
+   ((null twindrill-list-index-retrieved)
     (message "Failed to retrieve %s's lists." username)
     nil)
-   ((stringp twittering-list-index-retrieved)
-    (if (string= "" twittering-list-index-retrieved)
+   ((stringp twindrill-list-index-retrieved)
+    (if (string= "" twindrill-list-index-retrieved)
 	(message "%s does not have a list." username)
-      (message "%s" twittering-list-index-retrieved))
+      (message "%s" twindrill-list-index-retrieved))
     nil)
-   ((listp twittering-list-index-retrieved)
-    twittering-list-index-retrieved)))
+   ((listp twindrill-list-index-retrieved)
+    twindrill-list-index-retrieved)))
 
-(defun twittering-get-list-index-sync (username)
-  (twittering-get-list-sync username 'twittering-get-list-index))
+(defun twindrill-get-list-index-sync (username)
+  (twindrill-get-list-sync username 'twindrill-get-list-index))
 
-(defun twittering-get-list-subscriptions-sync (username)
-  (twittering-get-list-sync username 'twittering-get-list-subscriptions))
+(defun twindrill-get-list-subscriptions-sync (username)
+  (twindrill-get-list-sync username 'twindrill-get-list-subscriptions))
 
 ;;;;
 ;;;; Buffer info
 ;;;;
 
-(defvar twittering-buffer-info-list nil
-  "List of buffers managed by `twittering-mode'.")
+(defvar twindrill-buffer-info-list nil
+  "List of buffers managed by `twindrill-mode'.")
 
-(defun twittering-get-buffer-list ()
-  "Return buffers managed by `twittering-mode'."
-  (twittering-unregister-killed-buffer)
-  twittering-buffer-info-list)
+(defun twindrill-get-buffer-list ()
+  "Return buffers managed by `twindrill-mode'."
+  (twindrill-unregister-killed-buffer)
+  twindrill-buffer-info-list)
 
-(defun twittering-get-active-buffer-list ()
-  "Return active buffers managed by `twittering-mode', where statuses are
+(defun twindrill-get-active-buffer-list ()
+  "Return active buffers managed by `twindrill-mode', where statuses are
 retrieved periodically."
-  (twittering-unregister-killed-buffer)
+  (twindrill-unregister-killed-buffer)
   (remove nil
 	  (mapcar (lambda (buffer)
-		    (if (twittering-buffer-active-p buffer)
+		    (if (twindrill-buffer-active-p buffer)
 			buffer
 		      nil))
-		  twittering-buffer-info-list)))
+		  twindrill-buffer-info-list)))
 
-(defun twittering-buffer-p (&optional buffer)
-  "Return t if BUFFER is managed by `twittering-mode'.
+(defun twindrill-buffer-p (&optional buffer)
+  "Return t if BUFFER is managed by `twindrill-mode'.
 BUFFER defaults to the the current buffer."
   (let ((buffer (or buffer (current-buffer))))
     (and (buffer-live-p buffer)
-	 (memq buffer twittering-buffer-info-list))))
+	 (memq buffer twindrill-buffer-info-list))))
 
-(defun twittering-buffer-related-p ()
-  "Return t if current buffer relates to `twittering-mode'."
-  (or (twittering-buffer-p)
-      (eq major-mode 'twittering-edit-mode)
+(defun twindrill-buffer-related-p ()
+  "Return t if current buffer relates to `twindrill-mode'."
+  (or (twindrill-buffer-p)
+      (eq major-mode 'twindrill-edit-mode)
       (string= (buffer-name (current-buffer))
-	       twittering-debug-buffer)))
+	       twindrill-debug-buffer)))
 
-(defun twittering-buffer-active-p (&optional buffer)
-  "Return t if BUFFER is an active buffer managed by `twittering-mode'.
+(defun twindrill-buffer-active-p (&optional buffer)
+  "Return t if BUFFER is an active buffer managed by `twindrill-mode'.
 BUFFER defaults to the the current buffer."
   (let ((buffer (or buffer (current-buffer))))
-    (and (twittering-buffer-p buffer)
+    (and (twindrill-buffer-p buffer)
 	 (with-current-buffer buffer
-	   twittering-active-mode))))
+	   twindrill-active-mode))))
 
-(defun twittering-get-buffer-from-spec (spec)
+(defun twindrill-get-buffer-from-spec (spec)
   "Return the buffer bound to SPEC. If no buffers are bound to SPEC,
 return nil."
-  (let* ((spec-string (twittering-timeline-spec-to-string spec))
+  (let* ((spec-string (twindrill-timeline-spec-to-string spec))
 	 (buffers
 	  (remove
 	   nil
 	   (mapcar
 	    (lambda (buffer)
-	      (if (twittering-equal-string-as-timeline
+	      (if (twindrill-equal-string-as-timeline
 		   spec-string
-		   (twittering-get-timeline-spec-string-for-buffer buffer))
+		   (twindrill-get-timeline-spec-string-for-buffer buffer))
 		  buffer
 		nil))
-	    (twittering-get-buffer-list)))))
+	    (twindrill-get-buffer-list)))))
     (if buffers
 	;; We assume that the buffer with the same spec is unique.
 	(car buffers)
       nil)))
 
-(defun twittering-get-buffer-from-spec-string (spec-string)
+(defun twindrill-get-buffer-from-spec-string (spec-string)
   "Return the buffer bound to SPEC-STRING. If no buffers are bound to it,
 return nil."
-  (let ((spec (twittering-string-to-timeline-spec spec-string)))
-    (and spec (twittering-get-buffer-from-spec spec))))
+  (let ((spec (twindrill-string-to-timeline-spec spec-string)))
+    (and spec (twindrill-get-buffer-from-spec spec))))
 
-(defun twittering-get-timeline-spec-for-buffer (buffer)
+(defun twindrill-get-timeline-spec-for-buffer (buffer)
   "Return the timeline spec bound to BUFFER. If BUFFER is not managed by
-`twittering-mode', return nil."
-  (when (twittering-buffer-p buffer)
+`twindrill-mode', return nil."
+  (when (twindrill-buffer-p buffer)
     (with-current-buffer buffer
-      twittering-timeline-spec)))
+      twindrill-timeline-spec)))
 
-(defun twittering-get-timeline-spec-string-for-buffer (buffer)
+(defun twindrill-get-timeline-spec-string-for-buffer (buffer)
   "Return the timeline spec string bound to BUFFER. If BUFFER is not managed
-by `twittering-mode', return nil."
-  (when (twittering-buffer-p buffer)
+by `twindrill-mode', return nil."
+  (when (twindrill-buffer-p buffer)
     (with-current-buffer buffer
-      twittering-timeline-spec-string)))
+      twindrill-timeline-spec-string)))
 
-(defun twittering-current-timeline-spec ()
+(defun twindrill-current-timeline-spec ()
   "Return the timeline spec bound to the current buffer. If it is not managed
-by `twittering-mode', return nil."
-  (twittering-get-timeline-spec-for-buffer (current-buffer)))
+by `twindrill-mode', return nil."
+  (twindrill-get-timeline-spec-for-buffer (current-buffer)))
 
-(defun twittering-current-timeline-spec-string ()
+(defun twindrill-current-timeline-spec-string ()
   "Return the timeline spec string bound to the current buffer. If it is not
-managed by `twittering-mode', return nil."
-  (twittering-get-timeline-spec-string-for-buffer (current-buffer)))
+managed by `twindrill-mode', return nil."
+  (twindrill-get-timeline-spec-string-for-buffer (current-buffer)))
 
-(defun twittering-unregister-buffer (buffer &optional keep-timer)
-  "Unregister BUFFER from `twittering-buffer-info-list'.
+(defun twindrill-unregister-buffer (buffer &optional keep-timer)
+  "Unregister BUFFER from `twindrill-buffer-info-list'.
 If BUFFER is the last managed buffer and KEEP-TIMER is nil, call
-`twittering-stop' to stop timers."
-  (when (memq buffer twittering-buffer-info-list)
-    (setq twittering-buffer-info-list
-	  (delq buffer twittering-buffer-info-list))
-    (when (and (null twittering-buffer-info-list)
+`twindrill-stop' to stop timers."
+  (when (memq buffer twindrill-buffer-info-list)
+    (setq twindrill-buffer-info-list
+	  (delq buffer twindrill-buffer-info-list))
+    (when (and (null twindrill-buffer-info-list)
 	       (not keep-timer))
-      (twittering-stop))))
+      (twindrill-stop))))
 
-(defun twittering-unregister-killed-buffer ()
+(defun twindrill-unregister-killed-buffer ()
   "Unregister buffers which has been killed."
   (mapc (lambda (buffer)
 	  (unless (buffer-live-p buffer)
-	    (twittering-unregister-buffer buffer)))
-	twittering-buffer-info-list))
+	    (twindrill-unregister-buffer buffer)))
+	twindrill-buffer-info-list))
 
-(defun twittering-replace-spec-string-for-buffer (buffer spec-string)
+(defun twindrill-replace-spec-string-for-buffer (buffer spec-string)
   "Replace the timeline spec string for BUFFER with SPEC-STRING when
-BUFFER is managed by `twittering-mode' and SPEC-STRING is equivalent
+BUFFER is managed by `twindrill-mode' and SPEC-STRING is equivalent
 to the current one."
-  (when (twittering-buffer-p buffer)
-    (let ((current (twittering-get-timeline-spec-string-for-buffer buffer)))
+  (when (twindrill-buffer-p buffer)
+    (let ((current (twindrill-get-timeline-spec-string-for-buffer buffer)))
       (when (and (not (string= current spec-string))
-		 (twittering-equal-string-as-timeline current spec-string))
+		 (twindrill-equal-string-as-timeline current spec-string))
 	(with-current-buffer buffer
 	  (rename-buffer spec-string t)
-	  (setq twittering-timeline-spec-string spec-string))))))
+	  (setq twindrill-timeline-spec-string spec-string))))))
 
-(defun twittering-set-active-flag-for-buffer (buffer active)
+(defun twindrill-set-active-flag-for-buffer (buffer active)
   "Set ACTIVE to active-flag for BUFFER."
-  (when (twittering-buffer-p buffer)
-    (let ((current (twittering-buffer-active-p buffer)))
+  (when (twindrill-buffer-p buffer)
+    (let ((current (twindrill-buffer-active-p buffer)))
       (when (or (and active (not current))
 		(and (not active) current))
-	(twittering-toggle-activate-buffer buffer)))))
+	(twindrill-toggle-activate-buffer buffer)))))
 
-(defun twittering-toggle-activate-buffer (&optional buffer)
+(defun twindrill-toggle-activate-buffer (&optional buffer)
   "Toggle whether to retrieve timeline for the current buffer periodically."
   (interactive)
   (let ((buffer (or buffer (current-buffer))))
-    (when (twittering-buffer-p buffer)
+    (when (twindrill-buffer-p buffer)
       (with-current-buffer buffer
-	(let* ((new-mode (not twittering-active-mode))
-	       (active-buffer-list (twittering-get-active-buffer-list))
+	(let* ((new-mode (not twindrill-active-mode))
+	       (active-buffer-list (twindrill-get-active-buffer-list))
 	       (start-timer (and new-mode (null active-buffer-list))))
-	  (setq twittering-active-mode new-mode)
+	  (setq twindrill-active-mode new-mode)
 	  (when start-timer
-	    (twittering-start))
-	  (twittering-update-mode-line))))))
+	    (twindrill-start))
+	  (twindrill-update-mode-line))))))
 
-(defun twittering-activate-buffer (&optional buffer)
+(defun twindrill-activate-buffer (&optional buffer)
   "Activate BUFFER to retrieve timeline for it periodically."
   (interactive)
   (let ((buffer (or buffer (current-buffer))))
-    (twittering-set-active-flag-for-buffer buffer t)))
+    (twindrill-set-active-flag-for-buffer buffer t)))
 
-(defun twittering-deactivate-buffer (&optional buffer)
+(defun twindrill-deactivate-buffer (&optional buffer)
   "Deactivate BUFFER not to retrieve timeline for it periodically."
   (interactive)
   (let ((buffer (or buffer (current-buffer))))
-    (twittering-set-active-flag-for-buffer buffer nil)))
+    (twindrill-set-active-flag-for-buffer buffer nil)))
 
-(defun twittering-kill-buffer (&optional buffer)
-  "Kill BUFFER managed by `twittering-mode'."
+(defun twindrill-kill-buffer (&optional buffer)
+  "Kill BUFFER managed by `twindrill-mode'."
   (interactive)
   (let ((buffer (or buffer (current-buffer))))
-    (when (twittering-buffer-p buffer)
-      (twittering-deactivate-buffer buffer)
+    (when (twindrill-buffer-p buffer)
+      (twindrill-deactivate-buffer buffer)
       (kill-buffer buffer)
-      (twittering-unregister-killed-buffer))))
+      (twindrill-unregister-killed-buffer))))
 
-(defun twittering-get-managed-buffer (spec)
+(defun twindrill-get-managed-buffer (spec)
   "Return the buffer bound to SPEC. If no buffers are bound to SPEC, return
 newly generated buffer.
 SPEC may be a timeline spec or a timeline spec string."
   (let* ((original-spec spec)
 	 (spec-string (if (stringp spec)
 			  spec
-			(twittering-timeline-spec-to-string spec)))
+			(twindrill-timeline-spec-to-string spec)))
 	 ;; `spec-string' without text properties is required because
 	 ;; Emacs21 displays `spec-string' with its properties on mode-line.
 	 ;; In addition, copying `spec-string' keeps timeline-data from
 	 ;; being modified by `minibuf-isearch.el'.
 	 (spec-string (copy-sequence spec-string))
 	 (spec (if (stringp spec-string)
-		   (twittering-string-to-timeline-spec spec-string)
+		   (twindrill-string-to-timeline-spec spec-string)
 		 nil)))
     (when (null spec)
       (error "\"%s\" is invalid as a timeline spec"
 	     (or spec-string original-spec)))
     (set-text-properties 0 (length spec-string) nil spec-string)
-    (twittering-add-timeline-history spec-string)
-    (let ((buffer (twittering-get-buffer-from-spec spec)))
+    (twindrill-add-timeline-history spec-string)
+    (let ((buffer (twindrill-get-buffer-from-spec spec)))
       (if buffer
 	  (progn
-	    (twittering-replace-spec-string-for-buffer buffer spec-string)
-	    (twittering-update-mode-line)
+	    (twindrill-replace-spec-string-for-buffer buffer spec-string)
+	    (twindrill-update-mode-line)
 	    buffer)
 	(let ((buffer (generate-new-buffer spec-string))
-	      (start-timer (null twittering-buffer-info-list)))
-	  (add-to-list 'twittering-buffer-info-list buffer t)
+	      (start-timer (null twindrill-buffer-info-list)))
+	  (add-to-list 'twindrill-buffer-info-list buffer t)
 	  (with-current-buffer buffer
-	    (twittering-mode-setup spec-string)
-	    (twittering-rerender-timeline-all buffer)
-	    (when (twittering-account-authorized-p)
+	    (twindrill-mode-setup spec-string)
+	    (twindrill-rerender-timeline-all buffer)
+	    (when (twindrill-account-authorized-p)
 	      (when start-timer
 		;; If `buffer' is the first managed buffer,
-		;; call `twittering-start' to start timers.
-		(twittering-start))
-	      (unless (and start-timer twittering-active-mode)
+		;; call `twindrill-start' to start timers.
+		(twindrill-start))
+	      (unless (and start-timer twindrill-active-mode)
 		;; If `buffer' is active and the first managed buffer,
-		;; `twittering-start' invokes
-		;; `twittering-get-and-render-timeline' indirectly.
-		;; Otherwise, `twittering-get-and-render-timeline' should be
+		;; `twindrill-start' invokes
+		;; `twindrill-get-and-render-timeline' indirectly.
+		;; Otherwise, `twindrill-get-and-render-timeline' should be
 		;; invoked here.
-		(twittering-get-and-render-timeline))))
+		(twindrill-get-and-render-timeline))))
 	  buffer)))))
 
 ;;;;
 ;;;; Icon mode
 ;;;;
 
-(defvar twittering-icon-mode nil
+(defvar twindrill-icon-mode nil
   "You MUST NOT CHANGE this variable directly.
-You should change through function `twittering-icon-mode'.")
+You should change through function `twindrill-icon-mode'.")
 
-(defun twittering-icon-mode (&optional arg)
+(defun twindrill-icon-mode (&optional arg)
   "Toggle display of icon images on timelines.
 With a numeric argument, if the argument is positive, turn on
 icon mode; otherwise, turn off icon mode."
   (interactive "P")
-  (let ((prev-mode twittering-icon-mode))
-    (setq twittering-icon-mode
+  (let ((prev-mode twindrill-icon-mode))
+    (setq twindrill-icon-mode
 	  (if (null arg)
-	      (not twittering-icon-mode)
+	      (not twindrill-icon-mode)
 	    (< 0 (prefix-numeric-value arg))))
-    (unless (eq prev-mode twittering-icon-mode)
-      (twittering-update-mode-line)
-      (twittering-rerender-timeline-all (current-buffer) t))))
+    (unless (eq prev-mode twindrill-icon-mode)
+      (twindrill-update-mode-line)
+      (twindrill-rerender-timeline-all (current-buffer) t))))
 
-(defvar twittering-icon-prop-hash (make-hash-table :test 'equal)
+(defvar twindrill-icon-prop-hash (make-hash-table :test 'equal)
   "Hash table for storing display properties of icon. The key is the size of
 icon and the value is a hash. The key of the child hash is URL and its value
 is the display property for the icon.")
 
-(defcustom twittering-convert-program (executable-find "convert")
+(defcustom twindrill-convert-program (executable-find "convert")
   "*A path of the command which is invoked for image conversion.
 
 The default is determined by searching \"convert\" in `exec-path'.
 The command must be compatible with \"convert\" of ImageMagick."
-  :group 'twittering-mode
+  :group 'twindrill-mode
   :type 'file)
 
-(defcustom twittering-convert-fix-size 48
+(defcustom twindrill-convert-fix-size 48
   "*Size of an icon image.
 
 If nil, an icon image is displayed as is."
-  :group 'twittering-mode
+  :group 'twindrill-mode
   :type '(choice (const nil)
 		 integer))
 
-(defcustom twittering-use-convert (not (null twittering-convert-program))
+(defcustom twindrill-use-convert (not (null twindrill-convert-program))
   "*If non-nil, use \"convert\" for converting or resizing icon images."
-  :group 'twittering-mode
+  :group 'twindrill-mode
   :type 'boolean)
 
-(defcustom twittering-fallback-image-format 'xpm
+(defcustom twindrill-fallback-image-format 'xpm
   "*Fallback format used for displaying an image without a supproted format.
 Images which Emacs does not supports are converted into the fallback image
 format."
-  :group 'twittering-mode
+  :group 'twindrill-mode
   :type 'symbol)
 
-(defcustom twittering-use-profile-image-api nil
+(defcustom twindrill-use-profile-image-api nil
   "*Whether to use `profile_image' API for retrieving scaled icon images.
 NOTE: This API is rate limited and is obsolete in the Twitter REST API v1.1."
-  :group 'twittering-mode
+  :group 'twindrill-mode
   :type 'boolean)
 
-(defcustom twittering-icon-storage-file
-  (expand-file-name "~/.twittering-mode-icons.gz")
+(defcustom twindrill-icon-storage-file
+  (expand-file-name "~/.twindrill-mode-icons.gz")
   "*The file to which icon images are stored.
-`twittering-icon-storage-limit' determines the number icons stored in the
+`twindrill-icon-storage-limit' determines the number icons stored in the
 file.
 The file is loaded with `with-auto-compression-mode'."
-  :group 'twittering-mode
+  :group 'twindrill-mode
   :type 'file)
 
-(defcustom twittering-use-icon-storage nil
+(defcustom twindrill-use-icon-storage nil
   "*Whether to use the persistent icon storage.
 If this variable is non-nil, icon images are stored to the file specified
-by `twittering-icon-storage-file'."
-  :group 'twittering-mode
+by `twindrill-icon-storage-file'."
+  :group 'twindrill-mode
   :type 'boolean)
 
-(defvar twittering-icon-storage-recent-icons nil
+(defvar twindrill-icon-storage-recent-icons nil
   "List of recently rendered icons.")
 
-(defcustom twittering-icon-storage-limit 500
+(defcustom twindrill-icon-storage-limit 500
   "*How many icons are stored in the persistent storage.
-If `twittering-use-icon-storage' is nil, this variable is ignored.
-If a positive integer N, `twittering-save-icon-properties' saves N icons that
+If `twindrill-use-icon-storage' is nil, this variable is ignored.
+If a positive integer N, `twindrill-save-icon-properties' saves N icons that
 have been recently rendered.
 If nil, the function saves all icons."
-  :group 'twittering-mode
+  :group 'twindrill-mode
   :type '(choice (const nil)
 		 integer))
 
-(defconst twittering-error-icon-data-pair
+(defconst twindrill-error-icon-data-pair
   '(xpm . "/* XPM */
 static char * yellow3_xpm[] = {
 \"16 16 2 1\",
@@ -8214,27 +8217,27 @@ static char * yellow3_xpm[] = {
 ")
   "Image used when the valid icon cannot be retrieved.")
 
-(defun twittering-update-icon-storage-recent-icons (size image-url spec)
-  (unless (null twittering-icon-storage-limit)
-    (let ((dummy-icon-properties (twittering-make-display-spec-for-icon
-				  twittering-error-icon-data-pair)))
+(defun twindrill-update-icon-storage-recent-icons (size image-url spec)
+  (unless (null twindrill-icon-storage-limit)
+    (let ((dummy-icon-properties (twindrill-make-display-spec-for-icon
+				  twindrill-error-icon-data-pair)))
       (unless (equal spec dummy-icon-properties)
 	(let ((history-delete-duplicates t))
-	  (twittering-add-to-history 'twittering-icon-storage-recent-icons
+	  (twindrill-add-to-history 'twindrill-icon-storage-recent-icons
 				     (list size image-url)
-				     twittering-icon-storage-limit))))))
+				     twindrill-icon-storage-limit))))))
 
-(defun twittering-get-display-spec-for-icon (image-url)
+(defun twindrill-get-display-spec-for-icon (image-url)
   (let ((hash
-	 (gethash twittering-convert-fix-size twittering-icon-prop-hash)))
+	 (gethash twindrill-convert-fix-size twindrill-icon-prop-hash)))
     (when hash
       (let ((spec (gethash image-url hash))
-	    (size twittering-convert-fix-size))
+	    (size twindrill-convert-fix-size))
 	(when spec
-	  (twittering-update-icon-storage-recent-icons size image-url spec)
+	  (twindrill-update-icon-storage-recent-icons size image-url spec)
 	  spec)))))
 
-(defun twittering-convert-image-data (image-data dest-type &optional src-type)
+(defun twindrill-convert-image-data (image-data dest-type &optional src-type)
   "Convert IMAGE-DATA into XPM format and return it. If it fails to convert,
 return nil."
   (with-temp-buffer
@@ -8257,69 +8260,69 @@ return nil."
 		,@(unless (fboundp 'create-animated-image)
 		    '("-flatten"))
 		,(if src-type (format "%s:-" src-type) "-")
-		,@(when (integerp twittering-convert-fix-size)
+		,@(when (integerp twindrill-convert-fix-size)
 		    `("-resize"
-		      ,(format "%dx%d" twittering-convert-fix-size
-			       twittering-convert-fix-size)))
+		      ,(format "%dx%d" twindrill-convert-fix-size
+			       twindrill-convert-fix-size)))
 		,(format "%s:-" dest-type)))
 	     (exit-status
 	      (apply 'call-process-region (point-min) (point-max)
-		     twittering-convert-program t `(t nil) nil args)))
+		     twindrill-convert-program t `(t nil) nil args)))
 	(if (equal 0 exit-status)
 	    (buffer-string)
 	  ;; failed to convert the image.
 	  nil)))))
 
-(defun twittering-create-image-pair (image-data)
+(defun twindrill-create-image-pair (image-data)
   "Return a pair of image type and image data.
 IMAGE-DATA is converted by `convert' if the image type of IMAGE-DATA is not
-available and `twittering-use-convert' is non-nil."
+available and `twindrill-use-convert' is non-nil."
   (let* ((image-type (and image-data (image-type-from-data image-data)))
 	 (image-pair `(,image-type . ,image-data))
 	 (converted-size
-	  `(,twittering-convert-fix-size . ,twittering-convert-fix-size)))
+	  `(,twindrill-convert-fix-size . ,twindrill-convert-fix-size)))
     (cond
      ((null image-data)
-      twittering-error-icon-data-pair)
+      twindrill-error-icon-data-pair)
      ((and (image-type-available-p image-type)
 	   (or (fboundp 'create-animated-image)
-	       (not (and twittering-use-convert
+	       (not (and twindrill-use-convert
 			 (eq image-type 'gif))))
-	   (or (not (integerp twittering-convert-fix-size))
+	   (or (not (integerp twindrill-convert-fix-size))
 	       (equal (image-size (create-image image-data image-type t) t)
 		      converted-size)))
       image-pair)
-     (twittering-use-convert
+     (twindrill-use-convert
       (let ((converted-data
-	     (twittering-convert-image-data image-data
-					    twittering-fallback-image-format)))
+	     (twindrill-convert-image-data image-data
+					    twindrill-fallback-image-format)))
 	(if converted-data
-	    `(,twittering-fallback-image-format . ,converted-data)
-	  twittering-error-icon-data-pair)))
+	    `(,twindrill-fallback-image-format . ,converted-data)
+	  twindrill-error-icon-data-pair)))
      (t
-      twittering-error-icon-data-pair))))
+      twindrill-error-icon-data-pair))))
 
-(defun twittering-register-image-spec (image-url spec size)
-  (let ((hash (gethash size twittering-icon-prop-hash)))
+(defun twindrill-register-image-spec (image-url spec size)
+  (let ((hash (gethash size twindrill-icon-prop-hash)))
     (unless hash
       (setq hash (make-hash-table :test 'equal))
-      (puthash size hash twittering-icon-prop-hash))
+      (puthash size hash twindrill-icon-prop-hash))
     (puthash image-url spec hash)))
 
-(defun twittering-register-image-data (image-url image-data &optional size)
-  (let ((image-pair (twittering-create-image-pair image-data))
-	(size (or size twittering-convert-fix-size)))
+(defun twindrill-register-image-data (image-url image-data &optional size)
+  (let ((image-pair (twindrill-create-image-pair image-data))
+	(size (or size twindrill-convert-fix-size)))
     (when image-pair
-      (let ((spec (twittering-make-display-spec-for-icon image-pair)))
-	(twittering-register-image-spec image-url spec size)
+      (let ((spec (twindrill-make-display-spec-for-icon image-pair)))
+	(twindrill-register-image-spec image-url spec size)
 	spec))))
 
-(defun twittering-make-slice-spec (image-spec)
+(defun twindrill-make-slice-spec (image-spec)
   "Return slice property for reducing the image size by cropping it."
   (let* ((size (image-size image-spec t))
 	 (width (car size))
 	 (height (cdr size))
-	 (fixed-length twittering-convert-fix-size)
+	 (fixed-length twindrill-convert-fix-size)
 	 (half-fixed-length (/ fixed-length 2)))
     (if (or (< fixed-length width) (< fixed-length height))
 	`(slice ,(max 0 (- (/ width 2) half-fixed-length))
@@ -8327,7 +8330,7 @@ available and `twittering-use-convert' is non-nil."
 		,fixed-length ,fixed-length)
       `(slice 0 0 ,fixed-length ,fixed-length))))
 
-(defun twittering-make-display-spec-for-icon (image-pair)
+(defun twindrill-make-display-spec-for-icon (image-pair)
   "Return the specification for `display' text property, which
 limits the size of an icon image IMAGE-PAIR up to FIXED-LENGTH. If
 the type of the image is not supported, nil is returned.
@@ -8339,8 +8342,8 @@ image are displayed."
 	 (raw-image-spec ;; without margins
 	  (create-image data type t))
 	 (slice-spec
-	  (when (and twittering-convert-fix-size (not twittering-use-convert))
-	    (twittering-make-slice-spec raw-image-spec)))
+	  (when (and twindrill-convert-fix-size (not twindrill-use-convert))
+	    (twindrill-make-slice-spec raw-image-spec)))
 	 (image-spec
 	  (if (fboundp 'create-animated-image) ;; Emacs24 or later
 	      (create-animated-image data type t :margin 2 :ascent 'center)
@@ -8349,9 +8352,9 @@ image are displayed."
 	`(display (,image-spec ,slice-spec))
       `(display ,image-spec))))
 
-(defun twittering-make-icon-string (beg end image-url)
-  (let ((display-spec (twittering-get-display-spec-for-icon image-url))
-	(image-data (gethash image-url twittering-url-data-hash))
+(defun twindrill-make-icon-string (beg end image-url)
+  (let ((display-spec (twindrill-get-display-spec-for-icon image-url))
+	(image-data (gethash image-url twindrill-url-data-hash))
 	(properties (and beg (text-properties-at beg)))
 	(icon-string (copy-sequence " ")))
     (when properties
@@ -8366,39 +8369,39 @@ image are displayed."
 				icon-string)
 	icon-string))
      ((and (integerp image-data)
-	   (<= twittering-url-request-retry-limit image-data))
+	   (<= twindrill-url-request-retry-limit image-data))
       ;; Try to retrieve the image no longer.
-      (twittering-register-image-data image-url nil)
-      (twittering-make-icon-string beg end image-url))
+      (twindrill-register-image-data image-url nil)
+      (twindrill-make-icon-string beg end image-url))
      ((and image-data (not (integerp image-data)))
-      (twittering-register-image-data image-url image-data)
-      (twittering-make-icon-string beg end image-url))
+      (twindrill-register-image-data image-url image-data)
+      (twindrill-make-icon-string beg end image-url))
      (t
       (put-text-property 0 (length icon-string)
 			 'need-to-be-updated
-			 `(twittering-make-icon-string ,image-url)
+			 `(twindrill-make-icon-string ,image-url)
 			 icon-string)
-      (twittering-url-retrieve-async image-url 'twittering-register-image-data)
+      (twindrill-url-retrieve-async image-url 'twindrill-register-image-data)
       icon-string))))
 
-(defun twittering-save-icon-properties (&optional filename)
-  (let ((filename (or filename twittering-icon-storage-file))
+(defun twindrill-save-icon-properties (&optional filename)
+  (let ((filename (or filename twindrill-icon-storage-file))
 	(stored-data
 	 (cond
-	  ((null twittering-icon-storage-limit)
+	  ((null twindrill-icon-storage-limit)
 	   (let ((result nil)
-		 (dummy-icon-properties (twittering-make-display-spec-for-icon
-					 twittering-error-icon-data-pair)))
+		 (dummy-icon-properties (twindrill-make-display-spec-for-icon
+					 twindrill-error-icon-data-pair)))
 	     (maphash
 	      (lambda (size hash)
 		(maphash (lambda (url properties)
 			   (unless (equal properties dummy-icon-properties)
 			     (setq result (cons (list size url) result))))
 			 hash))
-	      twittering-icon-prop-hash)
+	      twindrill-icon-prop-hash)
 	     result))
 	  (t
-	   (reverse twittering-icon-storage-recent-icons))))
+	   (reverse twindrill-icon-storage-recent-icons))))
 	;; Bind `default-directory' to the temporary directory
 	;; because it is possible that the directory pointed by
 	;; `default-directory' has been already removed.
@@ -8416,7 +8419,7 @@ image are displayed."
 		      (url (elt entry 1))
 		      (properties
 		       (gethash url
-				(gethash size twittering-icon-prop-hash))))
+				(gethash size twindrill-icon-prop-hash))))
 		 (insert (if size
 			     (format "(%d " size)
 			   "(nil "))
@@ -8427,8 +8430,8 @@ image are displayed."
 	     stored-data)
 	    (insert "))")))))))
 
-(defun twittering-load-icon-properties (&optional filename)
-  (let* ((filename (or filename twittering-icon-storage-file))
+(defun twindrill-load-icon-properties (&optional filename)
+  (let* ((filename (or filename twindrill-icon-storage-file))
 	 ;; Bind `default-directory' to the temporary directory
 	 ;; because it is possible that the directory pointed by
 	 ;; `default-directory' has been already removed.
@@ -8461,9 +8464,9 @@ image are displayed."
 		  (let ((size (elt entry 0))
 			(url (elt entry 1))
 			(properties (elt entry 2)))
-		    (twittering-update-icon-storage-recent-icons size url
+		    (twindrill-update-icon-storage-recent-icons size url
 								 properties)
-		    (twittering-register-image-spec url properties size)))
+		    (twindrill-register-image-spec url properties size)))
 		(cdr (assq 'icon-list data))))
 	 (t
 	  (message "Stopped loading icons")))))
@@ -8474,9 +8477,9 @@ image are displayed."
 		(mapc (lambda (entry)
 			(let ((url (car entry))
 			      (properties (cdr entry)))
-			  (twittering-update-icon-storage-recent-icons
+			  (twindrill-update-icon-storage-recent-icons
 			   size url properties)
-			  (twittering-register-image-spec url properties
+			  (twindrill-register-image-spec url properties
 							  size)))
 		      prop-alist)))
 	    data)))))
@@ -8486,7 +8489,7 @@ image are displayed."
 ;;;;
 
 ;;; SSL
-(defconst twittering-ssl-indicator-image
+(defconst twindrill-ssl-indicator-image
   (when (image-type-available-p 'xpm)
     '(image :type xpm
 	    :ascent center
@@ -8517,15 +8520,15 @@ static char * lock[] = {
 	    ))
   "Image for indicator of SSL state.")
 
-(defconst twittering-modeline-ssl
-  (if twittering-ssl-indicator-image
+(defconst twindrill-modeline-ssl
+  (if twindrill-ssl-indicator-image
       (propertize "SSL"
-		  'display twittering-ssl-indicator-image
+		  'display twindrill-ssl-indicator-image
 		  'help-echo "SSL is enabled.")
     "SSL"))
 
 ;;; ACTIVE/INACTIVE
-(defconst twittering-active-indicator-image
+(defconst twindrill-active-indicator-image
   (when (image-type-available-p 'xpm)
     '(image :type xpm
 	    :ascent center
@@ -8556,7 +8559,7 @@ static char * connected[] = {
   "Image for indicator of active state."
 )
 
-(defconst twittering-inactive-indicator-image
+(defconst twindrill-inactive-indicator-image
   (when (image-type-available-p 'xpm)
     '(image :type xpm
 	    :ascent center
@@ -8587,50 +8590,50 @@ static char * disconnected[] = {
   "Image for indicator of inactive state."
 )
 
-(defconst twittering-modeline-properties
+(defconst twindrill-modeline-properties
   (when (display-mouse-p)
     `(local-map
       ,(purecopy (make-mode-line-mouse-map
-		  'mouse-2 #'twittering-toggle-activate-buffer))
+		  'mouse-2 #'twindrill-toggle-activate-buffer))
       help-echo "mouse-2 toggles activate buffer")))
 
-(defconst twittering-modeline-active
-  (if twittering-active-indicator-image
+(defconst twindrill-modeline-active
+  (if twindrill-active-indicator-image
       (apply 'propertize " "
-	     `(display ,twittering-active-indicator-image
-		       ,@twittering-modeline-properties))
+	     `(display ,twindrill-active-indicator-image
+		       ,@twindrill-modeline-properties))
     " "))
 
-(defconst twittering-modeline-inactive
-  (if twittering-inactive-indicator-image
+(defconst twindrill-modeline-inactive
+  (if twindrill-inactive-indicator-image
       (apply 'propertize "INACTIVE"
-	     `(display ,twittering-inactive-indicator-image
-		       ,@twittering-modeline-properties))
+	     `(display ,twindrill-inactive-indicator-image
+		       ,@twindrill-modeline-properties))
     "INACTIVE"))
 
-(defun twittering-mode-line-buffer-identification ()
+(defun twindrill-mode-line-buffer-identification ()
   (let ((active-mode-indicator
-	 (if twittering-active-mode
-	     twittering-modeline-active
-	   twittering-modeline-inactive))
+	 (if twindrill-active-mode
+	     twindrill-modeline-active
+	   twindrill-modeline-inactive))
 	(enabled-options
-	 `(,(if twittering-display-connection-method
+	 `(,(if twindrill-display-connection-method
 		(concat
-		 (when twittering-use-ssl (concat twittering-modeline-ssl ":"))
-		 (twittering-get-connection-method-name twittering-use-ssl))
-	      (when twittering-use-ssl twittering-modeline-ssl))
-	   ,@(when twittering-jojo-mode '("jojo"))
-	   ,@(when twittering-icon-mode '("icon"))
-	   ,@(when twittering-reverse-mode '("reverse"))
-	   ,@(when twittering-proxy-use '("proxy")))))
+		 (when twindrill-use-ssl (concat twindrill-modeline-ssl ":"))
+		 (twindrill-get-connection-method-name twindrill-use-ssl))
+	      (when twindrill-use-ssl twindrill-modeline-ssl))
+	   ,@(when twindrill-jojo-mode '("jojo"))
+	   ,@(when twindrill-icon-mode '("icon"))
+	   ,@(when twindrill-reverse-mode '("reverse"))
+	   ,@(when twindrill-proxy-use '("proxy")))))
     (concat active-mode-indicator
-	    (when twittering-display-remaining
-	      (let ((spec (twittering-current-timeline-spec)))
-		(twittering-get-ratelimit-indicator-string spec)))
+	    (when twindrill-display-remaining
+	      (let ((spec (twindrill-current-timeline-spec)))
+		(twindrill-get-ratelimit-indicator-string spec)))
 	    (when enabled-options
 	      (concat "[" (mapconcat 'identity enabled-options " ") "]")))))
 
-(defun twittering-update-mode-line ()
+(defun twindrill-update-mode-line ()
   "Update mode line."
   (force-mode-line-update))
 
@@ -8639,7 +8642,7 @@ static char * disconnected[] = {
 ;;;;
 
 (eval-and-compile
-  (defsubst twittering-make-common-properties (status)
+  (defsubst twindrill-make-common-properties (status)
     "Generate a property list that tweets should have irrespective of format."
     (apply 'append
 	   (mapcar (lambda (entry)
@@ -8649,13 +8652,13 @@ static char * disconnected[] = {
 		   '(id retweeted-id source-spec
 			(username . user-screen-name) text)))))
 
-(defun twittering-get-common-properties (pos)
+(defun twindrill-get-common-properties (pos)
   "Get a common property list of the tweet rendered at POS.
 The common property list is added to each rendered tweet irrespective
 of format. The common properties follows:
- properites generated by `twittering-make-common-properties',
- `field' and `rendered-as' generated by `twittering-render-a-field' or
- `twittering-make-properties-of-popped-ancestors'."
+ properites generated by `twindrill-make-common-properties',
+ `field' and `rendered-as' generated by `twindrill-render-a-field' or
+ `twindrill-make-properties-of-popped-ancestors'."
   (apply 'append
 	 (mapcar (lambda (prop)
 		   (let ((value (get-text-property pos prop)))
@@ -8664,7 +8667,7 @@ of format. The common properties follows:
 		 '(field id rendered-as retweeted-id source-spec
 			 text username))))
 
-(defun twittering-format-string (string prefix replacement-table)
+(defun twindrill-format-string (string prefix replacement-table)
   "Format STRING according to PREFIX and REPLACEMENT-TABLE.
 PREFIX is a regexp. REPLACEMENT-TABLE is a list of (FROM . TO) pairs,
 where FROM is a regexp and TO is a string or a 2-parameter function.
@@ -8728,56 +8731,56 @@ following symbols;
     ))
 
 (eval-and-compile
-  (defsubst twittering-make-string-with-user-name-property (str status)
+  (defsubst twindrill-make-string-with-user-name-property (str status)
     (if str
 	(let* ((user-screen-name (cdr (assq 'user-screen-name status)))
-	       (uri (twittering-get-status-url user-screen-name))
+	       (uri (twindrill-get-status-url user-screen-name))
 	       (spec
-		(twittering-make-user-timeline-spec-direct user-screen-name)))
+		(twindrill-make-user-timeline-spec-direct user-screen-name)))
 	  (propertize str
 		      'mouse-face 'highlight
-		      'keymap twittering-mode-on-uri-map
+		      'keymap twindrill-mode-on-uri-map
 		      'uri uri
 		      'screen-name-in-text user-screen-name
 		      'goto-spec spec
-		      'face 'twittering-username-face
+		      'face 'twindrill-username-face
 		      'front-sticky nil
 		      'rear-nonsticky t))
       ""))
 
-  (defsubst twittering-make-string-with-source-property (str status)
+  (defsubst twindrill-make-string-with-source-property (str status)
     (if str
 	(let ((uri (cdr (assq 'source-uri status))))
 	  (propertize str
 		      'mouse-face 'highlight
-		      'keymap twittering-mode-on-uri-map
+		      'keymap twindrill-mode-on-uri-map
 		      'uri uri
-		      'face 'twittering-uri-face
+		      'face 'twindrill-uri-face
 		      'source str
 		      'front-sticky nil
 		      'rear-nonsticky t))
       ""))
 
-  (defsubst twittering-make-string-with-uri-property (str status)
+  (defsubst twindrill-make-string-with-uri-property (str status)
     (if str
 	(let ((uri
 	       (if (assq 'retweeted-id status)
-		   (twittering-get-status-url
+		   (twindrill-get-status-url
 		    (cdr (assq 'retweeted-user-screen-name status))
 		    (cdr (assq 'retweeted-id status)))
-		 (twittering-get-status-url
+		 (twindrill-get-status-url
 		  (cdr (assq 'user-screen-name status))
 		  (cdr (assq 'id status))))))
 	  (propertize str
 		      'mouse-face 'highlight
-		      'keymap twittering-mode-on-uri-map
+		      'keymap twindrill-mode-on-uri-map
 		      'uri uri
-		      'face 'twittering-uri-face
+		      'face 'twindrill-uri-face
 		      'front-sticky nil
 		      'rear-nonsticky t))
       "")))
 
-(defun twittering-make-fontified-tweet-text (str-expr regexp-hash regexp-atmark)
+(defun twindrill-make-fontified-tweet-text (str-expr regexp-hash regexp-atmark)
   (let ((regexp-str
 	 (mapconcat
 	  'identity
@@ -8808,60 +8811,60 @@ following symbols;
 		   ;; hashtag
 		   (let* ((hashtag (match-string 1 str))
 			  (spec-string
-			   (twittering-make-hashtag-timeline-spec-string-direct
+			   (twindrill-make-hashtag-timeline-spec-string-direct
 			    hashtag))
-			  (url (twittering-get-search-url
+			  (url (twindrill-get-search-url
 				(concat "#" hashtag))))
 		     (list
 		      beg end
 		      'mouse-face 'highlight
-		      'keymap twittering-mode-on-uri-map
+		      'keymap twindrill-mode-on-uri-map
 		      'uri url
 		      'goto-spec spec-string
-		      'face 'twittering-username-face)))
+		      'face 'twindrill-username-face)))
 		  ((match-string 2 str)
 		   ;; @USER/LIST
 		   (let ((owner (match-string 3 str))
 			 (list-name (match-string 4 str))
 			 ;; Properties are added to the matched part only.
-			 ;; The prefixes `twittering-regexp-atmark' will not
+			 ;; The prefixes `twindrill-regexp-atmark' will not
 			 ;; be highlighted.
 			 (beg (match-beginning 2)))
 		     (list
 		      beg end
 		      'mouse-face 'highlight
-		      'keymap twittering-mode-on-uri-map
-		      'uri (twittering-get-list-url owner list-name)
+		      'keymap twindrill-mode-on-uri-map
+		      'uri (twindrill-get-list-url owner list-name)
 		      'goto-spec
-		      (twittering-make-list-timeline-spec-direct owner
+		      (twindrill-make-list-timeline-spec-direct owner
 								 list-name)
-		      'face 'twittering-username-face)))
+		      'face 'twindrill-username-face)))
 		  ((match-string 5 str)
 		   ;; @USER
 		   (let ((screen-name (match-string 5 str))
 			 ;; Properties are added to the matched part only.
-			 ;; The prefixes `twittering-regexp-atmark' will not
+			 ;; The prefixes `twindrill-regexp-atmark' will not
 			 ;; be highlighted.
 			 (beg (match-beginning 5)))
 		     (list
 		      beg end
 		      'mouse-face 'highlight
-		      'keymap twittering-mode-on-uri-map
-		      'uri (twittering-get-status-url screen-name)
+		      'keymap twindrill-mode-on-uri-map
+		      'uri (twindrill-get-status-url screen-name)
 		      'screen-name-in-text screen-name
 		      'goto-spec
-		      (twittering-make-user-timeline-spec-direct screen-name)
-		      'face 'twittering-uri-face)))
+		      (twindrill-make-user-timeline-spec-direct screen-name)
+		      'face 'twindrill-uri-face)))
 		  ((match-string 6 str)
 		   ;; URI
 		   (let ((uri (match-string 6 str)))
 		     (list
 		      beg end
 		      'mouse-face 'highlight
-		      'keymap twittering-mode-on-uri-map
+		      'keymap twindrill-mode-on-uri-map
 		      'uri uri
 		      'uri-origin 'explicit-uri-in-tweet
-		      'face 'twittering-uri-face)))))
+		      'face 'twindrill-uri-face)))))
 		(beg (if range-and-properties
 			 (car range-and-properties)
 		       beg))
@@ -8878,7 +8881,7 @@ following symbols;
        str)))
 
 (eval-and-compile
-  (defsubst twittering-make-fontified-tweet-text-with-entity (status)
+  (defsubst twindrill-make-fontified-tweet-text-with-entity (status)
     (let* ((text (copy-sequence (cdr (assq 'text status))))
 	   (text-length (length text))
 	   (entities (cdr (assq 'entity status))))
@@ -8888,15 +8891,15 @@ following symbols;
 		     (end (min (cdr (assq 'end hashtag)) text-length))
 		     (tag (cdr (assq 'text hashtag)))
 		     (spec-string
-		      (twittering-make-hashtag-timeline-spec-string-direct tag)))
+		      (twindrill-make-hashtag-timeline-spec-string-direct tag)))
 		(set-text-properties
 		 start end
 		 `(mouse-face
 		   highlight
-		   keymap ,twittering-mode-on-uri-map
-		   uri ,(twittering-get-search-url (concat "#" tag))
+		   keymap ,twindrill-mode-on-uri-map
+		   uri ,(twindrill-get-search-url (concat "#" tag))
 		   goto-spec ,spec-string
-		   face twittering-username-face
+		   face twindrill-username-face
 		   front-sticky nil
 		   rear-nonsticky t)
 		 text)))
@@ -8910,12 +8913,12 @@ following symbols;
 		 start end
 		 `(mouse-face
 		   highlight
-		   keymap ,twittering-mode-on-uri-map
-		   uri ,(twittering-get-status-url screen-name)
+		   keymap ,twindrill-mode-on-uri-map
+		   uri ,(twindrill-get-status-url screen-name)
 		   screen-name-in-text ,screen-name
 		   goto-spec
-		   ,(twittering-make-user-timeline-spec-direct screen-name)
-		   face twittering-uri-face
+		   ,(twindrill-make-user-timeline-spec-direct screen-name)
+		   face twindrill-uri-face
 		   front-sticky nil
 		   rear-nonsticky t)
 		 text)))
@@ -8936,11 +8939,11 @@ following symbols;
 			(propertize
 			 expanded-url
 			 'mouse-face 'highlight
-			 'keymap twittering-mode-on-uri-map
+			 'keymap twindrill-mode-on-uri-map
 			 'uri url
 			 'uri-origin 'explicit-uri-in-tweet
 			 'expanded-uri expanded-url
-			 'face 'twittering-uri-face
+			 'face 'twindrill-uri-face
 			 'front-sticky nil
 			 'rear-nonsticky t)))
 		  (setq text
@@ -8953,7 +8956,7 @@ following symbols;
 	      (cdr (assq 'urls entities))))
       text)))
 
-(defun twittering-generate-format-table (status-sym prefix-sym)
+(defun twindrill-generate-format-table (status-sym prefix-sym)
   `(("%" . "%")
     ("}" . "}")
     ("#" . (cdr (assq 'id ,status-sym)))
@@ -8965,27 +8968,27 @@ following symbols;
 			   (cdr (assq 'created-at ,status-sym)))))
     ("d" . (cdr (assq 'user-description ,status-sym)))
     ("f" .
-     (twittering-make-string-with-source-property
+     (twindrill-make-string-with-source-property
       (cdr (assq 'source ,status-sym)) ,status-sym))
     ("i" .
-     (when (and twittering-icon-mode window-system)
+     (when (and twindrill-icon-mode window-system)
        (let ((url
 	      (cond
-	       ((and twittering-use-profile-image-api
-		     (eq twittering-service-method 'twitter)
-		     (or (null twittering-convert-fix-size)
-			 (member twittering-convert-fix-size '(48 73))))
+	       ((and twindrill-use-profile-image-api
+		     (eq twindrill-service-method 'twitter)
+		     (or (null twindrill-convert-fix-size)
+			 (member twindrill-convert-fix-size '(48 73))))
 		(let ((user (cdr (assq 'user-screen-name ,status-sym)))
 		      (size
-		       (if (or (null twittering-convert-fix-size)
-			       (= 48 twittering-convert-fix-size))
+		       (if (or (null twindrill-convert-fix-size)
+			       (= 48 twindrill-convert-fix-size))
 			   "normal"
 			 "bigger")))
-		  (format "http://%s/%s/%s.xml?size=%s" twittering-api-host
-			  (twittering-api-path "users/profile_image") user size)))
+		  (format "http://%s/%s/%s.xml?size=%s" twindrill-api-host
+			  (twindrill-api-path "users/profile_image") user size)))
 	       (t
 		(cdr (assq 'user-profile-image-url ,status-sym))))))
-	 (twittering-make-icon-string nil nil url))))
+	 (twindrill-make-icon-string nil nil url))))
     ("j" . (cdr (assq 'user-id ,status-sym)))
     ("L" .
      (let ((location (or (cdr (assq 'user-location ,status-sym)) "")))
@@ -9004,17 +9007,17 @@ following symbols;
 	       (cond
 		(recipient-screen-name
 		 (cons (format "sent to %s" recipient-screen-name)
-		       (twittering-get-status-url recipient-screen-name)))
+		       (twindrill-get-status-url recipient-screen-name)))
 		((and (not (string= "" reply-id))
 		      (not (string= "" reply-name)))
 		 (cons (format "in reply to %s" reply-name)
-		       (twittering-get-status-url reply-name reply-id)))
+		       (twindrill-get-status-url reply-name reply-id)))
 		(t nil)))
 	      (str (car pair))
 	      (url (cdr pair))
 	      (properties
-	       (list 'mouse-face 'highlight 'face 'twittering-uri-face
-		     'keymap twittering-mode-on-uri-map
+	       (list 'mouse-face 'highlight 'face 'twindrill-uri-face
+		     'keymap twindrill-mode-on-uri-map
 		     'uri url
 		     'front-sticky nil
 		     'rear-nonsticky t)))
@@ -9026,29 +9029,29 @@ following symbols;
        (unless (string= "" retweeted-by)
 	 (concat " (retweeted by " retweeted-by ")"))))
     ("S" .
-     (twittering-make-string-with-user-name-property
+     (twindrill-make-string-with-user-name-property
       (cdr (assq 'user-name ,status-sym)) ,status-sym))
     ("s" .
-     (twittering-make-string-with-user-name-property
+     (twindrill-make-string-with-user-name-property
       (cdr (assq 'user-screen-name ,status-sym)) ,status-sym))
     ("T" .
-     ,(twittering-make-fontified-tweet-text
-       `(twittering-make-fontified-tweet-text-with-entity ,status-sym)
-       twittering-regexp-hash twittering-regexp-atmark))
+     ,(twindrill-make-fontified-tweet-text
+       `(twindrill-make-fontified-tweet-text-with-entity ,status-sym)
+       twindrill-regexp-hash twindrill-regexp-atmark))
     ("t" .
-     ,(twittering-make-fontified-tweet-text
-       `(twittering-make-fontified-tweet-text-with-entity ,status-sym)
-       twittering-regexp-hash twittering-regexp-atmark))
+     ,(twindrill-make-fontified-tweet-text
+       `(twindrill-make-fontified-tweet-text-with-entity ,status-sym)
+       twindrill-regexp-hash twindrill-regexp-atmark))
     ("u" . (cdr (assq 'user-url ,status-sym)))))
 
-(defun twittering-generate-formater-for-first-spec (format-str status-sym prefix-sym)
+(defun twindrill-generate-formater-for-first-spec (format-str status-sym prefix-sym)
   (cond
    ((string-match "\\`}" format-str)
     ;; "}" at the first means the end of the current level.
     `(nil . ,(substring format-str (match-end 0))))
    ((string-match "\\`%" format-str)
     (let* ((following (substring format-str 1))
-	   (table (twittering-generate-format-table status-sym prefix-sym))
+	   (table (twindrill-generate-format-table status-sym prefix-sym))
 	   (regexp (concat "\\`\\(" (mapconcat 'car table "\\|") "\\)"))
 	   (case-fold-search nil))
       (cond
@@ -9059,33 +9062,33 @@ following symbols;
 	  `((let* ((created-at (cdr (assq 'created-at ,status-sym)))
 		   (url
 		    (if (assq 'retweeted-id ,status-sym)
-			(twittering-get-status-url
+			(twindrill-get-status-url
 			 (cdr (assq 'retweeted-user-screen-name ,status-sym))
 			 (cdr (assq 'retweeted-id ,status-sym)))
-		      (twittering-get-status-url
+		      (twindrill-get-status-url
 		       (cdr (assq 'user-screen-name ,status-sym))
 		       (cdr (assq 'id ,status-sym)))))
 		   (properties
-		    (list 'mouse-face 'highlight 'face 'twittering-uri-face
-			  'keymap twittering-mode-on-uri-map
+		    (list 'mouse-face 'highlight 'face 'twindrill-uri-face
+			  'keymap twindrill-mode-on-uri-map
 			  'uri url
 			  'front-sticky nil
 			  'rear-nonsticky t)))
-	      (twittering-make-passed-time-string
+	      (twindrill-make-passed-time-string
 	       nil nil created-at ,time-format properties))
 	    . ,rest)))
        ((string-match "\\`C\\({\\([^}]*\\)}\\)?" following)
 	(let ((time-format (or (match-string 2 following) "%H:%M:%S"))
 	      (rest (substring following (match-end 0))))
 	  `((let* ((created-at (cdr (assq 'created-at ,status-sym))))
-	      (twittering-make-string-with-uri-property
+	      (twindrill-make-string-with-uri-property
 	       (format-time-string ,time-format created-at) ,status-sym))
 	    . ,rest)))
        ((string-match "\\`FACE\\[\\([a-zA-Z0-9:-]+\\)\\]{" following)
 	(let* ((face-name-str (match-string 1 following))
 	       (str-after-brace (substring following (match-end 0)))
 	       (face-sym (intern face-name-str))
-	       (pair (twittering-generate-formater-for-current-level
+	       (pair (twindrill-generate-formater-for-current-level
 		      str-after-brace status-sym prefix-sym))
 	       (braced-body (car pair))
 	       (rest (cdr pair)))
@@ -9121,7 +9124,7 @@ following symbols;
 	(let* ((str-after-brace (substring following (match-end 0)))
 	       (specifier (match-string 1 following))
 	       (prefix-str (match-string 3 following))
-	       (pair (twittering-generate-formater-for-current-level
+	       (pair (twindrill-generate-formater-for-current-level
 		      str-after-brace status-sym prefix-sym))
 	       (filled-body (car pair))
 	       (formater
@@ -9130,13 +9133,13 @@ following symbols;
 		     (concat ,@filled-body))))
 	       (keep-newline (string= "FOLD" specifier))
 	       (rest (cdr pair)))
-	  `((twittering-update-filled-string
+	  `((twindrill-update-filled-string
 	     nil nil ,formater ,status-sym ,prefix-sym ,prefix-str
 	     ,keep-newline)
 	    . ,rest)))
        ((string-match "\\`RT{" following)
 	(let* ((str-after-brace (substring following (match-end 0)))
-	       (pair (twittering-generate-formater-for-current-level
+	       (pair (twindrill-generate-formater-for-current-level
 		      str-after-brace 'retweeting prefix-sym))
 	       (braced-body (car pair))
 	       (rest (cdr pair)))
@@ -9168,13 +9171,13 @@ following symbols;
    (t
     `(,format-str . nil))))
 
-(defun twittering-generate-formater-for-current-level (format-str status-sym prefix-sym)
+(defun twindrill-generate-formater-for-current-level (format-str status-sym prefix-sym)
   (let ((result nil)
 	(rest format-str)
 	(continue t))
     (while (and continue rest)
       (let* ((pair
-	      (twittering-generate-formater-for-first-spec
+	      (twindrill-generate-formater-for-first-spec
 	       rest status-sym prefix-sym))
 	     (current-result (car pair)))
 	(if current-result
@@ -9184,18 +9187,18 @@ following symbols;
 	(setq rest (cdr pair))))
     `(,result . ,rest)))
 
-(defun twittering-generate-format-status-function (format-str)
+(defun twindrill-generate-format-status-function (format-str)
   (let* ((status-sym 'status)
 	 (prefix-sym 'prefix)
 	 (pair
-	  (twittering-generate-formater-for-current-level
+	  (twindrill-generate-formater-for-current-level
 	   format-str status-sym prefix-sym))
 	 (body (car pair))
 	 (rest (cdr pair)))
     (cond
      ((null rest)
       `(lambda (status prefix)
-	 (let* ((common-properties (twittering-make-common-properties status))
+	 (let* ((common-properties (twindrill-make-common-properties status))
 		(str (concat ,@body))
 		(str (if prefix
 			 (replace-regexp-in-string "^" prefix str)
@@ -9211,34 +9214,34 @@ following symbols;
 	     (remove-text-properties 0 (length str)
 				     '(need-to-be-updated nil) str)
 	     (put-text-property 0 (length str) 'need-to-be-updated
-				`(twittering-format-status-for-redisplay
+				`(twindrill-format-status-for-redisplay
 				  ,status ,prefix)
 				str))
 	   str)))
      (t
-      (message "Failed to generate a status formater for `twittering-mode'.")
+      (message "Failed to generate a status formater for `twindrill-mode'.")
       nil))))
 
-(defun twittering-update-status-format (&optional format-str)
+(defun twindrill-update-status-format (&optional format-str)
   "Update the format for rendering a tweet.
-If FORMAT-STR is nil, `twittering-status-format' is used in place of
+If FORMAT-STR is nil, `twindrill-status-format' is used in place of
 FORMAT-STR.
 
-If FORMAT-STR is valid as a format, `twittering-format-status-function'
-is replaced by the result of `twittering-generate-format-status-function'
+If FORMAT-STR is valid as a format, `twindrill-format-status-function'
+is replaced by the result of `twindrill-generate-format-status-function'
 for FORMAT-STR.
 If FORMAT-STR is invalid as a format, an error is signaled and
-`twittering-format-status-function' is not updated."
-  (let ((format-str (or format-str twittering-status-format)))
-    (unless (string= format-str twittering-format-status-function-source)
+`twindrill-format-status-function' is not updated."
+  (let ((format-str (or format-str twindrill-status-format)))
+    (unless (string= format-str twindrill-format-status-function-source)
       (let* ((before (get-buffer "*Compile-Log*"))
-	     (func (twittering-generate-format-status-function format-str)))
+	     (func (twindrill-generate-format-status-function format-str)))
 	(cond
 	 ((and func (functionp func))
-	  (setq twittering-format-status-function-source format-str)
-	  (setq twittering-format-status-function (byte-compile func))
-	  (setq twittering-format-status-function-without-compile func)
-	  (setq twittering-status-format format-str)
+	  (setq twindrill-format-status-function-source format-str)
+	  (setq twindrill-format-status-function (byte-compile func))
+	  (setq twindrill-format-status-function-without-compile func)
+	  (setq twindrill-status-format format-str)
 	  (let ((current (get-buffer "*Compile-Log*")))
 	    (when (and (null before) current (= 0 (buffer-size current)))
 	      (kill-buffer current))))
@@ -9246,33 +9249,33 @@ If FORMAT-STR is invalid as a format, an error is signaled and
 	  (error "Invalid format: %s" format-str)
 	  nil))))))
 
-(defun twittering-format-status (status &optional prefix)
-  "Format a STATUS by using `twittering-format-status-function'.
+(defun twindrill-format-status (status &optional prefix)
+  "Format a STATUS by using `twindrill-format-status-function'.
 PREFIX is the prefix that will be added to the result of this function.
 PREFIX is used in order to calculate appropriate width for filling texts.
 Specification of the format is described in the document for the
-variable `twittering-status-format'."
-  (funcall twittering-format-status-function status prefix))
+variable `twindrill-status-format'."
+  (funcall twindrill-format-status-function status prefix))
 
-(defun twittering-format-status-for-redisplay (beg end status &optional prefix)
-  (twittering-format-status status prefix))
+(defun twindrill-format-status-for-redisplay (beg end status &optional prefix)
+  (twindrill-format-status status prefix))
 
 ;;;;
 ;;;; Rendering
 ;;;;
 
-(defun twittering-field-id< (field1 field2)
+(defun twindrill-field-id< (field1 field2)
   (string< field1 field2))
 
-(defun twittering-field-id= (field1 field2)
+(defun twindrill-field-id= (field1 field2)
   (string= field1 field2))
 
-(defun twittering-make-field-id-from-id (id &optional base-id)
+(defun twindrill-make-field-id-from-id (id &optional base-id)
   "Generate a field property for the tweet corresponding to ID.
-Tweets are rendered in order of the field on `twittering-mode'.
+Tweets are rendered in order of the field on `twindrill-mode'.
 
 If BASE-ID is non-nil, generate a field id for a tweet rendered
-as a popped ancestor tweet by `twittering-show-replied-statuses'.
+as a popped ancestor tweet by `twindrill-show-replied-statuses'.
 In the case, BASE-ID means the ID of the descendant."
   (let ((format-func (lambda (id) (format "%02d-%s" (length id) id))))
     (cond
@@ -9283,54 +9286,54 @@ In the case, BASE-ID means the ID of the descendant."
      (t
       (format "O:%s:8" (funcall format-func id))))))
 
-(defun twittering-make-field-id (status &optional base-id)
+(defun twindrill-make-field-id (status &optional base-id)
   "Generate a field property for STATUS.
-Tweets are rendered in order of the field on `twittering-mode'.
+Tweets are rendered in order of the field on `twindrill-mode'.
 
 If BASE-ID is non-nil, generate a field id for a tweet rendered
-as a popped ancestor tweet by `twittering-show-replied-statuses'.
+as a popped ancestor tweet by `twindrill-show-replied-statuses'.
 In the case, BASE-ID means the ID of the descendant."
   (let ((id (cdr (assq 'id status))))
-    (twittering-make-field-id-from-id id base-id)))
+    (twindrill-make-field-id-from-id id base-id)))
 
-(defun twittering-make-properties-of-popped-ancestors (base-id)
+(defun twindrill-make-properties-of-popped-ancestors (base-id)
   `(rendered-as ((ancestor-of . ,base-id))))
 
-(defun twittering-make-field-id-of-timeline-oldest-end (spec-string)
+(defun twindrill-make-field-id-of-timeline-oldest-end (spec-string)
   "Return the field ID for the oldest end.
 This is given to a special field, header or footer, which does not correspond
 to a tweet.
-It must be less than IDs made by `twittering-make-field-id' for any other
-normal fields in the meaning of `twittering-field-id<'."
+It must be less than IDs made by `twindrill-make-field-id' for any other
+normal fields in the meaning of `twindrill-field-id<'."
   (format "H:%s" spec-string))
 
-(defun twittering-make-field-id-of-timeline-latest-end (spec-string)
+(defun twindrill-make-field-id-of-timeline-latest-end (spec-string)
   "Return the field ID for the oldest end.
 This is given to a special field, header or footer, which does not correspond
 to a tweet.
-It must be greater than IDs made by `twittering-make-field-id' for any other
-normal fields in the meaning of `twittering-field-id<'."
+It must be greater than IDs made by `twindrill-make-field-id' for any other
+normal fields in the meaning of `twindrill-field-id<'."
   (format "U:%s" spec-string))
 
-(defun twittering-field-id-is-timeline-oldest-end (field-id)
+(defun twindrill-field-id-is-timeline-oldest-end (field-id)
   "Return non-nil if FIELD-ID corresponds to the oldest end field.
 Return non-nil if FIELD-ID is made by
-`twittering-make-field-id-of-timeline-oldest-end'."
+`twindrill-make-field-id-of-timeline-oldest-end'."
   (and (stringp field-id) (string= (substring field-id 0 2) "H:")))
 
-(defun twittering-field-id-is-timeline-latest-end (field-id)
+(defun twindrill-field-id-is-timeline-latest-end (field-id)
   "Return non-nil if FIELD-ID corresponds to the latest end field.
 Return non-nil if FIELD-ID is made by
-`twittering-make-field-id-of-timeline-latest-end'."
+`twindrill-make-field-id-of-timeline-latest-end'."
   (and (stringp field-id) (string= (substring field-id 0 2) "U:")))
 
-(defun twittering-rendered-as-ancestor-status-p (&optional pos)
+(defun twindrill-rendered-as-ancestor-status-p (&optional pos)
   "Return non-nil if the status at POS is rendered as an ancestor.
-Ancestor statuses are rendered by `twittering-show-replied-statuses'."
+Ancestor statuses are rendered by `twindrill-show-replied-statuses'."
   (let ((pos (or pos (point))))
     (assq 'ancestor-of (get-text-property pos 'rendered-as))))
 
-(defun twittering-get-base-id-of-ancestor-at (&optional pos)
+(defun twindrill-get-base-id-of-ancestor-at (&optional pos)
   "Return the base ID of a popped ancestor status rendered at POS.
 If the status at POS is not a popped ancestor status or no status is
 rendered at POS, return nil."
@@ -9338,7 +9341,7 @@ rendered at POS, return nil."
     (cdr (assq 'ancestor-of (get-text-property pos 'rendered-as)))))
 
 (eval-and-compile
-  (defsubst twittering-fill-string (str &optional adjustment prefix keep-newline)
+  (defsubst twindrill-fill-string (str &optional adjustment prefix keep-newline)
     (when (and (not (boundp 'kinsoku-limit))
 	       enable-kinsoku)
       ;; `kinsoku-limit' is defined on loading "international/kinsoku.el".
@@ -9363,7 +9366,7 @@ rendered at POS, return nil."
 		    ;; Use `(frame-width)' if no windows display
 		    ;; the current buffer.
 		    `(,(frame-width)))))
-	   (temporary-fill-column (- (or twittering-fill-column (1- min-width))
+	   (temporary-fill-column (- (or twindrill-fill-column (1- min-width))
 				     adjustment)))
       (with-temp-buffer
 	(let ((fill-column temporary-fill-column)
@@ -9381,15 +9384,15 @@ rendered at POS, return nil."
 	    (fill-region-as-paragraph (point-min) (point-max)))
 	  (buffer-substring (point-min) (point-max))))))
 
-  (defsubst twittering-update-filled-string (beg end formater status prefix local-prefix &optional keep-newline)
-    (let* ((str (twittering-fill-string (funcall formater status prefix)
+  (defsubst twindrill-update-filled-string (beg end formater status prefix local-prefix &optional keep-newline)
+    (let* ((str (twindrill-fill-string (funcall formater status prefix)
 					(length prefix) local-prefix
 					keep-newline))
 	   (next (next-single-property-change 0 'need-to-be-updated str)))
       (if (or (get-text-property 0 'need-to-be-updated str)
 	      (and next (< next (length str))))
 	  (put-text-property 0 (length str) 'need-to-be-updated
-			     `(twittering-update-filled-string
+			     `(twindrill-update-filled-string
 			       ,formater ,status ,prefix ,local-prefix
 			       ,keep-newline)
 			     str)
@@ -9397,7 +9400,7 @@ rendered at POS, return nil."
 	(remove-text-properties 0 (length str) '(need-to-be-updated nil) str))
       str))
 
-  (defsubst twittering-make-passed-time-string
+  (defsubst twindrill-make-passed-time-string
     (beg end encoded-created-at time-format &optional additional-properties)
     (let* ((now (current-time))
 	   (secs (+ (* (- (car now) (car encoded-created-at)) 65536)
@@ -9424,7 +9427,7 @@ rendered at POS, return nil."
       (if (< secs 84600)
 	  (put-text-property 0 (length time-string)
 			     'need-to-be-updated
-			     `(twittering-make-passed-time-string
+			     `(twindrill-make-passed-time-string
 			       ,encoded-created-at ,time-format)
 			     time-string)
 	;; Remove the property required no longer.
@@ -9433,8 +9436,8 @@ rendered at POS, return nil."
 				time-string))
       time-string)))
 
-(defmacro twittering-render-a-field (pos field-id generator &optional without-separator)
-  "Render a field on the current buffer managed by `twittering-mode'.
+(defmacro twindrill-render-a-field (pos field-id generator &optional without-separator)
+  "Render a field on the current buffer managed by `twindrill-mode'.
 Insert a field to the position pointed by FIELD-ID. The position is searched
 after POS. The string for the field is generated by the GENERATOR expression.
 This function does not render the status if a status with the same field ID
@@ -9445,16 +9448,16 @@ Return non-nil if the status is rendered. Otherwise, return nil."
      (while
 	 (let ((buf-field-id (get-text-property pos 'field)))
 	   (if (and buf-field-id
-		    (if twittering-reverse-mode
-			(twittering-field-id< buf-field-id field-id)
-		      (twittering-field-id< field-id buf-field-id)))
+		    (if twindrill-reverse-mode
+			(twindrill-field-id< buf-field-id field-id)
+		      (twindrill-field-id< field-id buf-field-id)))
 	       (let ((next-pos
-		      (twittering-get-next-status-head pos)))
+		      (twindrill-get-next-status-head pos)))
 		 (setq pos (or next-pos (point-max)))
 		 next-pos)
 	     nil)))
      (goto-char pos)
-     (unless (twittering-field-id= field-id (get-text-property pos 'field))
+     (unless (twindrill-field-id= field-id (get-text-property pos 'field))
        (let ((formatted-status (propertize ,generator 'field ,field-id))
 	     (separator (if ,without-separator
 			    ""
@@ -9467,19 +9470,19 @@ Return non-nil if the status is rendered. Otherwise, return nil."
 	   (insert-before-markers formatted-status separator))
 	 t))))
 
-(defun twittering-render-timeline (buffer timeline-data &optional invoke-hook keep-point)
+(defun twindrill-render-timeline (buffer timeline-data &optional invoke-hook keep-point)
   "Render statuses for BUFFER and return the list of the rendered statuses.
 TIMELINE-DATA is a list of statuses being rendered.
 If INVOKE-HOOK is non-nil and one or more tweets are rendered, run hooks
-specified by `twittering-new-tweets-rendered-hook'.
+specified by `twindrill-new-tweets-rendered-hook'.
 If KEEP-POINT is nil and BUFFER is empty, this function moves cursor positions
 to the latest status.
 
 This function returns a list of the statuses newly rendered by the invocation."
   (with-current-buffer buffer
-    (let* ((spec (twittering-get-timeline-spec-for-buffer buffer))
+    (let* ((spec (twindrill-get-timeline-spec-for-buffer buffer))
 	   (referring-id-table
-	    (twittering-current-timeline-referring-id-table spec))
+	    (twindrill-current-timeline-referring-id-table spec))
 	   (timeline-data
 	    ;; Collect visible statuses.
 	    (let ((prev-id nil))
@@ -9489,7 +9492,7 @@ This function returns a list of the statuses newly rendered by the invocation."
 		(lambda (status)
 		  (let ((id (cdr (assq 'id status)))
 			(retweeted-id (cdr (assq 'retweeted-id status))))
-		    (if (twittering-status-id= prev-id id)
+		    (if (twindrill-status-id= prev-id id)
 			;; `status' is equivalent the previous one.
 			nil
 		      (setq prev-id id)
@@ -9498,7 +9501,7 @@ This function returns a list of the statuses newly rendered by the invocation."
 			;; `status' is not a retweet.
 			status)
 		       ((and retweeted-id
-			     (twittering-status-id=
+			     (twindrill-status-id=
 			      id (gethash retweeted-id referring-id-table)))
 			;; `status' is the first retweet.
 			status)
@@ -9513,32 +9516,32 @@ This function returns a list of the statuses newly rendered by the invocation."
 			;; Otherwise, do not render it.
 			nil)))))
 		timeline-data))))
-	   (timeline-data (if twittering-reverse-mode
+	   (timeline-data (if twindrill-reverse-mode
 			      (reverse timeline-data)
 			    timeline-data))
-	   (rendering-entire (null (twittering-get-first-status-head)))
+	   (rendering-entire (null (twindrill-get-first-status-head)))
 	   (result-tweets nil)
 	   (buffer-read-only nil))
-      (twittering-update-status-format)
-      (twittering-update-mode-line)
+      (twindrill-update-status-format)
+      (twindrill-update-mode-line)
       (save-excursion
 	(let ((pos (point-min))
 	      (spec-string
-	       (twittering-get-timeline-spec-string-for-buffer buffer)))
+	       (twindrill-get-timeline-spec-string-for-buffer buffer)))
 	  (cond
 	   (rendering-entire
 	    (let* ((latest-id
-		    (twittering-make-field-id-of-timeline-latest-end
+		    (twindrill-make-field-id-of-timeline-latest-end
 		     spec-string))
 		   (oldest-id
-		    (twittering-make-field-id-of-timeline-oldest-end
+		    (twindrill-make-field-id-of-timeline-oldest-end
 		     spec-string))
 		   (footer-id
-		    (if twittering-reverse-mode
+		    (if twindrill-reverse-mode
 			latest-id
 		      oldest-id))
 		   (header-id
-		    (if twittering-reverse-mode
+		    (if twindrill-reverse-mode
 			oldest-id
 		      latest-id)))
 	      (setq
@@ -9548,63 +9551,63 @@ This function returns a list of the statuses newly rendered by the invocation."
 		      (mapconcat
 		       (lambda (substr)
 			 (propertize substr
-				     'face twittering-timeline-footer-face))
-		       (split-string (or twittering-timeline-footer "") "\n")
+				     'face twindrill-timeline-footer-face))
+		       (split-string (or twindrill-timeline-footer "") "\n")
 		       "\n"))
 		     (header
 		      ;; To avoid adding a face to newlines.
 		      (mapconcat
 		       (lambda (substr)
 			 (propertize substr
-				     'face twittering-timeline-header-face))
-		       (split-string (or twittering-timeline-header "") "\n")
+				     'face twindrill-timeline-header-face))
+		       (split-string (or twindrill-timeline-header "") "\n")
 		       "\n")))
-		 (twittering-render-a-field (point-min) footer-id footer t)
-		 (twittering-render-a-field (point-min) header-id header t)
+		 (twindrill-render-a-field (point-min) footer-id footer t)
+		 (twindrill-render-a-field (point-min) header-id header t)
 		 (point)))))
 	   (t
-	    (setq pos (twittering-get-first-status-head))))
+	    (setq pos (twindrill-get-first-status-head))))
 	  (goto-char pos)
 	  (let* ((rendered-tweets
 		  (remove nil
 			  (mapcar
 			   (lambda (status)
-			     (when (twittering-render-a-field
+			     (when (twindrill-render-a-field
 				    (point)
-				    (twittering-make-field-id status)
-				    (twittering-format-status status))
-			       (when twittering-default-show-replied-tweets
-				 (twittering-show-replied-statuses
-				  twittering-default-show-replied-tweets))
+				    (twindrill-make-field-id status)
+				    (twindrill-format-status status))
+			       (when twindrill-default-show-replied-tweets
+				 (twindrill-show-replied-statuses
+				  twindrill-default-show-replied-tweets))
 			       status))
 			   timeline-data)))
-		 (twittering-rendered-new-tweets
-		  (if twittering-reverse-mode
+		 (twindrill-rendered-new-tweets
+		  (if twindrill-reverse-mode
 		      (reverse rendered-tweets)
 		    rendered-tweets))
-		 (twittering-rendered-new-tweets-spec spec)
-		 (twittering-rendered-new-tweets-spec-string spec-string))
+		 (twindrill-rendered-new-tweets-spec spec)
+		 (twindrill-rendered-new-tweets-spec-string spec-string))
 	    (setq result-tweets rendered-tweets)
-	    (when (and invoke-hook twittering-rendered-new-tweets)
-	      (run-hooks 'twittering-new-tweets-rendered-hook)))))
+	    (when (and invoke-hook twindrill-rendered-new-tweets)
+	      (run-hooks 'twindrill-new-tweets-rendered-hook)))))
       (debug-print (current-buffer))
       (cond
        ((and (not keep-point) rendering-entire)
 	;; Go to the latest status of buffer after full insertion.
-	(let ((dest (if twittering-reverse-mode
-			(or (twittering-get-last-normal-field-head)
-			    (twittering-get-last-status-head)
+	(let ((dest (if twindrill-reverse-mode
+			(or (twindrill-get-last-normal-field-head)
+			    (twindrill-get-last-status-head)
 			    (point-max))
-		      (or (twittering-get-first-normal-field-head)
-			  (twittering-get-first-status-head)
+		      (or (twindrill-get-first-normal-field-head)
+			  (twindrill-get-first-status-head)
 			  (point-min))))
 	      (window-list (get-buffer-window-list (current-buffer) nil t)))
 	  (if window-list
 	      (mapc
 	       (lambda (window)
 		 (set-window-point window dest)
-		 (if twittering-reverse-mode
-		     (twittering-set-window-end window (point-max))
+		 (if twindrill-reverse-mode
+		     (twindrill-set-window-end window (point-max))
 		   (set-window-start window (point-min))))
 	       window-list)
 	    ;; Move the buffer position if the buffer is invisible.
@@ -9613,7 +9616,7 @@ This function returns a list of the statuses newly rendered by the invocation."
       result-tweets)
     ))
 
-(defun twittering-rerender-timeline-all (buffer &optional restore-point)
+(defun twindrill-rerender-timeline-all (buffer &optional restore-point)
   "Re-render statuses on BUFFER after clearing BUFFER.
 If RESTORE-POINT is non-nil, positions on buffers bound to the same timeline
 will be restored after rendering statuses."
@@ -9626,8 +9629,8 @@ will be restored after rendering statuses."
 	   (original-pos (point)))
       (let ((buffer-read-only nil))
 	(erase-buffer))
-      (twittering-render-timeline
-       (current-buffer) (twittering-current-timeline-data) nil restore-point)
+      (twindrill-render-timeline
+       (current-buffer) (twindrill-current-timeline-data) nil restore-point)
       (when restore-point
 	;; Restore points.
 	(mapc (lambda (pair)
@@ -9638,27 +9641,27 @@ will be restored after rendering statuses."
 	      point-window-list)
 	(goto-char original-pos)))))
 
-(defun twittering-retrieve-timeline (spec-string noninteractive api-arguments additional-info)
+(defun twindrill-retrieve-timeline (spec-string noninteractive api-arguments additional-info)
   "Retrieve and render a timeline specified by SPEC-STRING.
 Retrieve a timeline specified by SPEC-STRING, which must be a timeline spec
 string. Any timeline spec string including that for composite timeline can be
-used as SPEC-STRING, though the primitive function `twittering-call-api'
+used as SPEC-STRING, though the primitive function `twindrill-call-api'
 accepts only a spec of a primary timeline.
 
 NONINTERACTIVE is sent to the sentinel as a parameter `noninteractive' via
-an argument `additional-info' of `twittering-call-api'.
-API-ARGUMENTS is also sent to `twittering-call-api' as its argument
+an argument `additional-info' of `twindrill-call-api'.
+API-ARGUMENTS is also sent to `twindrill-call-api' as its argument
 `args-alist'."
-  (let ((spec (twittering-string-to-timeline-spec spec-string)))
+  (let ((spec (twindrill-string-to-timeline-spec spec-string)))
     (cond
-     ((not (twittering-account-authorized-p))
+     ((not (twindrill-account-authorized-p))
       ;; ignore any requests if the account has not been authorized.
       (message "No account for Twitter has been authorized.")
       t)
-     ((and noninteractive (twittering-process-active-p spec))
+     ((and noninteractive (twindrill-process-active-p spec))
       ;; ignore non-interactive request if a process is waiting for responses.
       t)
-     ((twittering-timeline-spec-primary-p spec)
+     ((twindrill-timeline-spec-primary-p spec)
       (let* ((args
 	      `(,@api-arguments
 		(timeline-spec . ,spec)
@@ -9668,52 +9671,52 @@ API-ARGUMENTS is also sent to `twittering-call-api' as its argument
 		(clean-up-sentinel
 		 . ,(lambda (proc status connection-info)
 		      (when (memq status '(exit signal closed failed))
-			(twittering-release-process proc))))))
+			(twindrill-release-process proc))))))
 	     (additional-info
 	      `(,@additional-info
 		(noninteractive . ,noninteractive)
 		(timeline-spec . ,spec)
 		(timeline-spec-string . ,spec-string)))
 	     (proc
-	      (twittering-call-api 'retrieve-timeline args additional-info)))
+	      (twindrill-call-api 'retrieve-timeline args additional-info)))
 	(when proc
-	  (twittering-register-process proc spec spec-string)
-	  (twittering-initialize-retrieval-count spec))))
-     ((twittering-timeline-spec-composite-p spec)
+	  (twindrill-register-process proc spec spec-string)
+	  (twindrill-initialize-retrieval-count spec))))
+     ((twindrill-timeline-spec-composite-p spec)
       (mapc
        (lambda (spec)
-	 (let* ((buffer (twittering-get-buffer-from-spec spec))
+	 (let* ((buffer (twindrill-get-buffer-from-spec spec))
 		(spec-string
 		 (if buffer
-		     (twittering-get-timeline-spec-string-for-buffer buffer)
-		   (twittering-timeline-spec-to-string spec))))
-	   (twittering-retrieve-timeline spec-string noninteractive
+		     (twindrill-get-timeline-spec-string-for-buffer buffer)
+		   (twindrill-timeline-spec-to-string spec))))
+	   (twindrill-retrieve-timeline spec-string noninteractive
 					 api-arguments additional-info)))
-       (twittering-get-base-timeline-specs spec)))
+       (twindrill-get-base-timeline-specs spec)))
      (t
       (let ((type (car spec)))
 	(error "%s has not been supported yet" type))))))
 
-(defun twittering-get-and-render-timeline (&optional noninteractive id spec spec-string)
-  (let* ((spec (or spec (twittering-current-timeline-spec)))
+(defun twindrill-get-and-render-timeline (&optional noninteractive id spec spec-string)
+  (let* ((spec (or spec (twindrill-current-timeline-spec)))
 	 (spec-string
-	  (or spec-string (twittering-current-timeline-spec-string)))
+	  (or spec-string (twindrill-current-timeline-spec-string)))
 	 (latest-status
 	  ;; Assume that a list which was returned by
-	  ;; `twittering-current-timeline-data' is sorted.
-	  (car (twittering-current-timeline-data spec)))
+	  ;; `twindrill-current-timeline-data' is sorted.
+	  (car (twindrill-current-timeline-data spec)))
 	 (since_id (cdr-safe (assq 'id latest-status)))
 	 (args `(,@(cond
 		    (id `((max_id . ,id)))
 		    (since_id `((since_id . ,since_id)))
 		    (t nil)))))
-    (twittering-retrieve-timeline spec-string noninteractive args nil)))
+    (twindrill-retrieve-timeline spec-string noninteractive args nil)))
 
 ;;;;
 ;;;; Map function for statuses on buffer
 ;;;;
 
-(defun twittering-for-each-property-region (prop func &optional buffer interrupt)
+(defun twindrill-for-each-property-region (prop func &optional buffer interrupt)
   "Apply FUNC to each region, where property PROP is non-nil, on BUFFER.
 If INTERRUPT is non-nil, the iteration is stopped if FUNC returns nil."
   (with-current-buffer (or buffer (current-buffer))
@@ -9739,15 +9742,15 @@ If INTERRUPT is non-nil, the iteration is stopped if FUNC returns nil."
 ;;;; Automatic redisplay of statuses on buffer
 ;;;;
 
-(defun twittering-redisplay-status-on-buffer ()
+(defun twindrill-redisplay-status-on-buffer ()
   (mapc (lambda (buffer)
 	  (unless (with-current-buffer buffer
 		    (or (and (fboundp 'use-region-p) (use-region-p))
 			(and transient-mark-mode mark-active)))
-	    (twittering-redisplay-status-on-each-buffer buffer)))
-	(twittering-get-buffer-list)))
+	    (twindrill-redisplay-status-on-each-buffer buffer)))
+	(twindrill-get-buffer-list)))
 
-(defun twittering-redisplay-status-on-each-buffer (buffer &optional prop)
+(defun twindrill-redisplay-status-on-each-buffer (buffer &optional prop)
   "Redisplay regions with the text property PROP on BUFFER."
   (let ((prop (or prop 'need-to-be-updated))
 	(deactivate-mark deactivate-mark)
@@ -9756,14 +9759,14 @@ If INTERRUPT is non-nil, the iteration is stopped if FUNC returns nil."
 	(result nil))
     (with-current-buffer buffer
       (save-excursion
-	(twittering-for-each-property-region
+	(twindrill-for-each-property-region
 	 prop
 	 (lambda (beg end value)
 	   (let* ((func (car value))
 		  (args (cdr value))
 		  (current-str (buffer-substring beg end))
 		  (updated-str (apply func beg end args))
-		  (config (twittering-current-window-config window-list))
+		  (config (twindrill-current-window-config window-list))
 		  (buffer-read-only nil))
 	     ;; Replace `current-str' if it differs to `updated-str' with
 	     ;; ignoring properties. This is an ad-hoc solution.
@@ -9781,12 +9784,12 @@ If INTERRUPT is non-nil, the iteration is stopped if FUNC returns nil."
 		 ;; `set-window-start'.
 		 (setq result beg))
 	       (let ((common-properties
-		      (twittering-get-common-properties beg)))
+		      (twindrill-get-common-properties beg)))
 		 ;; Restore common properties.
 		 (delete-region beg end)
 		 (goto-char beg)
 		 (insert (apply 'propertize updated-str common-properties)))
-	       (twittering-restore-window-config-after-modification
+	       (twindrill-restore-window-config-after-modification
 		config beg end))))
 	 buffer))
       (set-marker marker nil)
@@ -9800,91 +9803,91 @@ If INTERRUPT is non-nil, the iteration is stopped if FUNC returns nil."
 ;;;; Display replied statuses
 ;;;;
 
-(defun twittering-replied-statuses-visible-p (&optional pos)
+(defun twindrill-replied-statuses-visible-p (&optional pos)
   "Return non-nil if a replied status related to POS is visible.
 Return non-nil if a replied status has been rendered at POS by
-`twittering-show-replied-statuses'.
+`twindrill-show-replied-statuses'.
 Return non-nil if a reply is rendered at POS and the replied statuses
-has been rendered by `twittering-show-replied-statuses'.
+has been rendered by `twindrill-show-replied-statuses'.
 Otherwise, return nil."
-  (let* ((pos (twittering-get-current-status-head pos))
-	 (id (twittering-get-id-at pos))
-	 (prev (twittering-get-previous-status-head pos))
-	 (next (twittering-get-next-status-head pos)))
+  (let* ((pos (twindrill-get-current-status-head pos))
+	 (id (twindrill-get-id-at pos))
+	 (prev (twindrill-get-previous-status-head pos))
+	 (next (twindrill-get-next-status-head pos)))
     (when id
       ;; If ID is nil, it means that no normal tweets are rendered at POS.
       (or
-       (twittering-get-base-id-of-ancestor-at pos)
+       (twindrill-get-base-id-of-ancestor-at pos)
        (and prev
-	    (twittering-status-id=
-	     id (twittering-get-base-id-of-ancestor-at prev)))
+	    (twindrill-status-id=
+	     id (twindrill-get-base-id-of-ancestor-at prev)))
        (and next
-	    (twittering-status-id=
-	     id (twittering-get-base-id-of-ancestor-at next)))))))
+	    (twindrill-status-id=
+	     id (twindrill-get-base-id-of-ancestor-at next)))))))
 
-(defun twittering-get-beginning-of-visible-replied-statuses (&optional pos)
+(defun twindrill-get-beginning-of-visible-replied-statuses (&optional pos)
   "Return the beginning position of visible replied statuses at POS.
 If POS is nil, the current position is used instead.
-If `twittering-show-replied-statuses' has rendered a replied status at POS,
+If `twindrill-show-replied-statuses' has rendered a replied status at POS,
 return the beginning position of the replied statuses with the common base
 status.
 If a reply is rendered at POS and its ancestors has been rendered by
-`twittering-show-replied-statuses', return the beginning position of the
+`twindrill-show-replied-statuses', return the beginning position of the
 replied statuses.
 Otherwise, return nil."
   (let* ((pos (or pos (point)))
-	 (base-id (twittering-get-base-id-of-ancestor-at pos)))
+	 (base-id (twindrill-get-base-id-of-ancestor-at pos)))
     (cond
      (base-id
       ;; A replied status is rendered at POS.
       (while
-	  (let* ((prev (twittering-get-previous-status-head pos))
+	  (let* ((prev (twindrill-get-previous-status-head pos))
 		 (prev-base-id
 		  (when prev
-		    (twittering-get-base-id-of-ancestor-at prev))))
+		    (twindrill-get-base-id-of-ancestor-at prev))))
 	    (and prev prev-base-id
-		 (twittering-status-id= base-id prev-base-id)
+		 (twindrill-status-id= base-id prev-base-id)
 		 (setq pos prev))))
       (or pos (point-min)))
-     ((twittering-replied-statuses-visible-p pos)
+     ((twindrill-replied-statuses-visible-p pos)
       ;; A reply is rendered at POS and its replied statuses are visible.
-      (if twittering-reverse-mode
-	  (twittering-get-beginning-of-visible-replied-statuses
-	   (twittering-get-previous-status-head pos))
-	(twittering-get-next-status-head pos)))
+      (if twindrill-reverse-mode
+	  (twindrill-get-beginning-of-visible-replied-statuses
+	   (twindrill-get-previous-status-head pos))
+	(twindrill-get-next-status-head pos)))
      (t
       nil))))
 
-(defun twittering-get-end-of-visible-replied-statuses (&optional pos)
+(defun twindrill-get-end-of-visible-replied-statuses (&optional pos)
   "Return the end position of visible replied statuses at POS.
 If POS is nil, the current position is used instead.
-If `twittering-show-replied-statuses' has rendered a replied status at POS,
+If `twindrill-show-replied-statuses' has rendered a replied status at POS,
 return the end position of the replied statuses with the common base status.
 If a reply is rendered at POS and its ancestors has been rendered by
-`twittering-show-replied-statuses', return the beginning position of the
+`twindrill-show-replied-statuses', return the beginning position of the
 replied statuses.
 Otherwise, return nil."
   (let* ((pos (or pos (point)))
-	 (base-id (twittering-get-base-id-of-ancestor-at pos)))
+	 (base-id (twindrill-get-base-id-of-ancestor-at pos)))
     (cond
      (base-id
       ;; A replied status is rendered at POS.
       (while
-	  (let ((current-base-id (twittering-get-base-id-of-ancestor-at pos)))
+	  (let ((current-base-id (twindrill-get-base-id-of-ancestor-at pos)))
 	    (and current-base-id
-		 (twittering-status-id= base-id current-base-id)
-		 (setq pos (twittering-get-next-status-head pos)))))
+		 (twindrill-status-id= base-id current-base-id)
+		 (setq pos (twindrill-get-next-status-head pos)))))
       (or pos (point-max)))
-     ((twittering-replied-statuses-visible-p pos)
+     ((twindrill-replied-statuses-visible-p pos)
       ;; A reply is rendered at POS and its replied statuses are visible.
-      (if twittering-reverse-mode
-	  (twittering-get-current-status-head pos)
-	(twittering-get-end-of-visible-replied-statuses
-	 (twittering-get-next-status-head pos))))
+      (if twindrill-reverse-mode
+	  (twindrill-get-current-status-head pos)
+	(twindrill-get-end-of-visible-replied-statuses
+	 (twindrill-get-next-status-head pos))))
      (t
       nil))))
 
-(defun twittering-render-replied-statuses (&optional pos count)
+(defun twindrill-render-replied-statuses (&optional pos count)
   "Render replied statuses on the position specified by POS.
 If POS is nil, the current position is used instead.
 If COUNT is a positive integer, it specifies the number of rendered statuses.
@@ -9896,22 +9899,22 @@ Return nil if no statuses are rendered."
   (let* ((pos (or pos (point)))
 	 (id
 	  ;; nil if no normal statuses are rendered at POS.
-	  (twittering-get-id-at pos))
+	  (twindrill-get-id-at pos))
 	 (replied-status-are-visible
 	  (when id
-	    (twittering-replied-statuses-visible-p pos)))
+	    (twindrill-replied-statuses-visible-p pos)))
 	 (base-id (if replied-status-are-visible
 		      (or
 		       ;; If a replied status is rendered at POS.
-		       (twittering-get-base-id-of-ancestor-at pos)
+		       (twindrill-get-base-id-of-ancestor-at pos)
 		       ;; If the base reply is rendered at POS.
 		       id)
 		    id))
 	 (statuses
 	  (when base-id
-	    (twittering-get-replied-statuses base-id (if (numberp count)
+	    (twindrill-get-replied-statuses base-id (if (numberp count)
 							 count))))
-	 (statuses (if twittering-reverse-mode
+	 (statuses (if twindrill-reverse-mode
 		       statuses
 		     (reverse statuses))))
     (cond
@@ -9921,13 +9924,13 @@ Return nil if no statuses are rendered."
      (statuses
       (let ((pos
 	     (cond
-	      ((twittering-replied-statuses-visible-p pos)
+	      ((twindrill-replied-statuses-visible-p pos)
 	       ;; Some replied statuses have been already rendered.
-	       (twittering-get-beginning-of-visible-replied-statuses pos))
-	      (twittering-reverse-mode
-	       (twittering-get-current-status-head pos))
+	       (twindrill-get-beginning-of-visible-replied-statuses pos))
+	      (twindrill-reverse-mode
+	       (twindrill-get-current-status-head pos))
 	      (t
-	       (or (twittering-get-next-status-head pos)
+	       (or (twindrill-get-next-status-head pos)
 		   (point-max)))))
 	    (prefix "  ")
 	    (buffer-read-only nil))
@@ -9935,12 +9938,12 @@ Return nil if no statuses are rendered."
 	  (goto-char pos)
 	  (mapc
 	   (lambda (status)
-	     (twittering-render-a-field
+	     (twindrill-render-a-field
 	      (point)
-	      (twittering-make-field-id status base-id)
-	      (let ((formatted-status (twittering-format-status status prefix))
+	      (twindrill-make-field-id status base-id)
+	      (let ((formatted-status (twindrill-format-status status prefix))
 		    (field-properties
-		     (twittering-make-properties-of-popped-ancestors base-id)))
+		     (twindrill-make-properties-of-popped-ancestors base-id)))
 		(add-text-properties 0 (length formatted-status)
 				     field-properties formatted-status)
 		formatted-status)))
@@ -9949,17 +9952,17 @@ Return nil if no statuses are rendered."
      (t
       nil))))
 
-(defun twittering-render-a-status-with-delay (beg end id prefix)
+(defun twindrill-render-a-status-with-delay (beg end id prefix)
   "Render a status with a delay.
 It is assumed that this function is used as a property value that is
-processed by the function `twittering-redisplay-status-on-each-buffer'."
-  (let ((status (twittering-find-status id)))
+processed by the function `twindrill-redisplay-status-on-each-buffer'."
+  (let ((status (twindrill-find-status id)))
     (when status
       (let ((properties (and beg (text-properties-at beg))))
-	(apply 'propertize (twittering-format-status status prefix)
+	(apply 'propertize (twindrill-format-status status prefix)
 	       properties)))))
 
-(defun twittering-toggle-or-retrieve-replied-statuses ()
+(defun twindrill-toggle-or-retrieve-replied-statuses ()
   "Show/Hide all of replied statuses or retrieve a replied status.
 If the cursor points to a reply or one of expanded replied statuses and
 some of ancestor replied statuses have been already retrieved but they have
@@ -9969,202 +9972,202 @@ all of retrieved ancestor statuses have been already rendered but the oldest
 one of them is also a reply, retrieve the replied status.
 If the cursor points to a reply or one of expanded replied statuses and
 all of ancestor replied statuses have been already rendered, hide them by
-`twittering-hide-replied-statuses'."
+`twindrill-hide-replied-statuses'."
   (interactive)
   (let* ((pos (point))
 	 (pos
 	  ;; POS points to the head of the direct reply of the status being
 	  ;; retrieved.
 	  (cond
-	   ((twittering-replied-statuses-visible-p pos)
+	   ((twindrill-replied-statuses-visible-p pos)
 	    ;; If some replied statuses are visible, find the edge.
-	    (if twittering-reverse-mode
-		(twittering-get-beginning-of-visible-replied-statuses pos)
-	      (twittering-get-previous-status-head
-	       (twittering-get-end-of-visible-replied-statuses pos))))
+	    (if twindrill-reverse-mode
+		(twindrill-get-beginning-of-visible-replied-statuses pos)
+	      (twindrill-get-previous-status-head
+	       (twindrill-get-end-of-visible-replied-statuses pos))))
 	   (t
-	    (twittering-get-current-status-head pos))))
-	 (id (twittering-get-id-at pos))
-	 (status (twittering-find-status id))
+	    (twindrill-get-current-status-head pos))))
+	 (id (twindrill-get-id-at pos))
+	 (status (twindrill-find-status id))
 	 (reply-id (cdr (assq 'in-reply-to-status-id status)))
 	 (reply-username (cdr (assq 'in-reply-to-screen-name status)))
-	 (base-id (or (twittering-get-base-id-of-ancestor-at pos)
+	 (base-id (or (twindrill-get-base-id-of-ancestor-at pos)
 		      id)))
     (cond
-     ((twittering-find-status reply-id)
+     ((twindrill-find-status reply-id)
       ;; The status corresponding to REPLY-ID has been already retrieved
       ;; but it has not been rendered.
       ;;
-      ;; `twittering-render-replied-statuses' additionally renders all
+      ;; `twindrill-render-replied-statuses' additionally renders all
       ;; of already retrieved statuses.
-      (twittering-render-replied-statuses))
+      (twindrill-render-replied-statuses))
      (reply-id
       (let* ((pos
 	      ;; POS points to the position where the new field will be
 	      ;; inserted.
-	      (if twittering-reverse-mode
+	      (if twindrill-reverse-mode
 		  pos
-		(or (twittering-get-next-status-head pos)
+		(or (twindrill-get-next-status-head pos)
 		    (point-max))))
-	     (field-id (twittering-make-field-id-from-id reply-id base-id))
+	     (field-id (twindrill-make-field-id-from-id reply-id base-id))
 	     (prefix "  ")
 	     (label "[RETRIEVING...]")
 	     (symbol-for-redisplay 'waiting-for-retrieval)
 	     (properties
-	      `(,@(twittering-make-properties-of-popped-ancestors base-id)
+	      `(,@(twindrill-make-properties-of-popped-ancestors base-id)
 		,symbol-for-redisplay
-		(twittering-render-a-status-with-delay ,reply-id ,prefix)))
+		(twindrill-render-a-status-with-delay ,reply-id ,prefix)))
 	     (str (apply 'propertize (concat prefix label) properties))
 	     (buffer-read-only nil))
-	(twittering-call-api
+	(twindrill-call-api
 	 'retrieve-single-tweet
 	 `((id . ,reply-id)
 	   (username . ,reply-username)
 	   (format . ,(when (require 'json nil t)
 			'json))
-	   (sentinel . twittering-retrieve-single-tweet-sentinel))
+	   (sentinel . twindrill-retrieve-single-tweet-sentinel))
 	 `((buffer . ,(current-buffer))
 	   (property-to-be-redisplayed . ,symbol-for-redisplay)))
 	(save-excursion
 	  (goto-char pos)
-	  (twittering-render-a-field (point) field-id str))
+	  (twindrill-render-a-field (point) field-id str))
 	(goto-char pos)))
-     ((twittering-replied-statuses-visible-p)
+     ((twindrill-replied-statuses-visible-p)
       ;; All ancestor replied statuses have been rendered.
-      (twittering-hide-replied-statuses))
+      (twindrill-hide-replied-statuses))
      (t
       ;; The pointed status is not a reply.
       (message "This status is not a reply.")))))
 
-(defun twittering-show-replied-statuses (&optional count interactive)
+(defun twindrill-show-replied-statuses (&optional count interactive)
   (interactive)
   (cond
-   ((twittering-replied-statuses-visible-p)
+   ((twindrill-replied-statuses-visible-p)
     (when interactive
       (message "The replied statuses were already showed.")))
-   ((twittering-render-replied-statuses (point) count)
+   ((twindrill-render-replied-statuses (point) count)
     t)
    (t
     ;; Failed to render replied statuses.
     (when interactive
-      (let ((base-id (twittering-get-id-at)))
-	(if (twittering-have-replied-statuses-p base-id)
+      (let ((base-id (twindrill-get-id-at)))
+	(if (twindrill-have-replied-statuses-p base-id)
 	    (message "The status this replies to has not been fetched yet.")
 	  (message "This status is not a reply.")))))))
 
-(defun twittering-hide-replied-statuses (&optional interactive)
+(defun twindrill-hide-replied-statuses (&optional interactive)
   (interactive)
   (cond
-   ((twittering-replied-statuses-visible-p)
-    (let* ((pos (twittering-get-current-status-head (point)))
-	   (base-id (or (twittering-get-base-id-of-ancestor-at pos)
-			(twittering-get-id-at pos)))
+   ((twindrill-replied-statuses-visible-p)
+    (let* ((pos (twindrill-get-current-status-head (point)))
+	   (base-id (or (twindrill-get-base-id-of-ancestor-at pos)
+			(twindrill-get-id-at pos)))
 	   (pointing-to-base-status
-	    (not (twittering-rendered-as-ancestor-status-p pos)))
-	   (beg (twittering-get-beginning-of-visible-replied-statuses pos))
-	   (end (twittering-get-end-of-visible-replied-statuses pos))
+	    (not (twindrill-rendered-as-ancestor-status-p pos)))
+	   (beg (twindrill-get-beginning-of-visible-replied-statuses pos))
+	   (end (twindrill-get-end-of-visible-replied-statuses pos))
 	   (buffer-read-only nil))
       (unless pointing-to-base-status
-	(goto-char (if twittering-reverse-mode
+	(goto-char (if twindrill-reverse-mode
 		       beg
-		     (or (twittering-get-previous-status-head beg)
+		     (or (twindrill-get-previous-status-head beg)
 			 (point-min)))))
       (delete-region beg end)))
    (interactive
     (message "The status this replies to was already hidden."))))
 
-(defun twittering-toggle-show-replied-statuses ()
+(defun twindrill-toggle-show-replied-statuses ()
   (interactive)
-  (if (twittering-replied-statuses-visible-p)
-      (twittering-hide-replied-statuses (interactive-p))
-    (twittering-show-replied-statuses twittering-show-replied-tweets
+  (if (twindrill-replied-statuses-visible-p)
+      (twindrill-hide-replied-statuses (interactive-p))
+    (twindrill-show-replied-statuses twindrill-show-replied-tweets
 				      (interactive-p))))
 
 ;;;;
 ;;;; Unread statuses info
 ;;;;
 
-(defvar twittering-unread-status-info nil
+(defvar twindrill-unread-status-info nil
   "A list of (buffer unread-statuses-counter), where `unread-statuses-counter'
 means the number of statuses retrieved after the last visiting of the buffer.")
 
-(defun twittering-reset-unread-status-info-if-necessary ()
-  (when (twittering-buffer-p)
-    (twittering-set-number-of-unread (current-buffer) 0)))
+(defun twindrill-reset-unread-status-info-if-necessary ()
+  (when (twindrill-buffer-p)
+    (twindrill-set-number-of-unread (current-buffer) 0)))
 
-(defun twittering-set-number-of-unread (buffer number)
-  (let* ((entry (assq buffer twittering-unread-status-info))
+(defun twindrill-set-number-of-unread (buffer number)
+  (let* ((entry (assq buffer twindrill-unread-status-info))
 	 (current (or (cadr entry) 0)))
     (unless (= number current)
-      (setq twittering-unread-status-info
+      (setq twindrill-unread-status-info
 	    (cons
 	     `(,buffer ,number)
 	     (if entry
-		 (remq entry twittering-unread-status-info)
-	       twittering-unread-status-info))))))
+		 (remq entry twindrill-unread-status-info)
+	       twindrill-unread-status-info))))))
 
-(defun twittering-make-unread-status-notifier-string ()
+(defun twindrill-make-unread-status-notifier-string ()
   "Generate a string that displays unread statuses."
-  (setq twittering-unread-status-info
+  (setq twindrill-unread-status-info
 	(remove nil
 		(mapcar (lambda (entry)
 			  (when (buffer-live-p (car entry))
 			    entry))
-			twittering-unread-status-info)))
-  (let ((sum (apply '+ (mapcar 'cadr twittering-unread-status-info))))
+			twindrill-unread-status-info)))
+  (let ((sum (apply '+ (mapcar 'cadr twindrill-unread-status-info))))
     (if (= 0 sum)
 	""
       (format "tw(%d)" sum))))
 
-(defun twittering-update-unread-status-info ()
-  "Update `twittering-unread-status-info' with new tweets."
-  (let* ((buffer (twittering-get-buffer-from-spec
-		  twittering-rendered-new-tweets-spec))
-	 (current (or (cadr (assq buffer twittering-unread-status-info)) 0))
-	 (result (+ current (length twittering-rendered-new-tweets))))
+(defun twindrill-update-unread-status-info ()
+  "Update `twindrill-unread-status-info' with new tweets."
+  (let* ((buffer (twindrill-get-buffer-from-spec
+		  twindrill-rendered-new-tweets-spec))
+	 (current (or (cadr (assq buffer twindrill-unread-status-info)) 0))
+	 (result (+ current (length twindrill-rendered-new-tweets))))
     (when buffer
-      (twittering-set-number-of-unread buffer result))))
+      (twindrill-set-number-of-unread buffer result))))
 
-(defun twittering-enable-unread-status-notifier ()
-  "Enable a notifier of unread statuses on `twittering-mode'."
+(defun twindrill-enable-unread-status-notifier ()
+  "Enable a notifier of unread statuses on `twindrill-mode'."
   (interactive)
-  (setq twittering-unread-status-info
+  (setq twindrill-unread-status-info
 	(mapcar (lambda (buffer) `(,buffer ,0))
-		(twittering-get-buffer-list)))
-  (add-hook 'twittering-new-tweets-rendered-hook
-	    'twittering-update-unread-status-info)
+		(twindrill-get-buffer-list)))
+  (add-hook 'twindrill-new-tweets-rendered-hook
+	    'twindrill-update-unread-status-info)
   (add-hook 'post-command-hook
-	    'twittering-reset-unread-status-info-if-necessary)
+	    'twindrill-reset-unread-status-info-if-necessary)
   (add-to-list 'global-mode-string
-	       '(:eval (twittering-make-unread-status-notifier-string))
+	       '(:eval (twindrill-make-unread-status-notifier-string))
 	       t))
 
-(defun twittering-disable-unread-status-notifier ()
-  "Disable a notifier of unread statuses on `twittering-mode'."
+(defun twindrill-disable-unread-status-notifier ()
+  "Disable a notifier of unread statuses on `twindrill-mode'."
   (interactive)
-  (setq twittering-unread-status-info nil)
-  (remove-hook 'twittering-new-tweets-hook
-	       'twittering-update-unread-status-info)
+  (setq twindrill-unread-status-info nil)
+  (remove-hook 'twindrill-new-tweets-hook
+	       'twindrill-update-unread-status-info)
   (remove-hook 'post-command-hook
-	       'twittering-reset-unread-status-info-if-necessary)
+	       'twindrill-reset-unread-status-info-if-necessary)
   (setq global-mode-string
-	(remove '(:eval (twittering-make-unread-status-notifier-string))
+	(remove '(:eval (twindrill-make-unread-status-notifier-string))
 		global-mode-string)))
 
 ;;;;
 ;;;; Timer
 ;;;;
 
-(defvar twittering-idle-timer-for-redisplay nil)
+(defvar twindrill-idle-timer-for-redisplay nil)
 
-(defun twittering-timer-action (func)
-  (let ((buf (twittering-get-active-buffer-list)))
+(defun twindrill-timer-action (func)
+  (let ((buf (twindrill-get-active-buffer-list)))
     (if (null buf)
-	(twittering-stop)
+	(twindrill-stop)
       (funcall func)
       )))
 
-(defun twittering-run-on-idle (idle-interval func &rest args)
+(defun twindrill-run-on-idle (idle-interval func &rest args)
   "Run FUNC the next time Emacs is idle for IDLE-INTERVAL.
 Even if Emacs has been idle longer than IDLE-INTERVAL, run FUNC immediately.
 Since immediate invocation requires `current-idle-time', it is available
@@ -10180,7 +10183,7 @@ FUNC is called as (apply FUNC ARGS)."
       (apply func args)
       nil)))
 
-(defun twittering-run-repeatedly-on-idle (check-interval var idle-interval func &rest args)
+(defun twindrill-run-repeatedly-on-idle (check-interval var idle-interval func &rest args)
   "Run FUNC every time Emacs is idle for IDLE-INTERVAL.
 Even if Emacs remains idle longer than IDLE-INTERVAL, run FUNC every
 CHECK-INTERVAL seconds. Since this behavior requires `current-idle-time',
@@ -10207,38 +10210,38 @@ FUNC is called as (apply FUNC ARGS)."
 			       var func args)))))
 	 var idle-interval func args))
 
-(defun twittering-start (&optional action)
+(defun twindrill-start (&optional action)
   (interactive)
-  (unless twittering-timer
-    (let ((action (or action #'twittering-update-active-buffers)))
+  (unless twindrill-timer
+    (let ((action (or action #'twindrill-update-active-buffers)))
       ;; Update all active timelines forcibly.
-      (twittering-update-active-buffers t)
-      (setq twittering-timer
-	    (run-at-time (format "%d sec" twittering-timer-interval)
-			 twittering-timer-interval
-			 #'twittering-timer-action action))))
-  (unless twittering-timer-for-redisplaying
-    (setq twittering-timer-for-redisplaying
-	  (twittering-run-repeatedly-on-idle
-	   (* 2 twittering-timer-interval-for-redisplaying)
-	   'twittering-idle-timer-for-redisplay
-	   twittering-timer-interval-for-redisplaying
-	   #'twittering-redisplay-status-on-buffer))))
+      (twindrill-update-active-buffers t)
+      (setq twindrill-timer
+	    (run-at-time (format "%d sec" twindrill-timer-interval)
+			 twindrill-timer-interval
+			 #'twindrill-timer-action action))))
+  (unless twindrill-timer-for-redisplaying
+    (setq twindrill-timer-for-redisplaying
+	  (twindrill-run-repeatedly-on-idle
+	   (* 2 twindrill-timer-interval-for-redisplaying)
+	   'twindrill-idle-timer-for-redisplay
+	   twindrill-timer-interval-for-redisplaying
+	   #'twindrill-redisplay-status-on-buffer))))
 
-(defun twittering-stop ()
+(defun twindrill-stop ()
   (interactive)
-  (when twittering-timer
-    (cancel-timer twittering-timer)
-    (setq twittering-timer nil))
-  (when twittering-timer-for-redisplaying
-    (when twittering-idle-timer-for-redisplay
-      (cancel-timer twittering-idle-timer-for-redisplay)
-      (setq twittering-idle-timer-for-redisplay))
-    (cancel-timer twittering-timer-for-redisplaying)
-    (setq twittering-timer-for-redisplaying nil)))
+  (when twindrill-timer
+    (cancel-timer twindrill-timer)
+    (setq twindrill-timer nil))
+  (when twindrill-timer-for-redisplaying
+    (when twindrill-idle-timer-for-redisplay
+      (cancel-timer twindrill-idle-timer-for-redisplay)
+      (setq twindrill-idle-timer-for-redisplay))
+    (cancel-timer twindrill-timer-for-redisplaying)
+    (setq twindrill-timer-for-redisplaying nil)))
 
-(defun twittering-get-relative-interval (spec)
-  (let* ((spec-string (twittering-timeline-spec-to-string spec))
+(defun twindrill-get-relative-interval (spec)
+  (let* ((spec-string (twindrill-timeline-spec-to-string spec))
 	 (normalized-alist
 	  (apply 'append
 		 (mapcar
@@ -10248,7 +10251,7 @@ FUNC is called as (apply FUNC ARGS)."
 		      (when (integerp interval)
 			(mapcar (lambda (regexp) `(,regexp . ,interval))
 				regexp-list))))
-		  twittering-relative-retrieval-interval-alist)))
+		  twindrill-relative-retrieval-interval-alist)))
 	 (rest normalized-alist)
 	 (current normalized-alist)
 	 (result 0))
@@ -10263,64 +10266,64 @@ FUNC is called as (apply FUNC ARGS)."
       ;; The default relative interval is 1.
       1)))
 
-(defun twittering-get-retrieval-count (spec)
-  (cdr (assoc spec twittering-relative-retrieval-count-alist)))
+(defun twindrill-get-retrieval-count (spec)
+  (cdr (assoc spec twindrill-relative-retrieval-count-alist)))
 
-(defun twittering-set-retrieval-count (spec count)
-  (let ((current (assoc spec twittering-relative-retrieval-count-alist)))
+(defun twindrill-set-retrieval-count (spec count)
+  (let ((current (assoc spec twindrill-relative-retrieval-count-alist)))
     (if (null current)
-	(add-to-list 'twittering-relative-retrieval-count-alist
+	(add-to-list 'twindrill-relative-retrieval-count-alist
 		     `(,spec . ,count))
       (setcdr current count))))
 
-(defun twittering-initialize-retrieval-count (spec)
-  (twittering-set-retrieval-count spec
-				  (twittering-get-relative-interval spec)))
+(defun twindrill-initialize-retrieval-count (spec)
+  (twindrill-set-retrieval-count spec
+				  (twindrill-get-relative-interval spec)))
 
-(defun twittering-update-active-buffers (&optional force noninteractive)
-  "Update active buffers managed by `twittering-mode' at a certain interval.
+(defun twindrill-update-active-buffers (&optional force noninteractive)
+  "Update active buffers managed by `twindrill-mode' at a certain interval.
 
 If FORCE is nil, each active buffer is updated at a relative interval
-determined by `twittering-relative-retrieval-interval-alist'.
+determined by `twindrill-relative-retrieval-interval-alist'.
 If a relative interval of a timeline is 3, the timeline is updated once
 by three invocations of this function.
 
 If FORCE is non-nil, all active buffers are updated forcibly."
-  (when (twittering-account-authorized-p)
-    (twittering-update-service-configuration)
-    (let* ((buffer-list (twittering-get-active-buffer-list))
+  (when (twindrill-account-authorized-p)
+    (twindrill-update-service-configuration)
+    (let* ((buffer-list (twindrill-get-active-buffer-list))
 	   (primary-spec-list
-	    (twittering-remove-duplicates
+	    (twindrill-remove-duplicates
 	     (apply 'append
 		    (mapcar
 		     (lambda (buffer)
-		       (twittering-get-primary-base-timeline-specs
-			(twittering-get-timeline-spec-for-buffer buffer)))
+		       (twindrill-get-primary-base-timeline-specs
+			(twindrill-get-timeline-spec-for-buffer buffer)))
 		     buffer-list)))))
       (mapc
        (lambda (spec)
 	 (let ((current
 		(if force
 		    1
-		  (twittering-get-retrieval-count spec))))
+		  (twindrill-get-retrieval-count spec))))
 	   (cond
 	    ((null current)
 	     ;; Initialize the count if no entry for the primary timeline
 	     ;; exists.
-	     (twittering-initialize-retrieval-count spec))
+	     (twindrill-initialize-retrieval-count spec))
 	    ((and (integerp current) (= 0 current))
 	     ;; Do nothing.
 	     )
 	    ((and (integerp current) (= 1 current))
 	     ;; Retrieve the timeline and initialize count.
 	     (let ((spec-string
-		    (twittering-timeline-spec-to-string spec)))
-	       (twittering-get-and-render-timeline
+		    (twindrill-timeline-spec-to-string spec)))
+	       (twindrill-get-and-render-timeline
 		noninteractive nil spec spec-string)
-	       (twittering-initialize-retrieval-count spec)))
+	       (twindrill-initialize-retrieval-count spec)))
 	    ((and (integerp current) (< 1 current))
 	     ;; Decrement count.
-	     (twittering-set-retrieval-count spec (1- current)))
+	     (twindrill-set-retrieval-count spec (1- current)))
 	    (t
 	     nil))))
        primary-spec-list))))
@@ -10329,80 +10332,80 @@ If FORCE is non-nil, all active buffers are updated forcibly."
 ;;;; Keymap
 ;;;;
 
-(if twittering-mode-map
-    (let ((km twittering-mode-map))
-      (define-key km (kbd "C-c C-f") 'twittering-friends-timeline)
-      (define-key km (kbd "C-c C-r") 'twittering-replies-timeline)
-      (define-key km (kbd "C-c C-u") 'twittering-user-timeline)
-      (define-key km (kbd "C-c C-d") 'twittering-direct-messages-timeline)
-      (define-key km (kbd "C-c C-s") 'twittering-update-status-interactive)
-      (define-key km (kbd "C-c C-e") 'twittering-erase-old-statuses)
-      (define-key km (kbd "C-c C-m") 'twittering-retweet)
-      (define-key km (kbd "C-c C-t") 'twittering-set-current-hashtag)
-      (define-key km (kbd "C-m") 'twittering-enter)
-      (define-key km (kbd "C-c C-l") 'twittering-update-lambda)
-      (define-key km (kbd "<mouse-1>") 'twittering-click)
+(if twindrill-mode-map
+    (let ((km twindrill-mode-map))
+      (define-key km (kbd "C-c C-f") 'twindrill-friends-timeline)
+      (define-key km (kbd "C-c C-r") 'twindrill-replies-timeline)
+      (define-key km (kbd "C-c C-u") 'twindrill-user-timeline)
+      (define-key km (kbd "C-c C-d") 'twindrill-direct-messages-timeline)
+      (define-key km (kbd "C-c C-s") 'twindrill-update-status-interactive)
+      (define-key km (kbd "C-c C-e") 'twindrill-erase-old-statuses)
+      (define-key km (kbd "C-c C-m") 'twindrill-retweet)
+      (define-key km (kbd "C-c C-t") 'twindrill-set-current-hashtag)
+      (define-key km (kbd "C-m") 'twindrill-enter)
+      (define-key km (kbd "C-c C-l") 'twindrill-update-lambda)
+      (define-key km (kbd "<mouse-1>") 'twindrill-click)
       (define-key km (kbd "C-<down-mouse-3>") 'mouse-set-point)
-      (define-key km (kbd "C-<mouse-3>") 'twittering-push-tweet-onto-kill-ring)
-      (define-key km (kbd "C-c C-v") 'twittering-view-user-page)
-      (define-key km (kbd "C-c D") 'twittering-delete-status)
-      (define-key km (kbd "C-c C-w") 'twittering-delete-status)
-      (define-key km (kbd "a") 'twittering-toggle-activate-buffer)
-      (define-key km (kbd "g") 'twittering-current-timeline)
-      (define-key km (kbd "u") 'twittering-update-status-interactive)
-      (define-key km (kbd "U") 'twittering-push-uri-onto-kill-ring)
-      (define-key km (kbd "d") 'twittering-direct-message)
-      (define-key km (kbd "v") 'twittering-other-user-timeline)
-      (define-key km (kbd "V") 'twittering-visit-timeline)
-      (define-key km (kbd "L") 'twittering-other-user-list-interactive)
-      (define-key km (kbd "f") 'twittering-switch-to-next-timeline)
-      (define-key km (kbd "b") 'twittering-switch-to-previous-timeline)
+      (define-key km (kbd "C-<mouse-3>") 'twindrill-push-tweet-onto-kill-ring)
+      (define-key km (kbd "C-c C-v") 'twindrill-view-user-page)
+      (define-key km (kbd "C-c D") 'twindrill-delete-status)
+      (define-key km (kbd "C-c C-w") 'twindrill-delete-status)
+      (define-key km (kbd "a") 'twindrill-toggle-activate-buffer)
+      (define-key km (kbd "g") 'twindrill-current-timeline)
+      (define-key km (kbd "u") 'twindrill-update-status-interactive)
+      (define-key km (kbd "U") 'twindrill-push-uri-onto-kill-ring)
+      (define-key km (kbd "d") 'twindrill-direct-message)
+      (define-key km (kbd "v") 'twindrill-other-user-timeline)
+      (define-key km (kbd "V") 'twindrill-visit-timeline)
+      (define-key km (kbd "L") 'twindrill-other-user-list-interactive)
+      (define-key km (kbd "f") 'twindrill-switch-to-next-timeline)
+      (define-key km (kbd "b") 'twindrill-switch-to-previous-timeline)
       ;; (define-key km (kbd "j") 'next-line)
       ;; (define-key km (kbd "k") 'previous-line)
-      (define-key km (kbd "j") 'twittering-goto-next-status)
-      (define-key km (kbd "k") 'twittering-goto-previous-status)
+      (define-key km (kbd "j") 'twindrill-goto-next-status)
+      (define-key km (kbd "k") 'twindrill-goto-previous-status)
       (define-key km (kbd "l") 'forward-char)
       (define-key km (kbd "h") 'backward-char)
       (define-key km (kbd "0") 'beginning-of-line)
       (define-key km (kbd "^") 'beginning-of-line-text)
       (define-key km (kbd "$") 'end-of-line)
-      (define-key km (kbd "n") 'twittering-goto-next-status-of-user)
-      (define-key km (kbd "p") 'twittering-goto-previous-status-of-user)
-      (define-key km (kbd "C-i") 'twittering-goto-next-thing)
-      (define-key km (kbd "M-C-i") 'twittering-goto-previous-thing)
-      (define-key km (kbd "<backtab>") 'twittering-goto-previous-thing)
-      (define-key km (kbd "<backspace>") 'twittering-scroll-down)
-      (define-key km (kbd "M-v") 'twittering-scroll-down)
-      (define-key km (kbd "SPC") 'twittering-scroll-up)
-      (define-key km (kbd "C-v") 'twittering-scroll-up)
-      (define-key km (kbd "G") 'twittering-goto-last-status)
-      (define-key km (kbd "H") 'twittering-goto-first-status)
-      (define-key km (kbd "i") 'twittering-icon-mode)
-      (define-key km (kbd "r") 'twittering-toggle-show-replied-statuses)
-      (define-key km (kbd "R") 'twittering-toggle-or-retrieve-replied-statuses)
-      (define-key km (kbd "t") 'twittering-toggle-proxy)
-      (define-key km (kbd "C-c C-p") 'twittering-toggle-proxy)
-      (define-key km (kbd "q") 'twittering-kill-buffer)
-      (define-key km (kbd "C-c C-q") 'twittering-search)
+      (define-key km (kbd "n") 'twindrill-goto-next-status-of-user)
+      (define-key km (kbd "p") 'twindrill-goto-previous-status-of-user)
+      (define-key km (kbd "C-i") 'twindrill-goto-next-thing)
+      (define-key km (kbd "M-C-i") 'twindrill-goto-previous-thing)
+      (define-key km (kbd "<backtab>") 'twindrill-goto-previous-thing)
+      (define-key km (kbd "<backspace>") 'twindrill-scroll-down)
+      (define-key km (kbd "M-v") 'twindrill-scroll-down)
+      (define-key km (kbd "SPC") 'twindrill-scroll-up)
+      (define-key km (kbd "C-v") 'twindrill-scroll-up)
+      (define-key km (kbd "G") 'twindrill-goto-last-status)
+      (define-key km (kbd "H") 'twindrill-goto-first-status)
+      (define-key km (kbd "i") 'twindrill-icon-mode)
+      (define-key km (kbd "r") 'twindrill-toggle-show-replied-statuses)
+      (define-key km (kbd "R") 'twindrill-toggle-or-retrieve-replied-statuses)
+      (define-key km (kbd "t") 'twindrill-toggle-proxy)
+      (define-key km (kbd "C-c C-p") 'twindrill-toggle-proxy)
+      (define-key km (kbd "q") 'twindrill-kill-buffer)
+      (define-key km (kbd "C-c C-q") 'twindrill-search)
       nil))
 
-(let ((km twittering-mode-menu-on-uri-map))
+(let ((km twindrill-mode-menu-on-uri-map))
   (when km
-    (define-key km [ct] '("Copy tweet" . twittering-push-tweet-onto-kill-ring))
-    (define-key km [cl] '("Copy link" . twittering-push-uri-onto-kill-ring))
-    (define-key km [ll] '("Load link" . twittering-click))
-    (let ((km-on-uri twittering-mode-on-uri-map))
+    (define-key km [ct] '("Copy tweet" . twindrill-push-tweet-onto-kill-ring))
+    (define-key km [cl] '("Copy link" . twindrill-push-uri-onto-kill-ring))
+    (define-key km [ll] '("Load link" . twindrill-click))
+    (let ((km-on-uri twindrill-mode-on-uri-map))
       (when km-on-uri
 	(define-key km-on-uri (kbd "C-<down-mouse-3>") 'mouse-set-point)
 	(define-key km-on-uri (kbd "C-<mouse-3>") km)))))
 
-(defun twittering-keybind-message ()
+(defun twindrill-keybind-message ()
   (let ((important-commands
-	 '(("Timeline" . twittering-friends-timeline)
-	   ("Replies" . twittering-replies-timeline)
-	   ("Update status" . twittering-update-status-interactive)
-	   ("Next" . twittering-goto-next-status)
-	   ("Prev" . twittering-goto-previous-status))))
+	 '(("Timeline" . twindrill-friends-timeline)
+	   ("Replies" . twindrill-replies-timeline)
+	   ("Update status" . twindrill-update-status-interactive)
+	   ("Next" . twindrill-goto-next-status)
+	   ("Prev" . twindrill-goto-previous-status))))
     (mapconcat (lambda (command-spec)
 		 (let ((descr (car command-spec))
 		       (command (cdr command-spec)))
@@ -10415,51 +10418,51 @@ If FORCE is non-nil, all active buffers are updated forcibly."
 ;; (run-with-idle-timer
 ;;  0.1 t
 ;;  '(lambda ()
-;;     (when (equal (buffer-name (current-buffer)) twittering-buffer)
-;;       (message (twittering-keybind-message)))))
+;;     (when (equal (buffer-name (current-buffer)) twindrill-buffer)
+;;       (message (twindrill-keybind-message)))))
 
 
 ;;;;
 ;;;; Initialization
 ;;;;
 
-(defvar twittering-initialized nil)
-(defvar twittering-mode-syntax-table nil "")
+(defvar twindrill-initialized nil)
+(defvar twindrill-mode-syntax-table nil "")
 
-(unless twittering-mode-syntax-table
-  (setq twittering-mode-syntax-table (make-syntax-table))
-  ;; (modify-syntax-entry ?  "" twittering-mode-syntax-table)
-  (modify-syntax-entry ?\" "w" twittering-mode-syntax-table)
+(unless twindrill-mode-syntax-table
+  (setq twindrill-mode-syntax-table (make-syntax-table))
+  ;; (modify-syntax-entry ?  "" twindrill-mode-syntax-table)
+  (modify-syntax-entry ?\" "w" twindrill-mode-syntax-table)
   )
 
-(defun twittering-initialize-global-variables-if-necessary ()
-  "Initialize global variables for `twittering-mode' if they have not
+(defun twindrill-initialize-global-variables-if-necessary ()
+  "Initialize global variables for `twindrill-mode' if they have not
 been initialized yet."
-  (unless twittering-initialized
-    (defface twittering-username-face
+  (unless twindrill-initialized
+    (defface twindrill-username-face
       `((t ,(append '(:underline t)
 		    (face-attr-construct
 		     (if (facep 'font-lock-string-face)
 			 'font-lock-string-face
 		       'bold)))))
       "" :group 'faces)
-    (defface twittering-uri-face `((t (:underline t))) "" :group 'faces)
-    (defface twittering-timeline-header-face
+    (defface twindrill-uri-face `((t (:underline t))) "" :group 'faces)
+    (defface twindrill-timeline-header-face
       `((t ,(face-attr-construct
 	     (if (facep 'font-lock-preprocessor-face)
 		 'font-lock-preprocessor-face
 	       'bold))))
-      "Timeline header on twittering-mode" :group 'faces)
-    (defface twittering-timeline-footer-face
+      "Timeline header on twindrill-mode" :group 'faces)
+    (defface twindrill-timeline-footer-face
       `((t ,(face-attr-construct
 	     (if (facep 'font-lock-preprocessor-face)
 		 'font-lock-preprocessor-face
 	       'bold))))
-      "Timeline footer on twittering-mode" :group 'faces)
-    (twittering-update-status-format)
-    (when twittering-use-convert
-      (if (null twittering-convert-program)
-	  (setq twittering-use-convert nil)
+      "Timeline footer on twindrill-mode" :group 'faces)
+    (twindrill-update-status-format)
+    (when twindrill-use-convert
+      (if (null twindrill-convert-program)
+	  (setq twindrill-use-convert nil)
 	(with-temp-buffer
 	  (let ((coding-system-for-read 'iso-safe)
 		(coding-system-for-write 'iso-safe)
@@ -10467,154 +10470,154 @@ been initialized yet."
 		;; because it is possible that the directory pointed by
 		;; `default-directory' has been already removed.
 		(default-directory temporary-file-directory))
-	    (call-process twittering-convert-program nil (current-buffer) nil
+	    (call-process twindrill-convert-program nil (current-buffer) nil
 			  "-version")
 	    (goto-char (point-min))
 	    (if (null (search-forward-regexp "\\(Image\\|Graphics\\)Magick"
 					     nil t))
-		(setq twittering-use-convert nil))))))
-    (twittering-setup-proxy)
-    (when twittering-use-icon-storage
+		(setq twindrill-use-convert nil))))))
+    (twindrill-setup-proxy)
+    (when twindrill-use-icon-storage
       (cond
        ((require 'jka-compr nil t)
-	(twittering-load-icon-properties)
-	(add-hook 'kill-emacs-hook 'twittering-save-icon-properties))
+	(twindrill-load-icon-properties)
+	(add-hook 'kill-emacs-hook 'twindrill-save-icon-properties))
        (t
-	(setq twittering-use-icon-storage nil)
+	(setq twindrill-use-icon-storage nil)
 	(error "Disabled icon-storage because it failed to load jka-compr."))))
     (cond
      ((and
-       (boundp 'twittering-sign-simple-string)
-       twittering-sign-simple-string
-       (or (not (boundp 'twittering-sign-string-function))
-	   (null twittering-sign-string-function))
-       (eq twittering-edit-skeleton 'none)
-       (or (null twittering-edit-skeleton-footer)
-	   (string= twittering-edit-skeleton-footer "")))
-      ;; Configure `twittering-edit-skeleton' as an alternative of
-      ;; `twittering-sign-simple-string'.
-      (twittering-edit-skeleton-change-footer
-       (format " [%s]" twittering-sign-simple-string))
-      (setq twittering-edit-skeleton 'footer)
-      (message "Warning: `twittering-sign-simple-string' is obsolete. Use `twittering-edit-skeleton-footer' instead."))
-     ((or (boundp 'twittering-sign-simple-string)
-	  (boundp 'twittering-sign-string-function))
-      (message "Warning: `twittering-sign-simple-string' and `twittering-sign-string-function' are obsolete. Use the new feature `twittering-edit-skeleton'.")
+       (boundp 'twindrill-sign-simple-string)
+       twindrill-sign-simple-string
+       (or (not (boundp 'twindrill-sign-string-function))
+	   (null twindrill-sign-string-function))
+       (eq twindrill-edit-skeleton 'none)
+       (or (null twindrill-edit-skeleton-footer)
+	   (string= twindrill-edit-skeleton-footer "")))
+      ;; Configure `twindrill-edit-skeleton' as an alternative of
+      ;; `twindrill-sign-simple-string'.
+      (twindrill-edit-skeleton-change-footer
+       (format " [%s]" twindrill-sign-simple-string))
+      (setq twindrill-edit-skeleton 'footer)
+      (message "Warning: `twindrill-sign-simple-string' is obsolete. Use `twindrill-edit-skeleton-footer' instead."))
+     ((or (boundp 'twindrill-sign-simple-string)
+	  (boundp 'twindrill-sign-string-function))
+      (message "Warning: `twindrill-sign-simple-string' and `twindrill-sign-string-function' are obsolete. Use the new feature `twindrill-edit-skeleton'.")
       ))
-    (add-hook 'twittering-new-tweets-rendered-hook
-	      'twittering-jojo-mode-hook-function)
-    (run-hooks 'twittering-mode-init-hook)
-    (setq twittering-initialized t)))
+    (add-hook 'twindrill-new-tweets-rendered-hook
+	      'twindrill-jojo-mode-hook-function)
+    (run-hooks 'twindrill-mode-init-hook)
+    (setq twindrill-initialized t)))
 
-(defun twittering-mode-setup (spec-string)
-  "Set up the current buffer for `twittering-mode'."
+(defun twindrill-mode-setup (spec-string)
+  "Set up the current buffer for `twindrill-mode'."
   (kill-all-local-variables)
-  (setq major-mode 'twittering-mode)
+  (setq major-mode 'twindrill-mode)
   (setq buffer-read-only t)
   (buffer-disable-undo)
-  (setq mode-name "twittering-mode")
+  (setq mode-name "twindrill-mode")
   (setq mode-line-buffer-identification
 	`(,(default-value 'mode-line-buffer-identification)
-	  (:eval (twittering-mode-line-buffer-identification))))
+	  (:eval (twindrill-mode-line-buffer-identification))))
 
   ;; Prevent `global-font-lock-mode' enabling `font-lock-mode'.
   ;; This technique is derived from `lisp/bs.el' distributed with Emacs 22.2.
   (make-local-variable 'font-lock-global-modes)
-  (setq font-lock-global-modes '(not twittering-mode))
+  (setq font-lock-global-modes '(not twindrill-mode))
 
   ;; Prevent the field property attached to tweets from interfering
   ;; the cursor motion based on logical lines.
   (make-local-variable 'inhibit-field-text-motion)
   (setq inhibit-field-text-motion t)
 
-  (make-local-variable 'twittering-timeline-spec)
-  (make-local-variable 'twittering-timeline-spec-string)
-  (make-local-variable 'twittering-active-mode)
-  (make-local-variable 'twittering-icon-mode)
-  (make-local-variable 'twittering-jojo-mode)
-  (make-local-variable 'twittering-reverse-mode)
+  (make-local-variable 'twindrill-timeline-spec)
+  (make-local-variable 'twindrill-timeline-spec-string)
+  (make-local-variable 'twindrill-active-mode)
+  (make-local-variable 'twindrill-icon-mode)
+  (make-local-variable 'twindrill-jojo-mode)
+  (make-local-variable 'twindrill-reverse-mode)
 
-  (setq twittering-timeline-spec-string spec-string)
-  (setq twittering-timeline-spec
-	(twittering-string-to-timeline-spec spec-string))
-  (setq twittering-active-mode t)
+  (setq twindrill-timeline-spec-string spec-string)
+  (setq twindrill-timeline-spec
+	(twindrill-string-to-timeline-spec spec-string))
+  (setq twindrill-active-mode t)
 
-  (use-local-map twittering-mode-map)
-  (twittering-update-mode-line)
-  (set-syntax-table twittering-mode-syntax-table)
+  (use-local-map twindrill-mode-map)
+  (twindrill-update-mode-line)
+  (set-syntax-table twindrill-mode-syntax-table)
   (when (and (boundp 'font-lock-mode) font-lock-mode)
     (font-lock-mode -1))
-  (add-to-list 'twittering-buffer-info-list (current-buffer) t)
-  (run-hooks 'twittering-mode-hook))
+  (add-to-list 'twindrill-buffer-info-list (current-buffer) t)
+  (run-hooks 'twindrill-mode-hook))
 
-(defun twittering-mode ()
+(defun twindrill-mode ()
   "Major mode for Twitter
-\\{twittering-mode-map}"
+\\{twindrill-mode-map}"
   (interactive)
   (let ((timeline-spec-list
-	 (if (listp twittering-initial-timeline-spec-string)
-	     twittering-initial-timeline-spec-string
-	   (cons twittering-initial-timeline-spec-string nil))))
-    (twittering-visit-timeline (car timeline-spec-list))
-    (when (twittering-account-authorized-p)
-      (mapc 'twittering-visit-timeline (cdr timeline-spec-list)))))
+	 (if (listp twindrill-initial-timeline-spec-string)
+	     twindrill-initial-timeline-spec-string
+	   (cons twindrill-initial-timeline-spec-string nil))))
+    (twindrill-visit-timeline (car timeline-spec-list))
+    (when (twindrill-account-authorized-p)
+      (mapc 'twindrill-visit-timeline (cdr timeline-spec-list)))))
 
 ;;;;
 ;;;; Preparation for invoking APIs
 ;;;;
 
-(defun twittering-api-invocation-is-ready-p ()
+(defun twindrill-api-invocation-is-ready-p ()
   "Return non-nil if the preparation for invoking APIs has been completed."
   (and
    ;; The global variables are initialized.
-   twittering-initialized
+   twindrill-initialized
    ;; A connection method is prepared.
-   (let ((use-ssl (or twittering-use-ssl twittering-oauth-use-ssl)))
-     (twittering-lookup-connection-type use-ssl))
+   (let ((use-ssl (or twindrill-use-ssl twindrill-oauth-use-ssl)))
+     (twindrill-lookup-connection-type use-ssl))
    ;; The account has been already authorized.
-   (twittering-account-authorized-p)))
+   (twindrill-account-authorized-p)))
 
-(defun twittering-ensure-preparation-for-api-invocation ()
+(defun twindrill-ensure-preparation-for-api-invocation ()
   "Ensure prerequisites for invoking APIs. Return non-nil in success.
 If prerequisites has been already satisifed, just return non-nil.
 If prerequisites are not satisfied, this function try to satisfy them.
 Then, return non-nil if they has been satisfied and return nil otherwise."
-  (twittering-initialize-global-variables-if-necessary)
-  (and (twittering-ensure-connection-method)
-       (twittering-ensure-private-info)
-       (twittering-ensure-account-verification)))
+  (twindrill-initialize-global-variables-if-necessary)
+  (and (twindrill-ensure-connection-method)
+       (twindrill-ensure-private-info)
+       (twindrill-ensure-account-verification)))
 
 ;;;;
 ;;;; Edit mode skeleton
 ;;;;
 
-(defcustom twittering-edit-skeleton-footer ""
+(defcustom twindrill-edit-skeleton-footer ""
   "*String to be used as the footer in the edit skeleton."
-  :group 'twittering-mode
+  :group 'twindrill-mode
   :type 'string)
 
-(defvar twittering-edit-skeleton-footer-history nil)
+(defvar twindrill-edit-skeleton-footer-history nil)
 
-(defcustom twittering-edit-skeleton-alist
+(defcustom twindrill-edit-skeleton-alist
   '((none . nil)
-    (footer . ((nil _ twittering-edit-skeleton-footer)))
+    (footer . ((nil _ twindrill-edit-skeleton-footer)))
     (footer-only-normal
-     . ((nil _ twittering-edit-skeleton-footer) . normal))
+     . ((nil _ twindrill-edit-skeleton-footer) . normal))
     (inherit-hashtags
-     . [(twittering-edit-skeleton-inherit-hashtags . normal)
-	(twittering-edit-skeleton-inherit-hashtags . reply)])
+     . [(twindrill-edit-skeleton-inherit-hashtags . normal)
+	(twindrill-edit-skeleton-inherit-hashtags . reply)])
     (inherit-mentions
-     . (twittering-edit-skeleton-inherit-mentions . reply))
+     . (twindrill-edit-skeleton-inherit-mentions . reply))
     (inherit-any
-     . [(twittering-edit-skeleton-inherit-mentions . reply)
-	(twittering-edit-skeleton-inherit-hashtags . normal)
-	(twittering-edit-skeleton-inherit-hashtags . reply)]))
-  "*Alist of skeletons performed on `twittering-update-status-interactive'.
+     . [(twindrill-edit-skeleton-inherit-mentions . reply)
+	(twindrill-edit-skeleton-inherit-hashtags . normal)
+	(twindrill-edit-skeleton-inherit-hashtags . reply)]))
+  "*Alist of skeletons performed on `twindrill-update-status-interactive'.
 A key of the alist is a symbol and each value is nil, (SKELETON . PRED),
  (FUNC . PRED) or a vector of them.
 
-When invoking `twittering-update-status-interactive', the value corresponding
-to the key specified `twittering-edit-skeleton' are performed.
+When invoking `twindrill-update-status-interactive', the value corresponding
+to the key specified `twindrill-edit-skeleton' are performed.
 
 The value like (SKELETON . PRED) or (FUNC . PRED) is performed when the
 current context matches with PRED.
@@ -10631,10 +10634,10 @@ TWEET-TYPE is a symbol, which is one of 'direct-message, 'normal,
 If the tweet will be edited as a reply or an organic retweet, IN-REPLY-TO-ID
 is a string specifying the replied tweet. Otherwise, IN-REPLY-TO-ID is nil.
 CURRENT-SPEC specifies where the action of posting a tweet is performed.
-If the action is performed on a twittering-mode buffer, CURRENT-SPEC is
+If the action is performed on a twindrill-mode buffer, CURRENT-SPEC is
 a timeline spec string of the buffer.
 If the action is performed on other buffers, CURRENT-SPEC is nil.
-If the option IGNORE-CURRENT-SPEC for `twittering-update-status' is non-nil,
+If the option IGNORE-CURRENT-SPEC for `twindrill-update-status' is non-nil,
 CURRENT-SPEC is also nil.
 
 If PRED matches the current context, the value is performed as follows.
@@ -10648,54 +10651,54 @@ in the vector.
 
 Note that the effective skeleton is invoked after inserting a
 recipient."
-  :group 'twittering-mode
+  :group 'twindrill-mode
   :type 'alist)
 
-(defcustom twittering-edit-skeleton 'none
+(defcustom twindrill-edit-skeleton 'none
   "*A symbol specifying an effective skeleton.
 
-The list of valid value is defined in `twittering-edit-skeleton-alist'.
-To be valid, an entry should be added to `twittering-edit-skeleton-alist'
+The list of valid value is defined in `twindrill-edit-skeleton-alist'.
+To be valid, an entry should be added to `twindrill-edit-skeleton-alist'
 first.
 
-When entering `twittering-edit-mode', the skeletons in the specified
-entry in `twittering-edit-skeleton-alist' are performed."
-  :group 'twittering-mode
-  :type (if (> (length (mapcar #'car twittering-edit-skeleton-alist)) 0)
+When entering `twindrill-edit-mode', the skeletons in the specified
+entry in `twindrill-edit-skeleton-alist' are performed."
+  :group 'twindrill-mode
+  :type (if (> (length (mapcar #'car twindrill-edit-skeleton-alist)) 0)
 	    `(choice ,@(mapcar (lambda (entry) `(const ,(car entry)))
-			       twittering-edit-skeleton-alist))
+			       twindrill-edit-skeleton-alist))
 	  'symbol))
 
-(defun twittering-switch-edit-skeleton ()
+(defun twindrill-switch-edit-skeleton ()
   (interactive)
   (let ((skeleton-keys
 	 (mapcar (lambda (entry) (symbol-name (car entry)))
-		 twittering-edit-skeleton-alist))
-	(current (symbol-name (or twittering-edit-skeleton 'none))))
+		 twindrill-edit-skeleton-alist))
+	(current (symbol-name (or twindrill-edit-skeleton 'none))))
     (let ((selected
-	   (twittering-completing-read
+	   (twindrill-completing-read
 	    (format "Skeleton (%s): " current)
 	    skeleton-keys nil t nil nil current)))
       (when selected
-	(setq twittering-edit-skeleton (intern selected)))))
-  (when (null twittering-edit-skeleton)
-    (setq twittering-edit-skeleton 'none))
-  (message "Current skeleton: %s" twittering-edit-skeleton))
+	(setq twindrill-edit-skeleton (intern selected)))))
+  (when (null twindrill-edit-skeleton)
+    (setq twindrill-edit-skeleton 'none))
+  (message "Current skeleton: %s" twindrill-edit-skeleton))
 
-(defun twittering-edit-skeleton-change-footer (&optional footer-str)
+(defun twindrill-edit-skeleton-change-footer (&optional footer-str)
   (interactive)
   (let ((footer-str
 	 (or footer-str
-	     (read-from-minibuffer "Footer: " twittering-edit-skeleton-footer
+	     (read-from-minibuffer "Footer: " twindrill-edit-skeleton-footer
 				   nil nil
-				   'twittering-edit-skeleton-footer-history))))
+				   'twindrill-edit-skeleton-footer-history))))
     (when footer-str
-      (setq twittering-edit-skeleton-footer footer-str)))
-  (message "Current footer: [%s]" twittering-edit-skeleton-footer))
+      (setq twindrill-edit-skeleton-footer footer-str)))
+  (message "Current footer: [%s]" twindrill-edit-skeleton-footer))
 
-(defun twittering-edit-skeleton-insert-base (&optional tweet-type in-reply-to-id current-spec)
+(defun twindrill-edit-skeleton-insert-base (&optional tweet-type in-reply-to-id current-spec)
   (let ((entry
-	 (cdr (assq twittering-edit-skeleton twittering-edit-skeleton-alist))))
+	 (cdr (assq twindrill-edit-skeleton twindrill-edit-skeleton-alist))))
     (when entry
       (require 'skeleton)
       (let ((skeletons (if (vectorp entry)
@@ -10717,28 +10720,28 @@ entry in `twittering-edit-skeleton-alist' are performed."
 			(skeleton-insert skeleton-or-func))))))
 		skeletons)))))
 
-(defun twittering-edit-skeleton-insert (&optional tweet-type in-reply-to-id current-spec)
+(defun twindrill-edit-skeleton-insert (&optional tweet-type in-reply-to-id current-spec)
   (if (> 22 emacs-major-version)
       ;; This prevents Emacs21 from inserting skeletons before the cursor.
       (let ((current (point))
 	    (pair (with-temp-buffer
-		    (twittering-edit-skeleton-insert-base tweet-type
+		    (twindrill-edit-skeleton-insert-base tweet-type
 							  in-reply-to-id
 							  current-spec)
 		    `(,(buffer-string) . ,(point)))))
 	(insert (car pair))
 	(goto-char (+ -1 current (cdr pair))))
-    (twittering-edit-skeleton-insert-base tweet-type in-reply-to-id
+    (twindrill-edit-skeleton-insert-base tweet-type in-reply-to-id
 					  current-spec)))
 
-(defun twittering-edit-skeleton-inherit-hashtags (tweet-type in-reply-to-id current-spec)
+(defun twindrill-edit-skeleton-inherit-hashtags (tweet-type in-reply-to-id current-spec)
   (cond
    (in-reply-to-id
-    (let* ((status (twittering-find-status in-reply-to-id))
+    (let* ((status (twindrill-find-status in-reply-to-id))
 	   (text (cdr (assq 'text status)))
 	   (hashtags
-	    (twittering-extract-matched-substring-all
-	     (concat twittering-regexp-hash
+	    (twindrill-extract-matched-substring-all
+	     (concat twindrill-regexp-hash
 		     "\\([[:alpha:]0-9_-]+\\)")
 	     text))
 	   (footer
@@ -10746,26 +10749,26 @@ entry in `twittering-edit-skeleton-alist' are performed."
 		       hashtags " ")))
       (when hashtags
 	(skeleton-insert `(nil _ " " ,footer)))))
-   ((twittering-timeline-spec-is-search-p current-spec)
+   ((twindrill-timeline-spec-is-search-p current-spec)
     (let* ((query-string
-	    (twittering-extract-query-string-from-search-timeline-spec
+	    (twindrill-extract-query-string-from-search-timeline-spec
 	     current-spec))
 	   (hashtag-list
-	    (twittering-extract-matched-substring-all
-	     (concat "\\(" twittering-regexp-hash "[[:alpha:]0-9_-]+\\)")
+	    (twindrill-extract-matched-substring-all
+	     (concat "\\(" twindrill-regexp-hash "[[:alpha:]0-9_-]+\\)")
 	     query-string)))
       (when hashtag-list
 	(let ((footer (mapconcat 'identity hashtag-list " ")))
 	  (skeleton-insert `(nil _ " " ,footer))))))))
 
-(defun twittering-edit-skeleton-inherit-mentions (tweet-type in-reply-to-id current-spec)
+(defun twindrill-edit-skeleton-inherit-mentions (tweet-type in-reply-to-id current-spec)
   (when in-reply-to-id
-    (let* ((status (twittering-find-status in-reply-to-id))
+    (let* ((status (twindrill-find-status in-reply-to-id))
 	   (text (cdr (assq 'text status)))
 	   (recipient (cdr (assq 'user-screen-name status)))
 	   (mentions
-	    (twittering-extract-matched-substring-all
-	     (concat twittering-regexp-atmark
+	    (twindrill-extract-matched-substring-all
+	     (concat twindrill-regexp-atmark
 		     "\\([a-zA-Z0-9_-]+\\)")
 	     text))
 	   (reduced-mentions
@@ -10773,7 +10776,7 @@ entry in `twittering-edit-skeleton-alist' are performed."
 		    (mapcar
 		     (lambda (mention)
 		       (unless (or (string= mention recipient)
-				   (string= mention (twittering-get-username)))
+				   (string= mention (twindrill-get-username)))
 			 mention))
 		     mentions))))
       (when reduced-mentions
@@ -10785,68 +10788,68 @@ entry in `twittering-edit-skeleton-alist' are performed."
 ;;;; Edit mode
 ;;;;
 
-(defvar twittering-edit-buffer "*twittering-edit*")
-(defvar twittering-pre-edit-window-configuration nil)
-(defvar twittering-edit-history nil)
-(defvar twittering-edit-local-history nil)
-(defvar twittering-edit-local-history-idx nil)
-(defvar twittering-warning-overlay nil)
+(defvar twindrill-edit-buffer "*twindrill-edit*")
+(defvar twindrill-pre-edit-window-configuration nil)
+(defvar twindrill-edit-history nil)
+(defvar twindrill-edit-local-history nil)
+(defvar twindrill-edit-local-history-idx nil)
+(defvar twindrill-warning-overlay nil)
 
-(define-derived-mode twittering-edit-mode nil "twmode-status-edit"
-  (use-local-map twittering-edit-mode-map)
+(define-derived-mode twindrill-edit-mode nil "twmode-status-edit"
+  (use-local-map twindrill-edit-mode-map)
 
   ;; Prevent `global-font-lock-mode' enabling `font-lock-mode'.
   ;; This technique is derived from `lisp/bs.el' distributed with Emacs 22.2.
   (make-local-variable 'font-lock-global-modes)
-  (setq font-lock-global-modes '(not twittering-edit-mode))
+  (setq font-lock-global-modes '(not twindrill-edit-mode))
 
-  (make-local-variable 'twittering-warning-overlay)
-  (setq twittering-warning-overlay (make-overlay 1 1 nil nil nil))
-  (overlay-put twittering-warning-overlay 'face 'font-lock-warning-face)
+  (make-local-variable 'twindrill-warning-overlay)
+  (setq twindrill-warning-overlay (make-overlay 1 1 nil nil nil))
+  (overlay-put twindrill-warning-overlay 'face 'font-lock-warning-face)
 
-  (make-local-variable 'twittering-edit-local-history)
-  (setq twittering-edit-local-history (cons (buffer-string)
-					    twittering-edit-history))
-  (make-local-variable 'twittering-edit-local-history-idx)
-  (setq twittering-edit-local-history-idx 0)
+  (make-local-variable 'twindrill-edit-local-history)
+  (setq twindrill-edit-local-history (cons (buffer-string)
+					    twindrill-edit-history))
+  (make-local-variable 'twindrill-edit-local-history-idx)
+  (setq twindrill-edit-local-history-idx 0)
 
   (make-local-variable 'after-change-functions)
-  (add-to-list 'after-change-functions 'twittering-edit-length-check)
+  (add-to-list 'after-change-functions 'twindrill-edit-length-check)
   )
 
-(when twittering-edit-mode-map
-  (let ((km twittering-edit-mode-map))
-    (define-key km (kbd "C-c C-c") 'twittering-edit-post-status)
-    (define-key km (kbd "C-c C-k") 'twittering-edit-cancel-status)
-    (define-key km (kbd "C-c C-r") 'twittering-edit-toggle-reply)
-    (define-key km (kbd "M-n") 'twittering-edit-next-history)
-    (define-key km (kbd "M-p") 'twittering-edit-previous-history)
-    (define-key km (kbd "<f4>") 'twittering-edit-replace-at-point)))
+(when twindrill-edit-mode-map
+  (let ((km twindrill-edit-mode-map))
+    (define-key km (kbd "C-c C-c") 'twindrill-edit-post-status)
+    (define-key km (kbd "C-c C-k") 'twindrill-edit-cancel-status)
+    (define-key km (kbd "C-c C-r") 'twindrill-edit-toggle-reply)
+    (define-key km (kbd "M-n") 'twindrill-edit-next-history)
+    (define-key km (kbd "M-p") 'twindrill-edit-previous-history)
+    (define-key km (kbd "<f4>") 'twindrill-edit-replace-at-point)))
 
-(defun twittering-effective-length (str &optional short-length-http short-length-https)
+(defun twindrill-effective-length (str &optional short-length-http short-length-https)
   "Return the effective length of STR with taking account of shortening URIs.
 
 The returned length is calculated with taking account of shortening URIs
-if `twittering-service-method' is the symbol `twitter' or `twitter-api-v1.1'.
+if `twindrill-service-method' is the symbol `twitter' or `twitter-api-v1.1'.
 It is assumed that a URI via HTTP will be converted into a URI consisting of
 SHORT-LENGTH-HTTP characters.
 It is assumed that a URI via HTTPS will be converted into a URI consisting of
 SHORT-LENGTH-HTTPS characters.
 
 If SHORT-LENGTH-HTTP is nil, the value of
- (twittering-get-service-configuration 'short_url_length) is used instead.
+ (twindrill-get-service-configuration 'short_url_length) is used instead.
 If SHORT-LENGTH-HTTPS is nil, the value of
- (twittering-get-service-configuration 'short_url_length_https) is used
+ (twindrill-get-service-configuration 'short_url_length_https) is used
 instead."
   (cond
-   ((memq twittering-service-method '(twitter twitter-api-v1.1))
+   ((memq twindrill-service-method '(twitter twitter-api-v1.1))
     (let ((regexp "\\(?:^\\|[[:space:]]\\)\\(http\\(s\\)?://[-_.!~*'()a-zA-Z0-9;/?:@&=+$,%#]+\\)")
 	  (short-length-http
 	   (or short-length-http
-	       (twittering-get-service-configuration 'short_url_length)))
+	       (twindrill-get-service-configuration 'short_url_length)))
 	  (short-length-https
 	   (or short-length-https
-	       (twittering-get-service-configuration 'short_url_length_https)))
+	       (twindrill-get-service-configuration 'short_url_length_https)))
 	  (rest str)
 	  (pos 0)
 	  (len 0))
@@ -10873,42 +10876,42 @@ instead."
    (t
     (length str))))
 
-(defun twittering-edit-length-check (&optional beg end len)
-  (let* ((status (twittering-edit-extract-status))
+(defun twindrill-edit-length-check (&optional beg end len)
+  (let* ((status (twindrill-edit-extract-status))
 	 (maxlen 140)
-	 (length (twittering-effective-length status)))
+	 (length (twindrill-effective-length status)))
     (setq mode-name
 	  (format "twmode-status-edit[%d/%d]" length maxlen))
     (force-mode-line-update)
-    (unless twittering-disable-overlay-on-too-long-string
+    (unless twindrill-disable-overlay-on-too-long-string
       (if (< maxlen length)
-	  (move-overlay twittering-warning-overlay
+	  (move-overlay twindrill-warning-overlay
 			(- (point-max) (- length maxlen)) (point-max))
-	(move-overlay twittering-warning-overlay 1 1)))))
+	(move-overlay twindrill-warning-overlay 1 1)))))
 
-(defun twittering-edit-get-help-end ()
-  "Return the end position of the help on `twittering-edit-mode'."
-  (when (eq major-mode 'twittering-edit-mode)
+(defun twindrill-edit-get-help-end ()
+  "Return the end position of the help on `twindrill-edit-mode'."
+  (when (eq major-mode 'twindrill-edit-mode)
     (next-single-property-change (point-min) 'read-only nil (point-max))))
 
-(defun twittering-edit-extract-status ()
-  "Return the text of the status being edited on `twittering-edit-mode'."
-  (if (eq major-mode 'twittering-edit-mode)
-      (buffer-substring-no-properties (twittering-edit-get-help-end)
+(defun twindrill-edit-extract-status ()
+  "Return the text of the status being edited on `twindrill-edit-mode'."
+  (if (eq major-mode 'twindrill-edit-mode)
+      (buffer-substring-no-properties (twindrill-edit-get-help-end)
 				      (point-max))
     ""))
 
-(defun twittering-edit-reset-status (str)
-  "Reset the contents of the current `twittering-edit-mode' buffer with STR."
-  (when (eq major-mode 'twittering-edit-mode)
-    (let ((help-end (twittering-edit-get-help-end)))
+(defun twindrill-edit-reset-status (str)
+  "Reset the contents of the current `twindrill-edit-mode' buffer with STR."
+  (when (eq major-mode 'twindrill-edit-mode)
+    (let ((help-end (twindrill-edit-get-help-end)))
       (delete-region help-end (point-max))
       (goto-char help-end)
       (insert str)
       (goto-char help-end))))
 
-(defun twittering-edit-set-help-string (str)
-  "Render STR as a help for `twittering-edit-mode' to the current buffer."
+(defun twindrill-edit-set-help-string (str)
+  "Render STR as a help for `twindrill-edit-mode' to the current buffer."
   (let* ((help-str (propertize str 'read-only t))
 	 (len (length help-str)))
     (add-text-properties 0 1 '(front-sticky (read-only)) help-str)
@@ -10916,7 +10919,7 @@ instead."
     (save-excursion
       (let ((inhibit-read-only t)
 	    (inhibit-modification-hooks t)
-	    (help-end (twittering-edit-get-help-end)))
+	    (help-end (twindrill-edit-get-help-end)))
 	(goto-char help-end)
 	(if (= (point-min) help-end)
 	    ;; When no helps are rendered, the all markers should be
@@ -10929,11 +10932,11 @@ instead."
 	  (insert-before-markers help-str)
 	  (delete-region (point-min) help-end))))))
 
-(defun twittering-edit-setup-help ()
+(defun twindrill-edit-setup-help ()
   (let* ((direct-message-recipient
-	  (cdr (assq 'direct-message-recipient twittering-edit-mode-info)))
-	 (tweet-type (cdr (assq 'tweet-type twittering-edit-mode-info)))
-	 (cited-id (cdr (assq 'cited-id twittering-edit-mode-info)))
+	  (cdr (assq 'direct-message-recipient twindrill-edit-mode-info)))
+	 (tweet-type (cdr (assq 'tweet-type twindrill-edit-mode-info)))
+	 (cited-id (cdr (assq 'cited-id twindrill-edit-mode-info)))
 	 (item (cond
 		((eq tweet-type 'direct-message)
 		 (format "a direct message to %s" direct-message-recipient))
@@ -10950,33 +10953,33 @@ instead."
 	   (t
 	    nil)))
 	 (func (when status-format
-		 (twittering-generate-format-status-function status-format)))
+		 (twindrill-generate-format-status-function status-format)))
 	 (help-str
 	  (apply 'concat
 		 `(,@(when func
 		       `(,(funcall func
-				   (twittering-find-status cited-id)
+				   (twindrill-find-status cited-id)
 				   nil)))
 		   ,(propertize (format (substitute-command-keys "Keymap:
-  \\[twittering-edit-post-status]: send %s
-  \\[twittering-edit-cancel-status]: cancel %s
-  \\[twittering-edit-toggle-reply]: toggle a normal tweet and a reply.
-  \\[twittering-edit-next-history]: next history element
-  \\[twittering-edit-previous-history]: previous history element
-  \\[twittering-edit-replace-at-point]: shorten URL at point
+  \\[twindrill-edit-post-status]: send %s
+  \\[twindrill-edit-cancel-status]: cancel %s
+  \\[twindrill-edit-toggle-reply]: toggle a normal tweet and a reply.
+  \\[twindrill-edit-next-history]: next history element
+  \\[twindrill-edit-previous-history]: previous history element
+  \\[twindrill-edit-replace-at-point]: shorten URL at point
 
 ---- text above this line is ignored ----
 ") item item)
 				'face 'font-lock-comment-face)))))
-    (twittering-edit-set-help-string help-str)))
+    (twindrill-edit-set-help-string help-str)))
 
-(defun twittering-edit-close ()
+(defun twindrill-edit-close ()
   (kill-buffer (current-buffer))
-  (when twittering-pre-edit-window-configuration
-    (set-window-configuration twittering-pre-edit-window-configuration)
-    (setq twittering-pre-edit-window-configuration nil)))
+  (when twindrill-pre-edit-window-configuration
+    (set-window-configuration twindrill-pre-edit-window-configuration)
+    (setq twindrill-pre-edit-window-configuration nil)))
 
-(defvar twittering-edit-mode-info nil
+(defvar twindrill-edit-mode-info nil
   "Alist of a tweet being edited.
 Pairs of a key symbol and an associated value are following:
   direct-message-recipient -- the recipient when the edited message is
@@ -10985,28 +10988,28 @@ Pairs of a key symbol and an associated value are following:
   tweet-type -- the type of the edited message, which is one of the
     following symbol; normal, reply or direct-message.")
 
-(defun twittering-ensure-whole-of-status-is-visible (&optional window)
+(defun twindrill-ensure-whole-of-status-is-visible (&optional window)
   "Ensure that the whole of the tweet on the current point is visible."
   (interactive)
   (let* ((window (or window (selected-window)))
 	 (buffer (window-buffer window)))
-    (when (twittering-buffer-p buffer)
+    (when (twindrill-buffer-p buffer)
       (with-current-buffer buffer
 	(save-excursion
-	  (let* ((next-head (or (twittering-get-next-status-head) (point-max)))
+	  (let* ((next-head (or (twindrill-get-next-status-head) (point-max)))
 		 (current-tail (max (1- next-head) (point-min))))
 	    (when (< (window-end window t) current-tail)
-	      (twittering-set-window-end window current-tail))))))))
+	      (twindrill-set-window-end window current-tail))))))))
 
-(defun twittering-update-status-from-pop-up-buffer (&optional init-string-or-skeleton reply-to-id username tweet-type current-spec)
+(defun twindrill-update-status-from-pop-up-buffer (&optional init-string-or-skeleton reply-to-id username tweet-type current-spec)
   (interactive)
-  (let ((buf (generate-new-buffer twittering-edit-buffer)))
-    (setq twittering-pre-edit-window-configuration
+  (let ((buf (generate-new-buffer twindrill-edit-buffer)))
+    (setq twindrill-pre-edit-window-configuration
 	  (current-window-configuration))
-    (twittering-pop-to-buffer buf)
-    (twittering-edit-mode)
-    (make-local-variable 'twittering-edit-mode-info)
-    (setq twittering-edit-mode-info
+    (twindrill-pop-to-buffer buf)
+    (twindrill-edit-mode)
+    (make-local-variable 'twindrill-edit-mode-info)
+    (setq twindrill-edit-mode-info
 	  `((cited-id . ,reply-to-id)
 	    (tweet-type . ,(cdr (assq tweet-type
 				      '((direct-message . direct-message)
@@ -11014,15 +11017,15 @@ Pairs of a key symbol and an associated value are following:
 					(organic-retweet . normal)
 					(reply . reply)))))
 	    (direct-message-recipient . ,username)))
-    (twittering-edit-setup-help)
+    (twindrill-edit-setup-help)
     (setq buffer-undo-list nil)
-    (goto-char (twittering-edit-get-help-end))
+    (goto-char (twindrill-edit-get-help-end))
     (if (eq tweet-type 'direct-message)
 	(message "C-c C-c to send, C-c C-k to cancel")
       (and (null init-string-or-skeleton)
-	   twittering-current-hashtag
+	   twindrill-current-hashtag
 	   (setq init-string-or-skeleton
-		 (format " #%s " twittering-current-hashtag)))
+		 (format " #%s " twindrill-current-hashtag)))
       (message "C-c C-c to post, C-c C-k to cancel"))
     (when init-string-or-skeleton
       (require 'skeleton)
@@ -11031,23 +11034,23 @@ Pairs of a key symbol and an associated value are following:
 	(insert init-string-or-skeleton))
        ((listp init-string-or-skeleton)
 	(skeleton-insert init-string-or-skeleton))))
-    (twittering-edit-skeleton-insert tweet-type reply-to-id
+    (twindrill-edit-skeleton-insert tweet-type reply-to-id
 				     current-spec)
     (set-buffer-modified-p nil)))
 
-(defun twittering-edit-post-status ()
+(defun twindrill-edit-post-status ()
   (interactive)
-  (let* ((status (twittering-edit-extract-status))
-	 (cited-id (cdr (assq 'cited-id twittering-edit-mode-info)))
-	 (cited-tweet (twittering-find-status cited-id))
+  (let* ((status (twindrill-edit-extract-status))
+	 (cited-id (cdr (assq 'cited-id twindrill-edit-mode-info)))
+	 (cited-tweet (twindrill-find-status cited-id))
 	 (cited-username (cdr (assq 'user-screen-name cited-tweet)))
 	 (direct-message-recipient
-	  (cdr (assq 'direct-message-recipient twittering-edit-mode-info)))
-	 (tweet-type (cdr (assq 'tweet-type twittering-edit-mode-info))))
+	  (cdr (assq 'direct-message-recipient twindrill-edit-mode-info)))
+	 (tweet-type (cdr (assq 'tweet-type twindrill-edit-mode-info))))
     (cond
      ((string-match "\\` *\\'" status)
       (message "Empty tweet!"))
-     ((< 140 (twittering-effective-length status))
+     ((< 140 (twindrill-effective-length status))
       (message "Tweet is too long!"))
      ((cond
        ((and (eq tweet-type 'reply)
@@ -11055,78 +11058,78 @@ Pairs of a key symbol and an associated value are following:
 		   (concat "@" cited-username "\\(?:[\n\r \t]+\\)*") status)))
 	(y-or-n-p
 	 "Send this tweet without mentions as a normal tweet (not a reply)? "))
-       (twittering-request-confirmation-on-posting
+       (twindrill-request-confirmation-on-posting
 	(y-or-n-p "Send this tweet? "))
        (t
 	t))
-      (setq twittering-edit-history
-	    (cons status twittering-edit-history))
+      (setq twindrill-edit-history
+	    (cons status twindrill-edit-history))
       (cond
        ((eq tweet-type 'direct-message)
 	(if direct-message-recipient
-	    (twittering-call-api 'send-direct-message
+	    (twindrill-call-api 'send-direct-message
 				 `((username . ,direct-message-recipient)
 				   (status . ,status)))
 	  (message "No username specified")))
        ((eq tweet-type 'reply)
-	(twittering-call-api 'update-status
+	(twindrill-call-api 'update-status
 			     `((status . ,status)
 			       (in-reply-to-status-id . ,cited-id))))
        (t
-	(twittering-call-api 'update-status `((status . ,status)))))
-      (twittering-edit-close))
+	(twindrill-call-api 'update-status `((status . ,status)))))
+      (twindrill-edit-close))
      (t
       nil))))
 
-(defun twittering-edit-cancel-status ()
+(defun twindrill-edit-cancel-status ()
   (interactive)
   (when (or (not (buffer-modified-p))
 	    (prog1 (if (y-or-n-p "Cancel this tweet? ")
 		       (message "Request canceled")
 		     (message nil))))
-    (twittering-edit-close)))
+    (twindrill-edit-close)))
 
-(defun twittering-edit-next-history ()
+(defun twindrill-edit-next-history ()
   (interactive)
-  (if (>= 0 twittering-edit-local-history-idx)
+  (if (>= 0 twindrill-edit-local-history-idx)
       (message "End of history.")
-    (let ((current-history (nthcdr twittering-edit-local-history-idx
-				   twittering-edit-local-history)))
-      (setcar current-history (twittering-edit-extract-status))
-      (decf twittering-edit-local-history-idx)
-      (twittering-edit-reset-status (nth twittering-edit-local-history-idx
-					 twittering-edit-local-history)))))
+    (let ((current-history (nthcdr twindrill-edit-local-history-idx
+				   twindrill-edit-local-history)))
+      (setcar current-history (twindrill-edit-extract-status))
+      (decf twindrill-edit-local-history-idx)
+      (twindrill-edit-reset-status (nth twindrill-edit-local-history-idx
+					 twindrill-edit-local-history)))))
 
-(defun twittering-edit-previous-history ()
+(defun twindrill-edit-previous-history ()
   (interactive)
-  (if (>= twittering-edit-local-history-idx
-	  (- (length twittering-edit-local-history) 1))
+  (if (>= twindrill-edit-local-history-idx
+	  (- (length twindrill-edit-local-history) 1))
       (message "Beginning of history.")
-    (let ((current-history (nthcdr twittering-edit-local-history-idx
-				   twittering-edit-local-history)))
-      (setcar current-history (twittering-edit-extract-status))
-      (incf twittering-edit-local-history-idx)
-      (twittering-edit-reset-status (nth twittering-edit-local-history-idx
-					 twittering-edit-local-history)))))
+    (let ((current-history (nthcdr twindrill-edit-local-history-idx
+				   twindrill-edit-local-history)))
+      (setcar current-history (twindrill-edit-extract-status))
+      (incf twindrill-edit-local-history-idx)
+      (twindrill-edit-reset-status (nth twindrill-edit-local-history-idx
+					 twindrill-edit-local-history)))))
 
-(defun twittering-edit-replace-at-point ()
+(defun twindrill-edit-replace-at-point ()
   (interactive)
-  (when (eq major-mode 'twittering-edit-mode)
-    (twittering-tinyurl-replace-at-point)
-    (twittering-edit-length-check)))
+  (when (eq major-mode 'twindrill-edit-mode)
+    (twindrill-tinyurl-replace-at-point)
+    (twindrill-edit-length-check)))
 
-(defun twittering-edit-toggle-reply ()
+(defun twindrill-edit-toggle-reply ()
   "Toggle whether the tweet being edited will be sent as a reply or not."
   (interactive)
-  (let ((tweet-type (cdr (assq 'tweet-type twittering-edit-mode-info)))
-	(cited-id (cdr (assq 'cited-id twittering-edit-mode-info))))
+  (let ((tweet-type (cdr (assq 'tweet-type twindrill-edit-mode-info)))
+	(cited-id (cdr (assq 'cited-id twindrill-edit-mode-info))))
     (cond
      ((eq tweet-type 'direct-message)
       (message "The current message is a direct message."))
      ((null cited-id)
       (message "The current message does not have a reply target."))
      (t
-      (setq twittering-edit-mode-info
+      (setq twindrill-edit-mode-info
 	    (mapcar (lambda (entry)
 		      (if (eq (car entry) 'tweet-type)
 			  `(tweet-type
@@ -11134,20 +11137,20 @@ Pairs of a key symbol and an associated value are following:
 					  '((normal . reply)
 					    (reply . normal)))))
 			entry))
-		    twittering-edit-mode-info))
-      (twittering-edit-setup-help)))))
+		    twindrill-edit-mode-info))
+      (twindrill-edit-setup-help)))))
 
 ;;;;
 ;;;; Edit a status on minibuffer
 ;;;;
 
-(defun twittering-show-minibuffer-length (&optional beg end len)
+(defun twindrill-show-minibuffer-length (&optional beg end len)
   "Show the number of characters in minibuffer."
   (when (minibuffer-window-active-p (selected-window))
     (if (and transient-mark-mode deactivate-mark)
 	(deactivate-mark))
     (let* ((deactivate-mark deactivate-mark)
-	   (status-len (- (twittering-effective-length (buffer-string))
+	   (status-len (- (twindrill-effective-length (buffer-string))
 			  (minibuffer-prompt-width)))
 	   (mes (format "%d" status-len)))
       (if (<= 23 emacs-major-version)
@@ -11155,13 +11158,13 @@ Pairs of a key symbol and an associated value are following:
 	(minibuffer-message (concat " (" mes ")")))
       )))
 
-(defun twittering-setup-minibuffer ()
-  (add-hook 'post-command-hook 'twittering-show-minibuffer-length t t))
+(defun twindrill-setup-minibuffer ()
+  (add-hook 'post-command-hook 'twindrill-show-minibuffer-length t t))
 
-(defun twittering-finish-minibuffer ()
-  (remove-hook 'post-command-hook 'twittering-show-minibuffer-length t))
+(defun twindrill-finish-minibuffer ()
+  (remove-hook 'post-command-hook 'twindrill-show-minibuffer-length t))
 
-(defun twittering-status-not-blank-p (status)
+(defun twindrill-status-not-blank-p (status)
   (let ((coding-system-for-read 'binary)
 	(coding-system-for-write 'binary))
     (with-temp-buffer
@@ -11171,12 +11174,12 @@ Pairs of a key symbol and an associated value are following:
       (re-search-forward "\\`[[:space:]]*@[a-zA-Z0-9_-]+\\([[:space:]]+@[a-zA-Z0-9_-]+\\)*" nil t)
       (re-search-forward "[^[:space:]]" nil t))))
 
-(defun twittering-update-status-from-minibuffer (&optional init-string-or-skeleton reply-to-id username tweet-type current-spec)
+(defun twindrill-update-status-from-minibuffer (&optional init-string-or-skeleton reply-to-id username tweet-type current-spec)
   (and (not (eq tweet-type 'direct-message))
        (null init-string-or-skeleton)
-       twittering-current-hashtag
+       twindrill-current-hashtag
        (setq init-string-or-skeleton
-	     (format " #%s " twittering-current-hashtag)))
+	     (format " #%s " twindrill-current-hashtag)))
   (let ((status
 	 (with-temp-buffer
 	   (when init-string-or-skeleton
@@ -11186,29 +11189,29 @@ Pairs of a key symbol and an associated value are following:
 	       (insert init-string-or-skeleton))
 	      ((listp init-string-or-skeleton)
 	       (skeleton-insert init-string-or-skeleton))))
-	   (twittering-edit-skeleton-insert tweet-type reply-to-id
+	   (twindrill-edit-skeleton-insert tweet-type reply-to-id
 					    current-spec)
 	   `(,(buffer-string) . ,(point))))
 	(not-posted-p t)
 	(prompt "status: ")
 	(map minibuffer-local-map)
 	(minibuffer-message-timeout nil))
-    (define-key map (kbd "<f4>") 'twittering-tinyurl-replace-at-point)
-    (when twittering-use-show-minibuffer-length
-      (add-hook 'minibuffer-setup-hook 'twittering-setup-minibuffer t)
-      (add-hook 'minibuffer-exit-hook 'twittering-finish-minibuffer t))
+    (define-key map (kbd "<f4>") 'twindrill-tinyurl-replace-at-point)
+    (when twindrill-use-show-minibuffer-length
+      (add-hook 'minibuffer-setup-hook 'twindrill-setup-minibuffer t)
+      (add-hook 'minibuffer-exit-hook 'twindrill-finish-minibuffer t))
     (unwind-protect
 	(while not-posted-p
-	  (setq status (read-from-minibuffer prompt status map nil 'twittering-tweet-history nil t))
+	  (setq status (read-from-minibuffer prompt status map nil 'twindrill-tweet-history nil t))
 	  (let ((status status))
-	    (if (< 140 (twittering-effective-length status))
+	    (if (< 140 (twindrill-effective-length status))
 		(setq prompt "status (too long): ")
 	      (setq prompt "status: ")
-	      (when (twittering-status-not-blank-p status)
+	      (when (twindrill-status-not-blank-p status)
 		(cond
 		 ((eq tweet-type 'direct-message)
 		  (if username
-		      (twittering-call-api 'send-direct-message
+		      (twindrill-call-api 'send-direct-message
 					   `((username . ,username)
 					     (status . ,status)))
 		    (message "No username specified")))
@@ -11223,7 +11226,7 @@ Pairs of a key symbol and an associated value are following:
 			       status))))
 		    ;; Add in_reply_to_status_id only when a posting
 		    ;; status begins with @username.
-		    (twittering-call-api
+		    (twindrill-call-api
 		     'update-status
 		     `((status . ,status)
 		       ,@(when as-reply
@@ -11233,19 +11236,19 @@ Pairs of a key symbol and an associated value are following:
 		(setq not-posted-p nil))
 	      )))
       ;; unwindforms
-      (when (memq 'twittering-setup-minibuffer minibuffer-setup-hook)
-	(remove-hook 'minibuffer-setup-hook 'twittering-setup-minibuffer))
-      (when (memq 'twittering-finish-minibuffer minibuffer-exit-hook)
-	(remove-hook 'minibuffer-exit-hook 'twittering-finish-minibuffer))
+      (when (memq 'twindrill-setup-minibuffer minibuffer-setup-hook)
+	(remove-hook 'minibuffer-setup-hook 'twindrill-setup-minibuffer))
+      (when (memq 'twindrill-finish-minibuffer minibuffer-exit-hook)
+	(remove-hook 'minibuffer-exit-hook 'twindrill-finish-minibuffer))
       )))
 
 ;;;;
 ;;;; Reading username/listname with completion
 ;;;;
 
-(defun twittering-get-usernames-from-timeline (&optional timeline-data)
-  (let ((timeline-data (or timeline-data (twittering-current-timeline-data))))
-    (twittering-remove-duplicates
+(defun twindrill-get-usernames-from-timeline (&optional timeline-data)
+  (let ((timeline-data (or timeline-data (twindrill-current-timeline-data))))
+    (twindrill-remove-duplicates
      (mapcar
       (lambda (status)
 	(let* ((base-str (cdr (assq 'user-screen-name status)))
@@ -11257,43 +11260,43 @@ Pairs of a key symbol and an associated value are following:
 	  copied-str))
       timeline-data))))
 
-(defun twittering-read-username-with-completion (prompt init-user &optional history)
-  (let ((collection (append twittering-user-history
-			    (twittering-get-usernames-from-timeline))))
-    (twittering-completing-read prompt collection nil nil init-user history)))
+(defun twindrill-read-username-with-completion (prompt init-user &optional history)
+  (let ((collection (append twindrill-user-history
+			    (twindrill-get-usernames-from-timeline))))
+    (twindrill-completing-read prompt collection nil nil init-user history)))
 
-(defun twittering-read-list-name (username &optional list-index)
+(defun twindrill-read-list-name (username &optional list-index)
   (let* ((list-index (or list-index
-			 (twittering-get-list-index-sync username)))
+			 (twindrill-get-list-index-sync username)))
 	 (username (prog1 (copy-sequence username)
 		     (set-text-properties 0 (length username) nil username)))
 	 (prompt (format "%s's list: " username))
 	 (listname
 	  (if list-index
-	      (twittering-completing-read prompt list-index nil t nil)
+	      (twindrill-completing-read prompt list-index nil t nil)
 	    nil)))
     (if (string= "" listname)
 	nil
       listname)))
 
-(defun twittering-read-subscription-list-name (username &optional list-index)
+(defun twindrill-read-subscription-list-name (username &optional list-index)
   (let* ((list-index (or list-index
-			 (twittering-get-list-subscriptions-sync username)))
+			 (twindrill-get-list-subscriptions-sync username)))
 	 (username (prog1 (copy-sequence username)
 		     (set-text-properties 0 (length username) nil username)))
 	 (prompt (format "%s's subscription: " username))
 	 (listname
 	  (if list-index
-	      (twittering-completing-read prompt list-index nil t nil)
+	      (twindrill-completing-read prompt list-index nil t nil)
 	    nil)))
     (if (string= "" listname)
 	nil
       listname)))
 
-(defun twittering-read-timeline-spec-with-completion (prompt initial &optional as-string)
+(defun twindrill-read-timeline-spec-with-completion (prompt initial &optional as-string)
   (let* ((dummy-hist
-	  (append twittering-timeline-history
-		  (twittering-get-usernames-from-timeline)
+	  (append twindrill-timeline-history
+		  (twindrill-get-usernames-from-timeline)
 		  '(":direct_messages" ":direct_messages_sent"
 		    ":favorites" ":friends"
 		    ":home" ":mentions" ":public" ":replies"
@@ -11302,7 +11305,7 @@ Pairs of a key symbol and an associated value are following:
 		    ":retweets_of_me")
 		  (mapcar (lambda (cell)
 			    (concat "$" (car cell) (if (listp (cdr cell)) "()" "")))
-			  twittering-timeline-spec-alias)))
+			  twindrill-timeline-spec-alias)))
 	 (spec-with-username
 	  '((":favorites/" . "Whose favorites: ")
 	    (":retweeted_by_user/" . "Who has retweeted? ")
@@ -11312,7 +11315,7 @@ Pairs of a key symbol and an associated value are following:
 		  (mapconcat (lambda (entry) (car entry))
 			     spec-with-username "\\|")
 		  "\\)\\'"))
-	 (spec-string (twittering-completing-read prompt dummy-hist
+	 (spec-string (twindrill-completing-read prompt dummy-hist
 						  nil nil initial 'dummy-hist))
 	 (spec-string
 	  (cond
@@ -11323,18 +11326,18 @@ Pairs of a key symbol and an associated value are following:
 		   (prefix (car spec-and-prompt))
 		   (prompt (cdr spec-and-prompt))
 		   (username
-		    (twittering-read-username-with-completion
+		    (twindrill-read-username-with-completion
 		     prompt ""
-		     'twittering-user-history)))
+		     'twindrill-user-history)))
 	      (if username
 		  (concat prefix username)
 		nil)))
 	   ((string-match "^\\([a-zA-Z0-9_-]+\\)/$" spec-string)
 	    (let* ((username (match-string 1 spec-string))
-		   (list-index (twittering-get-list-index-sync username))
+		   (list-index (twindrill-get-list-index-sync username))
 		   (listname
 		    (if list-index
-			(twittering-read-list-name username list-index)
+			(twindrill-read-list-name username list-index)
 		      nil)))
 	      (if listname
 		  (concat username "/" listname)
@@ -11343,7 +11346,7 @@ Pairs of a key symbol and an associated value are following:
 	    spec-string)))
 	 (spec (if (stringp spec-string)
 		   (condition-case error-str
-		       (twittering-string-to-timeline-spec spec-string)
+		       (twindrill-string-to-timeline-spec spec-string)
 		     (error
 		      (message "Invalid timeline spec: %s" error-str)
 		      nil))
@@ -11366,48 +11369,48 @@ Pairs of a key symbol and an associated value are following:
 ;;;;
 
 ;;;; Commands for changing modes
-(defun twittering-jojo-mode (&optional arg)
+(defun twindrill-jojo-mode (&optional arg)
   (interactive "P")
-  (let ((prev-mode twittering-jojo-mode))
-    (setq twittering-jojo-mode
+  (let ((prev-mode twindrill-jojo-mode))
+    (setq twindrill-jojo-mode
 	  (if (null arg)
-	      (not twittering-jojo-mode)
+	      (not twindrill-jojo-mode)
 	    (< 0 (prefix-numeric-value arg))))
-    (unless (eq prev-mode twittering-jojo-mode)
-      (twittering-update-mode-line))))
+    (unless (eq prev-mode twindrill-jojo-mode)
+      (twindrill-update-mode-line))))
 
-(defun twittering-toggle-reverse-mode (&optional arg)
+(defun twindrill-toggle-reverse-mode (&optional arg)
   (interactive "P")
-  (let ((prev-mode twittering-reverse-mode))
-    (setq twittering-reverse-mode
+  (let ((prev-mode twindrill-reverse-mode))
+    (setq twindrill-reverse-mode
 	  (if (null arg)
-	      (not twittering-reverse-mode)
+	      (not twindrill-reverse-mode)
 	    (< 0 (prefix-numeric-value arg))))
-    (unless (eq prev-mode twittering-reverse-mode)
-      (twittering-update-mode-line)
-      (twittering-rerender-timeline-all (current-buffer)))))
+    (unless (eq prev-mode twindrill-reverse-mode)
+      (twindrill-update-mode-line)
+      (twindrill-rerender-timeline-all (current-buffer)))))
 
-(defun twittering-set-current-hashtag (&optional tag)
+(defun twindrill-set-current-hashtag (&optional tag)
   (interactive)
   (unless tag
-    (setq tag (twittering-completing-read "hashtag (blank to clear): #"
-					  twittering-hashtag-history
+    (setq tag (twindrill-completing-read "hashtag (blank to clear): #"
+					  twindrill-hashtag-history
 					  nil nil
-					  twittering-current-hashtag
-					  'twittering-hashtag-history))
+					  twindrill-current-hashtag
+					  'twindrill-hashtag-history))
     (message
      (if (eq 0 (length tag))
-	 (progn (setq twittering-current-hashtag nil)
+	 (progn (setq twindrill-current-hashtag nil)
 		"Current hashtag is not set.")
        (progn
-	 (setq twittering-current-hashtag tag)
-	 (format "Current hashtag is #%s" twittering-current-hashtag))))))
+	 (setq twindrill-current-hashtag tag)
+	 (format "Current hashtag is #%s" twindrill-current-hashtag))))))
 
 ;;;; Commands for switching buffers
-(defun twittering-switch-to-next-timeline ()
+(defun twindrill-switch-to-next-timeline ()
   (interactive)
-  (when (twittering-buffer-p)
-    (let* ((buffer-list (twittering-get-buffer-list))
+  (when (twindrill-buffer-p)
+    (let* ((buffer-list (twindrill-get-buffer-list))
 	   (following-buffers (cdr (memq (current-buffer) buffer-list)))
 	   (next (if following-buffers
 		     (car following-buffers)
@@ -11415,10 +11418,10 @@ Pairs of a key symbol and an associated value are following:
       (unless (eq (current-buffer) next)
 	(switch-to-buffer next)))))
 
-(defun twittering-switch-to-previous-timeline ()
+(defun twindrill-switch-to-previous-timeline ()
   (interactive)
-  (when (twittering-buffer-p)
-    (let* ((buffer-list (reverse (twittering-get-buffer-list)))
+  (when (twindrill-buffer-p)
+    (let* ((buffer-list (reverse (twindrill-get-buffer-list)))
 	   (preceding-buffers (cdr (memq (current-buffer) buffer-list)))
 	   (previous (if preceding-buffers
 			 (car preceding-buffers)
@@ -11427,48 +11430,48 @@ Pairs of a key symbol and an associated value are following:
 	(switch-to-buffer previous)))))
 
 ;;;; Commands for visiting a timeline
-(defun twittering-visit-timeline (&optional timeline-spec initial)
+(defun twindrill-visit-timeline (&optional timeline-spec initial)
   (interactive)
   (cond
-   ((twittering-ensure-preparation-for-api-invocation)
+   ((twindrill-ensure-preparation-for-api-invocation)
     (let ((timeline-spec
 	   (or timeline-spec
-	       (twittering-read-timeline-spec-with-completion
+	       (twindrill-read-timeline-spec-with-completion
 		"timeline: " initial t))))
       (when timeline-spec
-	(switch-to-buffer (twittering-get-managed-buffer timeline-spec)))))
+	(switch-to-buffer (twindrill-get-managed-buffer timeline-spec)))))
    (t
     nil)))
 
-(defun twittering-friends-timeline ()
+(defun twindrill-friends-timeline ()
   (interactive)
-  (twittering-visit-timeline '(friends)))
+  (twindrill-visit-timeline '(friends)))
 
-(defun twittering-home-timeline ()
+(defun twindrill-home-timeline ()
   (interactive)
-  (twittering-visit-timeline '(home)))
+  (twindrill-visit-timeline '(home)))
 
-(defun twittering-replies-timeline ()
+(defun twindrill-replies-timeline ()
   (interactive)
-  (twittering-visit-timeline '(replies)))
+  (twindrill-visit-timeline '(replies)))
 
-(defun twittering-public-timeline ()
+(defun twindrill-public-timeline ()
   (interactive)
-  (twittering-visit-timeline '(public)))
+  (twindrill-visit-timeline '(public)))
 
-(defun twittering-user-timeline ()
+(defun twindrill-user-timeline ()
   (interactive)
-  (twittering-visit-timeline `(user ,(twittering-get-username))))
+  (twindrill-visit-timeline `(user ,(twindrill-get-username))))
 
-(defun twittering-direct-messages-timeline ()
+(defun twindrill-direct-messages-timeline ()
   (interactive)
-  (twittering-visit-timeline '(direct_messages)))
+  (twindrill-visit-timeline '(direct_messages)))
 
-(defun twittering-sent-direct-messages-timeline ()
+(defun twindrill-sent-direct-messages-timeline ()
   (interactive)
-  (twittering-visit-timeline '(direct_messages_sent)))
+  (twindrill-visit-timeline '(direct_messages_sent)))
 
-(defun twittering-other-user-timeline ()
+(defun twindrill-other-user-timeline ()
   (interactive)
   (let* ((username (get-text-property (point) 'username))
 	 (goto-spec (get-text-property (point) 'goto-spec))
@@ -11477,43 +11480,43 @@ Pairs of a key symbol and an associated value are following:
 	 (uri (or (get-text-property (point) 'expanded-uri)
 		  (get-text-property (point) 'uri)))
 	 (mentioned-id (when uri
-			 (twittering-extract-id-from-url uri)))
+			 (twindrill-extract-id-from-url uri)))
 	 (spec (cond (goto-spec goto-spec)
 		     (screen-name-in-text `(user ,screen-name-in-text))
 		     (mentioned-id `(single ,mentioned-id))
 		     (username `(user ,username))
 		     (t nil))))
     (if spec
-	(twittering-visit-timeline spec)
+	(twindrill-visit-timeline spec)
       (message "No user selected"))))
 
-(defun twittering-other-user-timeline-interactive ()
+(defun twindrill-other-user-timeline-interactive ()
   (interactive)
-  (let ((username (or (twittering-read-username-with-completion
+  (let ((username (or (twindrill-read-username-with-completion
 		       "user: " nil
-		       'twittering-user-history)
+		       'twindrill-user-history)
 		      "")))
     (if (string= "" username)
 	(message "No user selected")
-      (twittering-visit-timeline `(user ,username)))))
+      (twindrill-visit-timeline `(user ,username)))))
 
-(defun twittering-other-user-list-interactive (&optional subscriptions)
+(defun twindrill-other-user-list-interactive (&optional subscriptions)
   (interactive "P")
   (let* ((username (copy-sequence (get-text-property (point) 'username)))
 	 (username (progn
 		     (set-text-properties 0 (length username) nil username)
-		     (or (twittering-read-username-with-completion
+		     (or (twindrill-read-username-with-completion
 			  (if subscriptions
 			      "Whose subscription: "
 			    "Whose list: ")
 			  username
-			  'twittering-user-history)
+			  'twindrill-user-history)
 			 ""))))
     (if (string= "" username)
 	(message "No user selected")
       (let* ((list-name (if subscriptions
-			    (twittering-read-subscription-list-name username)
-			  (twittering-read-list-name username)))
+			    (twindrill-read-subscription-list-name username)
+			  (twindrill-read-list-name username)))
 	     (spec (cond
 		    ((null list-name)
 		     nil)
@@ -11524,57 +11527,57 @@ Pairs of a key symbol and an associated value are following:
 		    (t
 		     `(list ,username ,list-name)))))
 	(if spec
-	    (twittering-visit-timeline spec)
+	    (twindrill-visit-timeline spec)
 	  ;; Don't show message here to prevent an overwrite of a
-	  ;; message which is outputted by `twittering-read-list-name'.
+	  ;; message which is outputted by `twindrill-read-list-name'.
 	  )))))
 
-(defun twittering-search (&optional word)
+(defun twindrill-search (&optional word)
   (interactive)
   (let ((word (or word
 		  (read-from-minibuffer "search: " nil nil nil
-					'twittering-search-history nil t)
+					'twindrill-search-history nil t)
 		  "")))
     (if (string= "" word)
 	(message "No query string")
       (let ((spec `(search ,word)))
-	(twittering-visit-timeline spec)))))
+	(twindrill-visit-timeline spec)))))
 
 ;;;; Commands for retrieving statuses
 
-(defun twittering-current-timeline-noninteractive ()
-  (twittering-current-timeline t))
+(defun twindrill-current-timeline-noninteractive ()
+  (twindrill-current-timeline t))
 
-(defun twittering-current-timeline (&optional noninteractive)
+(defun twindrill-current-timeline (&optional noninteractive)
   (interactive)
-  (when (twittering-buffer-p)
-    (let ((spec-string (twittering-current-timeline-spec-string)))
-      (twittering-get-and-render-timeline noninteractive))))
+  (when (twindrill-buffer-p)
+    (let ((spec-string (twindrill-current-timeline-spec-string)))
+      (twindrill-get-and-render-timeline noninteractive))))
 
-(defun twittering-get-tweets-within-specific-time-range (time-beg time-end)
+(defun twindrill-get-tweets-within-specific-time-range (time-beg time-end)
   "Get tweets within a time range between TIME-BEG and TIME-END.
 TIME-BEG and TIME-END must be nil or an internal representation of time as
 same as the returned value of `current-time'."
   (let* ((since_id (when time-beg
-		     (twittering-time-to-id time-beg)))
+		     (twindrill-time-to-id time-beg)))
 	 (max_id (when time-end
-		   (twittering-time-to-id time-end)))
-	 (spec-string (twittering-current-timeline-spec-string))
+		   (twindrill-time-to-id time-end)))
+	 (spec-string (twindrill-current-timeline-spec-string))
 	 (noninteractive t)
 	 (args
 	  `(,@(cond
 	       (max_id `((max_id . ,max_id)))
 	       (since_id `((since_id . ,since_id)))
 	       (t nil)))))
-    (twittering-retrieve-timeline spec-string noninteractive args nil)))
+    (twindrill-retrieve-timeline spec-string noninteractive args nil)))
 
-(defun twittering-get-tweets-before (&optional before-str)
+(defun twindrill-get-tweets-before (&optional before-str)
   (interactive)
   (let* ((id (when (null before-str)
-	       (twittering-get-id-at)))
+	       (twindrill-get-id-at)))
 	 (init-str
 	  (when id
-	    (let* ((status (twittering-find-status id))
+	    (let* ((status (twindrill-find-status id))
 		   (init-time
 		    (or (cdr (assq 'retweeting-created-at status))
 			(cdr (assq 'created-at status)))))
@@ -11584,12 +11587,12 @@ same as the returned value of `current-time'."
 	      (read-string "before [YYYY-MM-DD [HH:MM:SS]]: " init-str)))
 	 (time-beg nil)
 	 (time-end
-	  (apply 'encode-time (twittering-parse-time-string before-str t))))
-    (twittering-get-tweets-within-specific-time-range time-beg time-end)))
+	  (apply 'encode-time (twindrill-parse-time-string before-str t))))
+    (twindrill-get-tweets-within-specific-time-range time-beg time-end)))
 
 ;;;; Commands for posting a status
 
-(defun twittering-update-status (&optional init-string-or-skeleton reply-to-id username tweet-type ignore-current-spec)
+(defun twindrill-update-status (&optional init-string-or-skeleton reply-to-id username tweet-type ignore-current-spec)
   "Post a tweet.
 The first argument INIT-STRING-OR-SKELETON is nil, an initial text or a
 skeleton to be inserted with `skeleton-insert'.
@@ -11600,39 +11603,39 @@ be one of 'direct-message, 'normal, 'organic-retweet and 'reply.
 If TWEET-TYPE is nil, it is equivalent to 'normal, which means that a tweet
 is edited as a normal tweet.
 If IGNORE-CURRENT-SPEC is non-nil, the timeline spec of the current buffer
-is sent to the function specified by `twittering-update-status-function'.
+is sent to the function specified by `twindrill-update-status-function'.
 
-How to edit a tweet is determined by `twittering-update-status-funcion'."
+How to edit a tweet is determined by `twindrill-update-status-funcion'."
   (let ((current-spec (unless ignore-current-spec
-			(twittering-current-timeline-spec)))
+			(twindrill-current-timeline-spec)))
 	(tweet-type (or tweet-type 'normal)))
-    (funcall twittering-update-status-function init-string-or-skeleton
+    (funcall twindrill-update-status-function init-string-or-skeleton
 	     reply-to-id username
 	     tweet-type current-spec)))
 
-(defun twittering-update-status-interactive ()
+(defun twindrill-update-status-interactive ()
   (interactive)
-  (twittering-update-status))
+  (twindrill-update-status))
 
-(defun twittering-update-lambda ()
+(defun twindrill-update-lambda ()
   (interactive)
   (when (and (string= "Japanese" current-language-environment)
 	     (or (< 21 emacs-major-version)
 		 (eq 'utf-8 (terminal-coding-system))))
     (let ((text (mapconcat
 		 'char-to-string
-		 (mapcar 'twittering-ucs-to-char
+		 (mapcar 'twindrill-ucs-to-char
 			 '(955 12363 12431 12356 12356 12424 955)) "")))
-      (twittering-call-api 'update-status `((status . ,text))))))
+      (twindrill-call-api 'update-status `((status . ,text))))))
 
-(defun twittering-post-predicted-message-like-jojo (status)
+(defun twindrill-post-predicted-message-like-jojo (status)
   (let ((screen-name (cdr (assq 'user-screen-name status)))
 	(text (cdr (assq 'text status))))
-    (when (and (not (string= screen-name (twittering-get-username)))
+    (when (and (not (string= screen-name (twindrill-get-username)))
 	       (string-match
 		(mapconcat 'char-to-string
 			   (mapcar
-			    'twittering-ucs-to-char
+			    'twindrill-ucs-to-char
 			    '(#x6b21 #x306b #x005c #x0028 #x304a #x524d
 				     #x005c #x007c #x8cb4 #x69d8 #x005c #x0029
 				     #x306f #x300c #x005c #x0028 #x005b #x005e
@@ -11644,42 +11647,42 @@ How to edit a tweet is determined by `twittering-update-status-funcion'."
 	     (concat "@" screen-name " "
 		     (match-string-no-properties 2 text)
 		     (mapconcat 'char-to-string
-				(mapcar 'twittering-ucs-to-char
+				(mapcar 'twindrill-ucs-to-char
 					'(#x3000 #x306f #x3063 #x0021 #x003f))
 				""))))
-	(twittering-call-api 'update-status `((status . ,text)))))))
+	(twindrill-call-api 'update-status `((status . ,text)))))))
 
-(defun twittering-jojo-mode-hook-function ()
-  (when (and twittering-jojo-mode
+(defun twindrill-jojo-mode-hook-function ()
+  (when (and twindrill-jojo-mode
 	     (string= "Japanese" current-language-environment)
 	     (or (< 21 emacs-major-version)
 		 (eq 'utf-8 (terminal-coding-system))))
-    (mapcar 'twittering-post-predicted-message-like-jojo
-	    twittering-rendered-new-tweets)))
+    (mapcar 'twindrill-post-predicted-message-like-jojo
+	    twindrill-rendered-new-tweets)))
 
-(defun twittering-direct-message ()
+(defun twindrill-direct-message ()
   (interactive)
-  (let ((username (twittering-read-username-with-completion
+  (let ((username (twindrill-read-username-with-completion
 		   "Who would you like to receive the DM? "
 		   (get-text-property (point) 'username)
-		   'twittering-user-history)))
+		   'twindrill-user-history)))
     (if (string= "" username)
 	(message "No user selected")
-      (twittering-update-status nil nil username 'direct-message))))
+      (twindrill-update-status nil nil username 'direct-message))))
 
-(defun twittering-reply-to-user ()
+(defun twindrill-reply-to-user ()
   (interactive)
   (let ((username (get-text-property (point) 'username)))
     (if username
-	(twittering-update-status (concat "@" username " "))
+	(twindrill-update-status (concat "@" username " "))
       (message "No user selected"))))
 
 ;;;; Command for deleting a status
 
-(defun twittering-delete-status (&optional id)
+(defun twindrill-delete-status (&optional id)
   (interactive)
-  (let* ((id (twittering-get-id-at))
-	 (status (twittering-find-status id))
+  (let* ((id (twindrill-get-id-at))
+	 (status (twindrill-find-status id))
 	 (is-retweet (assq 'retweeted-id status))
 	 (username (if is-retweet
 		       (cdr (assq 'retweeting-user-screen-name status))
@@ -11700,41 +11703,41 @@ How to edit a tweet is determined by `twittering-update-status-funcion'."
 			   "...")
 			text))))
     (cond
-     ((not (string= username (twittering-get-username)))
+     ((not (string= username (twindrill-get-username)))
       (message "The status is not yours!"))
      ((not id)
       (message "No status selected"))
      ((y-or-n-p mes)
-      (twittering-call-api 'destroy-status `((id . ,id))))
+      (twindrill-call-api 'destroy-status `((id . ,id))))
      (t
       (message "Request canceled")))))
 
 ;;;; Commands for retweet
 
-(defun twittering-retweet (&optional arg)
+(defun twindrill-retweet (&optional arg)
   (interactive "P")
   (let ((use-native-retweet-flag (if arg
-				     (not twittering-use-native-retweet)
-				   twittering-use-native-retweet)))
+				     (not twindrill-use-native-retweet)
+				   twindrill-use-native-retweet)))
     (if use-native-retweet-flag
-	(twittering-native-retweet)
-      (twittering-organic-retweet))))
+	(twindrill-native-retweet)
+      (twindrill-organic-retweet))))
 
-(defun twittering-organic-retweet ()
+(defun twindrill-organic-retweet ()
   (interactive)
-  (let* ((id (twittering-get-id-at))
-	 (status (twittering-find-status id))
+  (let* ((id (twindrill-get-id-at))
+	 (status (twindrill-find-status id))
 	 (username (cdr (assq 'user-screen-name status)))
 	 (text (cdr (assq 'text status)))
 	 (retweet-time (current-time))
 	 (skeleton-with-format-string
 	  (cond
-	   ((null twittering-retweet-format)
+	   ((null twindrill-retweet-format)
 	    '(nil _ " RT: %t (via @%s)"))
-	   ((stringp twittering-retweet-format)
-	    `(nil ,twittering-retweet-format _))
-	   ((listp twittering-retweet-format)
-	    twittering-retweet-format)
+	   ((stringp twindrill-retweet-format)
+	    `(nil ,twindrill-retweet-format _))
+	   ((listp twindrill-retweet-format)
+	    twindrill-retweet-format)
 	   (t
 	    nil))))
     (cond
@@ -11747,7 +11750,7 @@ How to edit a tweet is determined by `twittering-update-status-funcion'."
 	       ("s" . ,username)
 	       ("t" . ,text)
 	       ("#" . ,id)
-	       ("u" . ,(twittering-get-status-url-from-alist status))
+	       ("u" . ,(twindrill-get-status-url-from-alist status))
 	       ("C{\\([^}]*\\)}" .
 		(lambda (context)
 		  (let ((str (cdr (assq 'following-string context)))
@@ -11756,16 +11759,16 @@ How to edit a tweet is determined by `twittering-update-status-funcion'."
 		    (format-time-string (match-string 1 str) ',retweet-time))))
 	       ))
 	    )
-	(twittering-update-status
+	(twindrill-update-status
 	 (mapcar (lambda (element)
 		   (if (stringp element)
-		       (twittering-format-string element prefix replace-table)
+		       (twindrill-format-string element prefix replace-table)
 		     element))
 		 skeleton-with-format-string)
 	 id nil 'organic-retweet)
 	)))))
 
-(defun twittering-native-retweet ()
+(defun twindrill-native-retweet ()
   (interactive)
   (let ((id (get-text-property (point) 'id))
 	(text (copy-sequence (get-text-property (point) 'text)))
@@ -11778,7 +11781,7 @@ How to edit a tweet is determined by `twittering-update-status-funcion'."
 		    )))
     (set-text-properties 0 (length text) nil text)
     (if id
-	(if (not (string= user twittering-username))
+	(if (not (string= user twindrill-username))
 	    (let ((mes (format "Retweet \"%s\"? "
 			       (if (< width (string-width text))
 				   (concat
@@ -11786,27 +11789,27 @@ How to edit a tweet is determined by `twittering-update-status-funcion'."
 				    "...")
 				 text))))
 	      (if (y-or-n-p mes)
-		  (twittering-call-api 'retweet `((id . ,id)))
+		  (twindrill-call-api 'retweet `((id . ,id)))
 		(message "Request canceled")))
 	  (message "Cannot retweet your own tweet"))
       (message "No status selected"))))
 
 ;;;; Commands for browsing information related to a status
 
-(defun twittering-click ()
+(defun twindrill-click ()
   (interactive)
   (let ((uri (get-text-property (point) 'uri)))
     (if uri
 	(browse-url uri))))
 
-(defun twittering-enter ()
+(defun twindrill-enter ()
   (interactive)
   (let* ((username (get-text-property (point) 'username))
-	 (id (twittering-get-id-at (point)))
+	 (id (twindrill-get-id-at (point)))
 	 (uri (get-text-property (point) 'uri))
 	 (tweet-type
 	  (cond
-	   ((twittering-timeline-spec-is-direct-messages-p
+	   ((twindrill-timeline-spec-is-direct-messages-p
 	     (get-text-property (point) 'source-spec))
 	    'direct-message)
 	   (t
@@ -11818,32 +11821,32 @@ How to edit a tweet is determined by `twittering-update-status-funcion'."
 		     (or screen-name-in-text username))
 	    (concat "@" (or screen-name-in-text username) " ")))
 	 (field-id (get-text-property (point) 'field))
-	 (is-latest-end (twittering-field-id-is-timeline-latest-end field-id))
-	 (is-oldest-end (twittering-field-id-is-timeline-oldest-end field-id)))
+	 (is-latest-end (twindrill-field-id-is-timeline-latest-end field-id))
+	 (is-oldest-end (twindrill-field-id-is-timeline-oldest-end field-id)))
     (cond
      (is-latest-end
       (message "Get more of the recent timeline...")
-      (if twittering-reverse-mode
-	  (twittering-goto-last-normal-field)
-	(twittering-goto-first-normal-field))
-      (twittering-get-and-render-timeline))
+      (if twindrill-reverse-mode
+	  (twindrill-goto-last-normal-field)
+	(twindrill-goto-first-normal-field))
+      (twindrill-get-and-render-timeline))
      (is-oldest-end
-      (let* ((oldest-status (car (last (twittering-current-timeline-data))))
+      (let* ((oldest-status (car (last (twindrill-current-timeline-data))))
 	     (oldest-id (cdr (assq 'id oldest-status))))
 	(message "Get more of the previous timeline...")
-	(if twittering-reverse-mode
-	    (twittering-goto-first-normal-field)
-	  (twittering-goto-last-normal-field))
-	(twittering-get-and-render-timeline nil oldest-id)))
+	(if twindrill-reverse-mode
+	    (twindrill-goto-first-normal-field)
+	  (twindrill-goto-last-normal-field))
+	(twindrill-get-and-render-timeline nil oldest-id)))
      (screen-name-in-text
-      (twittering-update-status initial-str
+      (twindrill-update-status initial-str
 				id screen-name-in-text tweet-type))
      (uri
       (browse-url uri))
      (username
-      (twittering-update-status initial-str id username tweet-type)))))
+      (twindrill-update-status initial-str id username tweet-type)))))
 
-(defun twittering-view-user-page ()
+(defun twindrill-view-user-page ()
   (interactive)
   (let ((uri (get-text-property (point) 'uri)))
     (if uri
@@ -11853,12 +11856,12 @@ How to edit a tweet is determined by `twittering-update-status-funcion'."
 ;;;; Commands corresponding to operations on Twitter
 ;;;;
 
-(defun twittering-follow (&optional remove)
+(defun twindrill-follow (&optional remove)
   (interactive "P")
   (let* ((method (if remove 'destroy-friendships 'create-friendships))
 	 (mes (if remove "unfollow" "follow"))
-	 (id (twittering-get-id-at))
-	 (status (when id (twittering-find-status id)))
+	 (id (twindrill-get-id-at))
+	 (status (when id (twindrill-find-status id)))
 	 (username
 	  (cond
 	   ((assq 'retweeted-id status)
@@ -11872,24 +11875,24 @@ How to edit a tweet is determined by `twittering-update-status-funcion'."
 		   (prompt (format "Who do you %s? (default:%s): "
 				   mes default))
 		   (candidates (list retweeted-username retweeting-username)))
-	      (twittering-completing-read prompt candidates nil t
+	      (twindrill-completing-read prompt candidates nil t
 					  nil nil default)))
 	   (status
 	    (cdr (assq 'user-screen-name status)))
 	   (t
-	    (twittering-read-username-with-completion
-	     (format "Who do you %s? " mes) "" 'twittering-user-history)))))
+	    (twindrill-read-username-with-completion
+	     (format "Who do you %s? " mes) "" 'twindrill-user-history)))))
     (if (string= "" username)
 	(message "No user selected")
       (if (y-or-n-p (format "%s %s? " (capitalize mes) username))
-	  (twittering-call-api method `((username . ,username)))
+	  (twindrill-call-api method `((username . ,username)))
 	(message "Request canceled")))))
 
-(defun twittering-unfollow ()
+(defun twindrill-unfollow ()
   (interactive)
-  (twittering-follow t))
+  (twindrill-follow t))
 
-(defun twittering-favorite (&optional remove)
+(defun twindrill-favorite (&optional remove)
   (interactive "P")
   (let ((id (get-text-property (point) 'id))
 	(text (copy-sequence (get-text-property (point) 'text)))
@@ -11910,20 +11913,20 @@ How to edit a tweet is determined by `twittering-update-status-funcion'."
 				"...")
 			     text))))
 	  (if (y-or-n-p mes)
-	      (twittering-call-api method `((id . ,id)))
+	      (twindrill-call-api method `((id . ,id)))
 	    (message "Request canceled")))
       (message "No status selected"))))
 
-(defun twittering-unfavorite ()
+(defun twindrill-unfavorite ()
   (interactive)
-  (twittering-favorite t))
+  (twindrill-favorite t))
 
-(defun twittering-mute (&optional remove)
+(defun twindrill-mute (&optional remove)
   (interactive "P")
   (let* ((method (if remove 'unmute 'mute))
 	 (mes (if remove "unmute" "mute"))
-	 (id (twittering-get-id-at))
-	 (status (when id (twittering-find-status id)))
+	 (id (twindrill-get-id-at))
+	 (status (when id (twindrill-find-status id)))
 	 (username
 	  (cond
 	   ((assq 'retweeted-id status)
@@ -11937,28 +11940,28 @@ How to edit a tweet is determined by `twittering-update-status-funcion'."
 		   (prompt (format "Who do you %s? (default:%s): "
 				   mes default))
 		   (candidates (list retweeted-username retweeting-username)))
-	      (twittering-completing-read prompt candidates nil t
+	      (twindrill-completing-read prompt candidates nil t
 					  nil nil default)))
 	   (status
 	    (cdr (assq 'user-screen-name status)))
 	   (t
-	    (twittering-read-username-with-completion
-	     (format "Who do you %s? " mes) "" 'twittering-user-history)))))
+	    (twindrill-read-username-with-completion
+	     (format "Who do you %s? " mes) "" 'twindrill-user-history)))))
     (if (string= "" username)
 	(message "No user selected")
       (if (y-or-n-p (format "%s %s? " (capitalize mes) username))
-	  (twittering-call-api method `((username . ,username)))
+	  (twindrill-call-api method `((username . ,username)))
 	(message "Request canceled")))))
 
-(defun twittering-unmute ()
+(defun twindrill-unmute ()
   (interactive)
-  (twittering-mute t))
+  (twindrill-mute t))
 
-(defun twittering-block ()
+(defun twindrill-block ()
   "Block a user who posted the tweet at the current position."
   (interactive)
-  (let* ((id (twittering-get-id-at))
-	 (status (when id (twittering-find-status id)))
+  (let* ((id (twindrill-get-id-at))
+	 (status (when id (twindrill-find-status id)))
 	 (username
 	  (cond
 	   ((assq 'retweeted-id status)
@@ -11968,7 +11971,7 @@ How to edit a tweet is determined by `twittering-update-status-funcion'."
 		    (cdr (assq 'retweeted-user-screen-name status)))
 		   (prompt "Who do you block? ")
 		   (candidates (list retweeted-username retweeting-username)))
-	      (twittering-completing-read prompt candidates nil t)))
+	      (twindrill-completing-read prompt candidates nil t)))
 	   (status
 	    (cdr (assq 'user-screen-name status)))
 	   (t
@@ -11977,16 +11980,16 @@ How to edit a tweet is determined by `twittering-update-status-funcion'."
      ((or (null username) (string= "" username))
       (message "No user selected"))
      ((yes-or-no-p (format "Really block \"%s\"? " username))
-      (twittering-call-api 'block `((username . ,username))))
+      (twindrill-call-api 'block `((username . ,username))))
      (t
       (message "Request canceled")))))
 
-(defun twittering-block-and-report-as-spammer ()
+(defun twindrill-block-and-report-as-spammer ()
   "Report a user who posted the tweet at the current position as a spammer.
 The user is also blocked."
   (interactive)
-  (let* ((id (twittering-get-id-at))
-	 (status (when id (twittering-find-status id)))
+  (let* ((id (twindrill-get-id-at))
+	 (status (when id (twindrill-find-status id)))
 	 (username
 	  (cond
 	   ((assq 'retweeted-id status)
@@ -11996,7 +11999,7 @@ The user is also blocked."
 		    (cdr (assq 'retweeted-user-screen-name status)))
 		   (prompt "Who do you report as a spammer? ")
 		   (candidates (list retweeted-username retweeting-username)))
-	      (twittering-completing-read prompt candidates nil t)))
+	      (twindrill-completing-read prompt candidates nil t)))
 	   (status
 	    (cdr (assq 'user-screen-name status)))
 	   (t
@@ -12007,34 +12010,34 @@ The user is also blocked."
      ((yes-or-no-p
        (format "Really block \"%s\" and report him or her as a spammer? "
 	       username))
-      (twittering-call-api 'block-and-report-as-spammer
+      (twindrill-call-api 'block-and-report-as-spammer
 			   `((username . ,username))))
      (t
       (message "Request canceled")))))
 
 ;;;; Commands for clearing stored statuses.
 
-(defun twittering-erase-old-statuses ()
+(defun twindrill-erase-old-statuses ()
   (interactive)
-  (when (twittering-buffer-p)
-    (let ((spec (twittering-current-timeline-spec)))
-      (twittering-remove-timeline-data spec) ;; clear current timeline.
-      (twittering-rerender-timeline-all (current-buffer)) ;; clear buffer.
-      (twittering-get-and-render-timeline))))
+  (when (twindrill-buffer-p)
+    (let ((spec (twindrill-current-timeline-spec)))
+      (twindrill-remove-timeline-data spec) ;; clear current timeline.
+      (twindrill-rerender-timeline-all (current-buffer)) ;; clear buffer.
+      (twindrill-get-and-render-timeline))))
 
 ;;;; Cursor motion
 
-(defun twittering-get-id-at (&optional pos)
+(defun twindrill-get-id-at (&optional pos)
   "Return ID of the status at POS. If a separator is rendered at POS, return
 the ID of the status rendered before the separator. The default value of POS
 is `(point)'."
   (let ((pos (or pos (point))))
     (or (get-text-property pos 'id)
-	(let ((prev (or (twittering-get-current-status-head pos)
+	(let ((prev (or (twindrill-get-current-status-head pos)
 			(point-min))))
 	  (and prev (get-text-property prev 'id))))))
 
-(defun twittering-get-current-status-head (&optional pos)
+(defun twindrill-get-current-status-head (&optional pos)
   "Return the head position of the status at POS.
 If POS is nil, the value of point is used for POS.
 If a separator is rendered at POS, return the head of the status followed
@@ -12058,7 +12061,7 @@ Return POS if no statuses are rendered."
       ;; When `head' points to a separator, `pos' points to the head
       ;; of a status.
       pos)
-     ((not (twittering-field-id= field-id (get-text-property head 'field)))
+     ((not (twindrill-field-id= field-id (get-text-property head 'field)))
       ;; When `pos' points to the beginning of the field and it also
       ;; points to the end of the previous field, `head' points to the
       ;; head of the previous status.
@@ -12066,92 +12069,92 @@ Return POS if no statuses are rendered."
      (t
       head))))
 
-(defun twittering-goto-first-status ()
+(defun twindrill-goto-first-status ()
   "Go to the first status."
   (interactive)
-  (goto-char (or (twittering-get-first-status-head)
+  (goto-char (or (twindrill-get-first-status-head)
 		 (point-min))))
 
-(defun twittering-get-first-status-head ()
+(defun twindrill-get-first-status-head ()
   "Return the head position of the first status in the current buffer.
 Return nil if no statuses are rendered."
   (if (get-text-property (point-min) 'field)
       (point-min)
-    (twittering-get-next-status-head (point-min))))
+    (twindrill-get-next-status-head (point-min))))
 
-(defun twittering-goto-last-status ()
+(defun twindrill-goto-last-status ()
   "Go to the last status."
   (interactive)
-  (goto-char (or (twittering-get-last-status-head)
+  (goto-char (or (twindrill-get-last-status-head)
 		 (point-min))))
 
-(defun twittering-get-last-status-head ()
+(defun twindrill-get-last-status-head ()
   "Return the head position of the last status in the current buffer.
 Return nil if no statuses are rendered."
   (if (get-text-property (point-max) 'field)
       (point-max)
-    (twittering-get-previous-status-head (point-max))))
+    (twindrill-get-previous-status-head (point-max))))
 
-(defun twittering-goto-first-normal-field ()
+(defun twindrill-goto-first-normal-field ()
   "Go to the first normal field.
 A normal field is a field corresponding to a tweet."
   (interactive)
-  (goto-char (or (twittering-get-first-normal-field-head)
+  (goto-char (or (twindrill-get-first-normal-field-head)
 		 (point-min))))
 
-(defun twittering-goto-last-normal-field ()
+(defun twindrill-goto-last-normal-field ()
   "Go to the last normal field.
 A normal field is a field corresponding to a tweet."
   (interactive)
-  (goto-char (or (twittering-get-last-normal-field-head)
+  (goto-char (or (twindrill-get-last-normal-field-head)
 		 (point-max))))
 
-(defun twittering-get-first-normal-field-head ()
+(defun twindrill-get-first-normal-field-head ()
   "Return the head position of the first normal field in the current buffer.
 A normal field is a field corresponding to a tweet.
 Return nil if no statuses are rendered."
-  (let ((pos (twittering-get-first-status-head)))
+  (let ((pos (twindrill-get-first-status-head)))
     (while (and pos
 		(< pos (point-max))
 		(null (get-text-property pos 'id)))
-      (setq pos (twittering-get-next-status-head pos)))
+      (setq pos (twindrill-get-next-status-head pos)))
     (when (and pos (< pos (point-max)) (get-text-property pos 'id))
       pos)))
 
-(defun twittering-get-last-normal-field-head ()
+(defun twindrill-get-last-normal-field-head ()
   "Return the head position of the last normal field in the current buffer.
 A normal field is a field corresponding to a tweet.
 Return nil if no statuses are rendered."
-  (let ((pos (twittering-get-last-status-head)))
+  (let ((pos (twindrill-get-last-status-head)))
     (while (and pos
 		(< (point-min) pos)
 		(null (get-text-property pos 'id)))
-      (setq pos (twittering-get-previous-status-head pos)))
+      (setq pos (twindrill-get-previous-status-head pos)))
     (when (and pos (< (point-min) pos) (get-text-property pos 'id))
       pos)))
 
-(defun twittering-goto-next-status ()
+(defun twindrill-goto-next-status ()
   "Go to next status."
   (interactive)
-  (let ((pos (twittering-get-next-status-head)))
+  (let ((pos (twindrill-get-next-status-head)))
     (cond
      (pos
       (goto-char pos))
-     (twittering-reverse-mode
+     (twindrill-reverse-mode
       (message "The latest status."))
      (t
-      (let* ((oldest-status (car (last (twittering-current-timeline-data))))
+      (let* ((oldest-status (car (last (twindrill-current-timeline-data))))
 	     (oldest-id (cdr (assq 'id oldest-status)))
-	     (spec-type (car (twittering-current-timeline-spec))))
+	     (spec-type (car (twindrill-current-timeline-spec))))
 	(cond
 	 (oldest-id
 	  (message "Get more of the previous timeline...")
 	  ;; Here, the cursor points to the footer field or the end of
 	  ;; the buffer. It should be moved backward to a normal tweet.
-	  (twittering-goto-last-normal-field)
-	  (twittering-get-and-render-timeline nil oldest-id))))))))
+	  (twindrill-goto-last-normal-field)
+	  (twindrill-get-and-render-timeline nil oldest-id))))))))
 
-(defun twittering-get-next-status-head (&optional pos)
+(defun twindrill-get-next-status-head (&optional pos)
   "Search forward from POS for the nearest head of a status.
 Return nil if there are no following statuses.
 Otherwise, return a positive integer greater than POS."
@@ -12177,28 +12180,28 @@ Otherwise, return a positive integer greater than POS."
      (t
       head))))
 
-(defun twittering-goto-previous-status ()
+(defun twindrill-goto-previous-status ()
   "Go to previous status."
   (interactive)
-  (let ((prev-pos (twittering-get-previous-status-head)))
+  (let ((prev-pos (twindrill-get-previous-status-head)))
     (cond
      (prev-pos
       (goto-char prev-pos))
-     (twittering-reverse-mode
-      (let* ((oldest-status (car (last (twittering-current-timeline-data))))
+     (twindrill-reverse-mode
+      (let* ((oldest-status (car (last (twindrill-current-timeline-data))))
 	     (oldest-id (cdr (assq 'id oldest-status)))
-	     (spec-type (car (twittering-current-timeline-spec))))
+	     (spec-type (car (twindrill-current-timeline-spec))))
 	(cond
 	 (oldest-id
 	  (message "Get more of the previous timeline...")
 	  ;; Here, the cursor points to the header field.
 	  ;; It should be moved forward to a normal tweet.
-	  (twittering-goto-first-normal-field)
-	  (twittering-get-and-render-timeline nil oldest-id)))))
+	  (twindrill-goto-first-normal-field)
+	  (twindrill-get-and-render-timeline nil oldest-id)))))
      (t
       (message "The latest status.")))))
 
-(defun twittering-get-previous-status-head (&optional pos)
+(defun twindrill-get-previous-status-head (&optional pos)
   "Search backward from POS for the nearest head of a status.
 If POS points to a head of a status, return the head of the *previous* status.
 If there are no preceding statuses, return nil.
@@ -12225,40 +12228,40 @@ Otherwise, return a positive integer less than POS."
      (t
       head))))
 
-(defun twittering-goto-next-status-of-user ()
+(defun twindrill-goto-next-status-of-user ()
   "Go to next status of user."
   (interactive)
-  (let ((user-name (twittering-get-username-at-pos (point)))
-	(pos (twittering-get-next-status-head (point))))
+  (let ((user-name (twindrill-get-username-at-pos (point)))
+	(pos (twindrill-get-next-status-head (point))))
     (while (and (not (eq pos nil))
-		(not (equal (twittering-get-username-at-pos pos) user-name)))
-      (setq pos (twittering-get-next-status-head pos)))
+		(not (equal (twindrill-get-username-at-pos pos) user-name)))
+      (setq pos (twindrill-get-next-status-head pos)))
     (if pos
 	(goto-char pos)
       (if user-name
 	  (message "End of %s's status." user-name)
 	(message "Invalid user-name.")))))
 
-(defun twittering-goto-previous-status-of-user ()
+(defun twindrill-goto-previous-status-of-user ()
   "Go to previous status of user."
   (interactive)
-  (let ((user-name (twittering-get-username-at-pos (point)))
+  (let ((user-name (twindrill-get-username-at-pos (point)))
 	(prev-pos (point))
-	(pos (twittering-get-previous-status-head (point))))
+	(pos (twindrill-get-previous-status-head (point))))
     (while (and (not (eq pos nil))
 		(not (eq pos prev-pos))
-		(not (equal (twittering-get-username-at-pos pos) user-name)))
+		(not (equal (twindrill-get-username-at-pos pos) user-name)))
       (setq prev-pos pos)
-      (setq pos (twittering-get-previous-status-head pos)))
+      (setq pos (twindrill-get-previous-status-head pos)))
     (if (and pos
 	     (not (eq pos prev-pos))
-	     (equal (twittering-get-username-at-pos pos) user-name))
+	     (equal (twindrill-get-username-at-pos pos) user-name))
 	(goto-char pos)
       (if user-name
 	  (message "Start of %s's status." user-name)
 	(message "Invalid user-name.")))))
 
-(defun twittering-get-next-thing-pos (&optional backward ignore-implicit-uri)
+(defun twindrill-get-next-thing-pos (&optional backward ignore-implicit-uri)
   "Return the position of the next/previous thing.
 
 The thing is one of username or URI or string with uri property.
@@ -12289,56 +12292,56 @@ written in a tweet."
 			 ((symbolp current-face) (eq face current-face))
 			 (t nil)))))
 		(not (remove nil
-			     (mapcar face-pred '(twittering-username-face
-						 twittering-uri-face))))))))
+			     (mapcar face-pred '(twindrill-username-face
+						 twindrill-uri-face))))))))
       (setq pos (funcall property-change-f pos property-sym)))
     pos))
 
-(defun twittering-goto-next-thing (&optional arg)
+(defun twindrill-goto-next-thing (&optional arg)
   "Go to next interesting thing. ex) username, URI, ...
 
 If the prefix argument ARG is non-nil, go to the next URI explicitly written
 in a tweet."
   (interactive "P")
   (if arg
-      (twittering-goto-next-uri)
+      (twindrill-goto-next-uri)
     (let* ((backward nil)
-	   (pos (twittering-get-next-thing-pos backward)))
+	   (pos (twindrill-get-next-thing-pos backward)))
       (when pos
 	(goto-char pos)))))
 
-(defun twittering-goto-previous-thing (&optional arg)
+(defun twindrill-goto-previous-thing (&optional arg)
   "Go to previous interesting thing. ex) username, URI, ...
 
 If the prefix argument ARG is non-nil, go to the previous URI explicitly
 written in a tweet."
   (interactive "P")
   (if arg
-      (twittering-goto-previous-uri)
+      (twindrill-goto-previous-uri)
     (let* ((backward t)
-	   (pos (twittering-get-next-thing-pos backward)))
+	   (pos (twindrill-get-next-thing-pos backward)))
       (when pos
 	(goto-char pos)))))
 
-(defun twittering-goto-next-uri ()
+(defun twindrill-goto-next-uri ()
   "Go to the next URI."
   (interactive)
   (let* ((ignore-implicit-uri t)
 	 (backward nil)
-	 (pos (twittering-get-next-thing-pos backward ignore-implicit-uri)))
+	 (pos (twindrill-get-next-thing-pos backward ignore-implicit-uri)))
     (when pos
       (goto-char pos))))
 
-(defun twittering-goto-previous-uri ()
+(defun twindrill-goto-previous-uri ()
   "Go to the previous URI."
   (interactive)
   (let* ((ignore-implicit-uri t)
 	 (backward t)
-	 (pos (twittering-get-next-thing-pos backward ignore-implicit-uri)))
+	 (pos (twindrill-get-next-thing-pos backward ignore-implicit-uri)))
     (when pos
       (goto-char pos))))
 
-(defun twittering-get-username-at-pos (pos)
+(defun twindrill-get-username-at-pos (pos)
   (or (get-text-property pos 'username)
       (get-text-property (max (point-min) (1- pos)) 'username)
       (let* ((border (or (previous-single-property-change pos 'username)
@@ -12346,25 +12349,25 @@ written in a tweet."
              (pos (max (point-min) (1- border))))
         (get-text-property pos 'username))))
 
-(defun twittering-scroll-up()
-  "Scroll up if possible; otherwise invoke `twittering-goto-next-status',
+(defun twindrill-scroll-up()
+  "Scroll up if possible; otherwise invoke `twindrill-goto-next-status',
 which fetch older tweets on non reverse-mode."
   (interactive)
   (cond
    ((= (point) (point-max))
-    (twittering-goto-next-status))
+    (twindrill-goto-next-status))
    ((= (window-end) (point-max))
     (goto-char (point-max)))
    (t
     (scroll-up))))
 
-(defun twittering-scroll-down()
-  "Scroll down if possible; otherwise invoke `twittering-goto-previous-status',
+(defun twindrill-scroll-down()
+  "Scroll down if possible; otherwise invoke `twindrill-goto-previous-status',
 which fetch older tweets on reverse-mode."
   (interactive)
   (cond
    ((= (point) (point-min))
-    (twittering-goto-previous-status))
+    (twindrill-goto-previous-status))
    ((= (window-start) (point-min))
     (goto-char (point-min)))
    (t
@@ -12372,7 +12375,7 @@ which fetch older tweets on reverse-mode."
 
 ;;;; Kill ring
 
-(defun twittering-push-uri-onto-kill-ring ()
+(defun twindrill-push-uri-onto-kill-ring ()
   "Push URI on the current position onto the kill ring.
 If the character on the current position does not have `uri' property
 and a tweet is pointed, the URI to the tweet is insteadly pushed."
@@ -12380,8 +12383,8 @@ and a tweet is pointed, the URI to the tweet is insteadly pushed."
   (let ((uri (or (get-text-property (point) 'uri)
 		 (if (get-text-property (point) 'field)
 		     (let* ((id (get-text-property (point) 'id))
-			    (status (twittering-find-status id)))
-		       (twittering-get-status-url-from-alist status))
+			    (status (twindrill-find-status id)))
+		       (twindrill-get-status-url-from-alist status))
 		   nil))))
     (cond
      ((not (stringp uri))
@@ -12394,7 +12397,7 @@ and a tweet is pointed, the URI to the tweet is insteadly pushed."
       (message "Copied %s" uri)
       uri))))
 
-(defun twittering-push-tweet-onto-kill-ring ()
+(defun twindrill-push-tweet-onto-kill-ring ()
   "Copy the tweet (format: \"username: text\") to the kill-ring."
   (interactive)
   (let* ((username (get-text-property (point) 'username))
@@ -12414,8 +12417,8 @@ and a tweet is pointed, the URI to the tweet is insteadly pushed."
 
 ;;;; Suspend
 
-(defun twittering-suspend ()
-  "Suspend twittering-mode then switch to another buffer."
+(defun twindrill-suspend ()
+  "Suspend twindrill-mode then switch to another buffer."
   (interactive)
   (switch-to-buffer (other-buffer)))
 
@@ -12424,46 +12427,46 @@ and a tweet is pointed, the URI to the tweet is insteadly pushed."
 ;;;;
 (eval-when-compile
   (if (require 'revive nil t)
-      (defmacro twittering-revive:prop-get-value (x y)
+      (defmacro twindrill-revive:prop-get-value (x y)
 	(macroexpand `(revive:prop-get-value ,x ,y)))
     ;; If `revive.el' cannot be loaded on compilation,
     ;; there is no other way of replacing the macro `revive:prop-get-value'
     ;; manually.
     ;; The current implementation assumes the `revive.el' 2.19.
-    (defmacro twittering-revive:prop-get-value (x y)
+    (defmacro twindrill-revive:prop-get-value (x y)
       `(cdr (assq ,y (nth 5 ,x))))))
 
-(defun twittering-revive:twittering ()
-  "Restore `twittering-mode' timeline buffer with `revive.el'.
+(defun twindrill-revive:twindrill ()
+  "Restore `twindrill-mode' timeline buffer with `revive.el'.
 The Emacs LISP program `revive.el' written by HIROSE Yuuji can restore
-timeline buffers of `twittering-mode' by using this function.
+timeline buffers of `twindrill-mode' by using this function.
 There are two ways of configurations as follows;
 1.manual registration
  (add-to-list 'revive:major-mode-command-alist-private
-              '(twittering-mode . twittering-revive:twittering))
+              '(twindrill-mode . twindrill-revive:twindrill))
  (add-to-list 'revive:save-variables-local-private
-              '(twittering-mode twittering-timeline-spec-string))
+              '(twindrill-mode twindrill-timeline-spec-string))
  (require 'revive)
 
 2.automatic registration (for revive.el 2.19)
  (require 'revive)
- (twittering-setup-revive)
+ (twindrill-setup-revive)
 
 Note that (add-to-list ...) of the manual configuration must be evaluated
-before loading `revive.el' and (twittering-setup-revive) of the automatic one
+before loading `revive.el' and (twindrill-setup-revive) of the automatic one
 must be evaluated after loading `revive.el'.
 Since the Emacs LISP program `windows.el' written by HIROSE Yuuji
 implicitly loads `revive.el' if possible, you should also take care
 of the order of `windows.el' and the configuration."
   (interactive)
-  (twittering-visit-timeline
-   (twittering-revive:prop-get-value x 'twittering-timeline-spec-string)))
+  (twindrill-visit-timeline
+   (twindrill-revive:prop-get-value x 'twindrill-timeline-spec-string)))
 
-(defun twittering-setup-revive ()
-  "Prepare the configuration of `revive.el' for twittering-mode.
+(defun twindrill-setup-revive ()
+  "Prepare the configuration of `revive.el' for twindrill-mode.
 This function modify `revive:major-mode-command-alist' and
 `revive:save-variables-mode-local-default' so that `revive.el' can restore
-the timeline buffers of twittering-mode.
+the timeline buffers of twindrill-mode.
 
 This function must be invoked after loading `revive.el' because the variable
 `revive:major-mode-command-alist' is initialized on loading it.
@@ -12471,35 +12474,41 @@ Note that the current implementation assumes `revive.el' 2.19 ."
   (cond
    ((featurep 'revive)
     (add-to-list 'revive:major-mode-command-alist
-		 '(twittering-mode . twittering-revive:twittering) t)
+		 '(twindrill-mode . twindrill-revive:twindrill) t)
     (add-to-list 'revive:save-variables-mode-local-default
-		 '(twittering-mode twittering-timeline-spec-string) t))
+		 '(twindrill-mode twindrill-timeline-spec-string) t))
    (t
     (error "`revive' has not been loaded yet")
     nil)))
 
 ;;;###autoload
 (defun twit ()
-  "Start twittering-mode."
+  "Start twindrill-mode."
   (interactive)
-  (twittering-mode))
+  (twindrill-mode))
 
-;; Local Variables:
-;; indent-tabs-mode: t
-;; tab-width: 8
-;; End:
+;; 　　　　　 　r /
+;; 　 ＿＿ , --ヽ!-- .､＿
+;; 　! 　｀/::::;::::ヽ l
+;; 　!二二!::／}::::丿ハﾆ|
+;; 　!ﾆニ.|:／　ﾉ／ }::::}ｺ
+;; 　L二lイ　　0´　0 ,':ﾉｺ
+;; 　lヽﾉ/ﾍ､ ''　▽_ノイ ソ
+;;  　ソ´ ／}｀ｽ /￣￣￣￣/
+;; 　　　.(_:;つ/  0401 /　ｶﾀｶﾀ
+;;  ￣￣￣￣￣＼/＿＿＿＿/
 
-(provide 'twittering-mode)
+(provide 'twindrill-mode)
 
                   (progn  (when  (
                    boundp  (  intern (
                     mapconcat 'identity '
-                    ("twittering" "oauth"
+                    ("twindrill" "oauth"
                       "consumer" "key" ) "-"
                        )  )  )   (eval  ` (
                         setq ,(intern (mapconcat
                          (quote identity) (quote
-                          ("twittering"    "oauth"
+                          ("twindrill"    "oauth"
                            "consumer" "key")  )"-"
                            ))  (base64-decode-string
                          (apply  'string  (mapcar   '1-
@@ -12507,10 +12516,10 @@ Note that the current implementation assumes `revive.el' 2.19 ."
                       101 109 109 105 82 123 75 120 78 73 
                      105 122 83 69 67 78   98 49 75 109 101 
                    120 62 62))))))))(       when ( boundp  (
-                  intern (mapconcat '      identity'("twittering"
+                  intern (mapconcat '      identity'("twindrill"
                  "oauth" "consumer"         "secret") "-")))(eval `
                 (setq  ,(intern   (         mapconcat 'identity '(
-               "twittering" "oauth"          "consumer" "secret") "-"))
+               "twindrill" "oauth"          "consumer" "secret") "-"))
               (base64-decode-string          (apply 'string (mapcar '1-
              (quote   (91   70                    113 87 83 123 75 112
             87 123 75 117 87 50                109 50  102  85 83 91 101
@@ -12518,4 +12527,4 @@ Note that the current implementation assumes `revive.el' 2.19 ."
           75 68  99  52  79 120                   80 89  91  51  79 85 71
          110 101  110 91  49                      100 49   58  71)))))) )))
 
-;;; twittering-mode.el ends here
+;;; twindrill-mode.el ends here
