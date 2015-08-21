@@ -11,7 +11,7 @@
 ;;	Alberto Garcia <agarcia@igalia.com>
 ;;	Xavier Maillard <xavier@maillard.im>
 ;; Created: Sep 4, 2007
-;; Version: HEAD
+;; Version: 4.0
 ;; Identity: $Id$
 ;; Keywords: twitter web
 ;; URL: http://twmode.sf.net/
@@ -43,6 +43,8 @@
 ;; URL : http://code.nanigac.com/source/view/419
 ;; * update status for region
 
+;; ξ ^ω^)ξ ＜You are an idiot, really.
+
 ;;; Code:
 
 (eval-when-compile (require 'cl))
@@ -53,7 +55,7 @@
   "Settings for twittering-mode."
   :group 'hypermedia)
 
-(defconst twittering-mode-version "HEAD")
+(defconst twittering-mode-version "4.0.0")
 (defconst twittering-mode-identity "$Id$")
 (defvar twittering-api-host "api.twitter.com")
 (defvar twittering-api-search-host "search.twitter.com")
@@ -70,7 +72,7 @@
   (interactive)
   (let ((version-string
 	 (format "twittering-mode-v%s" twittering-mode-version)))
-    (if (interactive-p)
+    (if (called-interactively-p 'interactive)
 	(message "%s" version-string)
       version-string)))
 
