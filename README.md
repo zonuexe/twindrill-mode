@@ -1,10 +1,10 @@
- Twittering-mode: a Twitter client for Emacs
-=============================================
+ξ ^ω^)ξ ＜ Twittering TwinDrill!
+===================================
 
-Twittering-mode enables you to twit on Emacsen.
+TwinDrill-mode a Twitter client for Emacs. forked from [hayamiz/twittering-mode](https://github.com/hayamiz/twittering-mode)
 
-- web: http://twmode.sf.net
-- github: http://github.com/hayamiz/twittering-mode
+- web: 
+- github: https://github.com/zonuexe/twindrill-mode
 
  Features
 ----------
@@ -336,3 +336,17 @@ The valid timeline specs follows:
 ----------
 
 - http://www.emacswiki.org/emacs-en/TwitteringMode
+
+
+```
+　　　　　 　r /
+　 ＿＿ , --ヽ!-- .､＿
+　! 　｀/::::;::::ヽ l
+　!二二!::／}::::丿ハﾆ|
+　!ﾆニ.|:／　ﾉ／ }::::}ｺ
+　L二lイ　　0´　0 ,':ﾉｺ
+　lヽﾉ/ﾍ､ ''　▽_ノイ ソ
+ 　ソ´ ／}｀ｽ /￣￣￣￣/
+　　　.(_:;つ/  0401 /　ｶﾀｶﾀ
+ ￣￣￣￣￣＼/＿＿＿＿/
+```
