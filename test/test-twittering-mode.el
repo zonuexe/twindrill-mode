@@ -1,8 +1,8 @@
 ;;; -*- coding: utf-8 -*-
 
 (defcase test-version nil nil
-  (test-assert-string-match "^twittering-mode-v\\([0-9]+\\(\\.[0-9]+\\)*\\|HEAD\\)"
-    (twittering-mode-version)))
+  (test-assert-string-match "^twindrill-mode-v\\([0-9]+\\(\\.[0-9]+\\)*\\|HEAD\\)"
+    (twindrill-mode-version)))
 
 (defcase test-assocref nil nil
   (test-assert-eq 'bar (assocref 'foo '((baz . qux) (foo . bar))))
@@ -10,54 +10,54 @@
 
 (defmacro test-setup-proxy(bindings)
   `(let ,(append '((process-environment nil)
-		   (twittering-proxy-use t)
-		   (twittering-proxy-server nil)
-		   (twittering-proxy-port nil)
-		   (twittering-http-proxy-server nil)
-		   (twittering-http-proxy-port nil)
-		   (twittering-https-proxy-server nil)
-		   (twittering-https-proxy-port nil))
+		   (twindrill-proxy-use t)
+		   (twindrill-proxy-server nil)
+		   (twindrill-proxy-port nil)
+		   (twindrill-http-proxy-server nil)
+		   (twindrill-http-proxy-port nil)
+		   (twindrill-https-proxy-server nil)
+		   (twindrill-https-proxy-port nil))
 		 bindings)
-     (twittering-setup-proxy)))
+     (twindrill-setup-proxy)))
 
 (defcase test-proxy nil nil
   (test-assert-ok
    (test-setup-proxy
-    ((twittering-proxy-server "proxy.example.com")
-     (twittering-proxy-port 8080))))
+    ((twindrill-proxy-server "proxy.example.com")
+     (twindrill-proxy-port 8080))))
   (test-assert-ok
    (test-setup-proxy
-    ((twittering-proxy-server "proxy.example.com")
-     (twittering-proxy-port "8080"))))
+    ((twindrill-proxy-server "proxy.example.com")
+     (twindrill-proxy-port "8080"))))
 
   (test-assert-ok
    (test-setup-proxy
-    ((twittering-http-proxy-server "proxy.example.com")
-     (twittering-http-proxy-port 8080))))
+    ((twindrill-http-proxy-server "proxy.example.com")
+     (twindrill-http-proxy-port 8080))))
   (test-assert-ok
    (test-setup-proxy
-    ((twittering-http-proxy-server "proxy.example.com")
-     (twittering-http-proxy-port "8080"))))
+    ((twindrill-http-proxy-server "proxy.example.com")
+     (twindrill-http-proxy-port "8080"))))
 
   (test-assert-ok
    (test-setup-proxy
-    ((twittering-https-proxy-server "proxy.example.com")
-     (twittering-https-proxy-port 8080))))
+    ((twindrill-https-proxy-server "proxy.example.com")
+     (twindrill-https-proxy-port 8080))))
   (test-assert-ok
    (test-setup-proxy
-    ((twittering-https-proxy-server "proxy.example.com")
-     (twittering-https-proxy-port "8080"))))
+    ((twindrill-https-proxy-server "proxy.example.com")
+     (twindrill-https-proxy-port "8080"))))
 
   (test-assert-equal
-   (let ((twittering-proxy-use nil)
+   (let ((twindrill-proxy-use nil)
 	 (process-environment nil)
-	 (twittering-https-proxy-server "proxy.example.com")
-	 (twittering-https-proxy-port 8080))
-     (twittering-toggle-proxy)
-     (list twittering-proxy-use
+	 (twindrill-https-proxy-server "proxy.example.com")
+	 (twindrill-https-proxy-port 8080))
+     (twindrill-toggle-proxy)
+     (list twindrill-proxy-use
 	   (progn
-	     (twittering-toggle-proxy)
-	     twittering-proxy-use)))
+	     (twindrill-toggle-proxy)
+	     twindrill-proxy-use)))
    '(t nil))
 
   ;; The test of configuration via an environment variable should be
@@ -69,48 +69,48 @@
       '("http_proxy=http://proxy1.example.com:8080/"))))))
 
 (defcase test-user-agent nil nil
-  (test-assert-string-equal (format "Emacs/%d.%d Twittering-mode/%s"
+  (test-assert-string-equal (format "Emacs/%d.%d Twindrill-mode/%s"
 				    emacs-major-version
 				    emacs-minor-version
-				    twittering-mode-version)
-    (twittering-user-agent))
-  (setq twittering-user-agent-function
+				    twindrill-mode-version)
+    (twindrill-user-agent))
+  (setq twindrill-user-agent-function
 	(lambda () "foo user agent"))
   (test-assert-string-equal "foo user agent"
-    (twittering-user-agent))
+    (twindrill-user-agent))
   )
 
 (defcase test-icon-mode nil nil
-  (setq twittering-icon-mode nil)
-  (twittering-icon-mode)
-  (test-assert-ok twittering-icon-mode)
-  (twittering-icon-mode)
-  (test-assert-ok (not twittering-icon-mode))
-  (twittering-icon-mode nil)
-  (test-assert-ok twittering-icon-mode)
-  (twittering-icon-mode t)
-  (test-assert-ok twittering-icon-mode)
-  (twittering-icon-mode -1)
-  (test-assert-ok (not twittering-icon-mode))
-  (twittering-icon-mode 1)
-  (test-assert-ok twittering-icon-mode)
+  (setq twindrill-icon-mode nil)
+  (twindrill-icon-mode)
+  (test-assert-ok twindrill-icon-mode)
+  (twindrill-icon-mode)
+  (test-assert-ok (not twindrill-icon-mode))
+  (twindrill-icon-mode nil)
+  (test-assert-ok twindrill-icon-mode)
+  (twindrill-icon-mode t)
+  (test-assert-ok twindrill-icon-mode)
+  (twindrill-icon-mode -1)
+  (test-assert-ok (not twindrill-icon-mode))
+  (twindrill-icon-mode 1)
+  (test-assert-ok twindrill-icon-mode)
   )
 
 (defcase test-percent-encode nil nil
   (test-assert-string-equal "Rinko"
-    (twittering-percent-encode "Rinko"))
+    (twindrill-percent-encode "Rinko"))
   (test-assert-string-equal "%25"
-    (twittering-percent-encode "%"))
+    (twindrill-percent-encode "%"))
   (test-assert-string-equal "love%20plus"
-    (twittering-percent-encode "love plus"))
+    (twindrill-percent-encode "love plus"))
   (test-assert-string-equal "%0A"
-    (twittering-percent-encode "\n")))
+    (twindrill-percent-encode "\n")))
 
 (with-network
  (when (require 'url nil t)
    (defcase tinyurl nil nil
      (test-assert-string-equal "http://tinyurl.com/3xsrg5"
-       (twittering-tinyurl-get "http://example.com/example"))
+       (twindrill-tinyurl-get "http://example.com/example"))
      )))
 
 (defcase case-string nil nil
@@ -140,32 +140,32 @@
 
 (defcase format-string nil nil
   (test-assert-string-equal ""
-    (twittering-format-string "" "" nil))
+    (twindrill-format-string "" "" nil))
 
   (test-assert-string-equal "Hello world"
-    (twittering-format-string "Hello world" "" nil))
+    (twindrill-format-string "Hello world" "" nil))
 
-  (test-assert-string-equal "RT: twittering-mode now (via @twmode)"
-    (twittering-format-string "RT: %t (via @%s)" "%"
-			      '(("t" . "twittering-mode now")
+  (test-assert-string-equal "RT: twindrill-mode now (via @twmode)"
+    (twindrill-format-string "RT: %t (via @%s)" "%"
+			      '(("t" . "twindrill-mode now")
 				("s" . "twmode"))))
 
   (test-assert-string-equal "RT: %t (via @twmode)"
-    (twittering-format-string "RT: %t (via @%s)" "%"
+    (twindrill-format-string "RT: %t (via @%s)" "%"
 			      '(("t" . "%t")
 				("s" . "twmode"))))
 
   (test-assert-string-equal "new\nline"
-    (twittering-format-string "new~%line" "~"
+    (twindrill-format-string "new~%line" "~"
 			      '(("%" . "\n"))))
   )
 
 (defun test-restore-timeline-spec(spec-str spec normalized-spec)
   (let ((spec-from-str
-	 (twittering-string-to-timeline-spec spec-str)))
+	 (twindrill-string-to-timeline-spec spec-str)))
     (list
-     (equal (twittering-string-to-timeline-spec
-	     (twittering-timeline-spec-to-string spec))
+     (equal (twindrill-string-to-timeline-spec
+	     (twindrill-timeline-spec-to-string spec))
 	    normalized-spec)
      (equal normalized-spec spec-from-str))))
 
@@ -339,20 +339,20 @@
 (defcase timeline-spec-dependence nil nil
   ;; Duplicates in a merge timeline are removed.
   (test-assert-equal
-   (let ((spec (twittering-string-to-timeline-spec "(:home+@+(@+:home))")))
-     (twittering-get-primary-base-timeline-specs spec))
+   (let ((spec (twindrill-string-to-timeline-spec "(:home+@+(@+:home))")))
+     (twindrill-get-primary-base-timeline-specs spec))
    '((home) (mentions)))
 
   (test-assert-equal
-   (let ((spec (twittering-string-to-timeline-spec
+   (let ((spec (twindrill-string-to-timeline-spec
 		"(:home+@+:exclude-if/(lambda (x) t)/(@+:home+USER))")))
-     (twittering-get-primary-base-timeline-specs spec))
+     (twindrill-get-primary-base-timeline-specs spec))
    '((home) (mentions) (user "USER")))
   )
 
 (defun format-status (status format-str)
-  (twittering-update-status-format format-str)
-  (twittering-format-status status))
+  (twindrill-update-status-format format-str)
+  (twindrill-format-status status))
 
 (lexical-let ((status (car (get-fixture 'timeline-data))))
   (defcase test-format-status nil nil
@@ -371,11 +371,11 @@
 
     (test-assert-string-equal
      ""
-     (let ((twittering-icon-mode nil))
+     (let ((twindrill-icon-mode nil))
        (format-status status "%i")))
     (test-assert-string-equal
      " "
-     (let ((twittering-icon-mode t)
+     (let ((twindrill-icon-mode t)
 	   (window-system t))
        (format-status status "%i")))
 
@@ -464,12 +464,12 @@
     (test-assert-string-equal
      " emacs,  :
   Help protect and support Free Software and the GNU Project by joining the Free Software Foundation! http://www.fsf.org/join?referrer=7019 // from web"
-     (let ((twittering-icon-mode nil))
+     (let ((twindrill-icon-mode nil))
        (format-status status "%i %s,  :\n  %T // from %f%L%r")))
     (test-assert-string-equal
      "  emacs,  :
   Help protect and support Free Software and the GNU Project by joining the Free Software Foundation! http://www.fsf.org/join?referrer=7019 // from web"
-     (let ((twittering-icon-mode t)
+     (let ((twindrill-icon-mode t)
 	   (window-system t))
        (format-status status "%i %s,  :\n  %T // from %f%L%r")))
 
@@ -477,21 +477,21 @@
      "
   Help protect and support Free Software and the GNU Project by joining the
   Free Software Foundation! http://www.fsf.org/join?referrer=7019 // from web"
-     (let ((twittering-fill-column 80))
+     (let ((twindrill-fill-column 80))
        (format-status status "\n%FILL[  ]{%T // from %f%L%r}")))
 
     (test-assert-string-equal
      "
   Help protect and support Free Software and the GNU Project by joining the
   Free Software Foundation! http://www.fsf.org/join?referrer=7019 // from web"
-     (let ((twittering-fill-column 80))
+     (let ((twindrill-fill-column 80))
        (format-status status "\n%FOLD[  ]{%T // from %f%L%r}")))
 
     (test-assert-string-equal
      "
   Edit XHTML5 documents in nxml-mode with on-the-fly validation:
   http://bit.ly/lYnEg (by @hober) // from web"
-     (let ((twittering-fill-column 80)
+     (let ((twindrill-fill-column 80)
 	   (oldest-status (car (last (get-fixture 'timeline-data)))))
        (format-status oldest-status "\n%FILL[  ]{%T // from %f%L%r}")))
 
@@ -501,43 +501,43 @@
 --http://bit.ly/lYnEg
 --			     
 --	(by @hober) // from web"
-     (let ((twittering-fill-column 80)
+     (let ((twindrill-fill-column 80)
 	   (oldest-status (car (last (get-fixture 'timeline-data)))))
        (format-status oldest-status "\n%FOLD[--]{%T // from %f%L%r}")))
     ))
 
 (defcase test-find-curl-program nil nil
-  (test-assert-string-match "curl" (twittering-find-curl-program))
+  (test-assert-string-match "curl" (twindrill-find-curl-program))
   (with-temp-buffer
-    (when (twittering-find-curl-program)
+    (when (twindrill-find-curl-program)
       (test-assert-eq 0
-	(call-process (twittering-find-curl-program)
+	(call-process (twindrill-find-curl-program)
 		      nil (current-buffer) nil
 		      "--help")))))
 
 (with-network
  (defcase test-ensure-ca-cert nil nil
-   (when (twittering-find-curl-program)
+   (when (twindrill-find-curl-program)
      (test-assert-eq 0
        (with-temp-buffer
-	 (call-process (twittering-find-curl-program)
+	 (call-process (twindrill-find-curl-program)
 		       nil (current-buffer) nil
 		       "--cacert"
-		       (twittering-ensure-ca-cert)
+		       (twindrill-ensure-ca-cert)
 		       "https://twitter.com/"))))))
 
 (defcase test-status-not-blank-p nil nil
-  (test-assert-ok (not (twittering-status-not-blank-p "")))
-  (test-assert-ok (not (twittering-status-not-blank-p "\n")))
-  (test-assert-ok (not (twittering-status-not-blank-p "@foo")))
-  (test-assert-ok (not (twittering-status-not-blank-p "@bar ")))
-  (test-assert-ok (twittering-status-not-blank-p "hello"))
-  (test-assert-ok (twittering-status-not-blank-p "@baz hello"))
-  (test-assert-ok (twittering-status-not-blank-p "@baz\n\nhello"))
-  (test-assert-ok (twittering-status-not-blank-p "\nhello"))
-  (test-assert-ok (twittering-status-not-blank-p "hello\n"))
-  (test-assert-ok (twittering-status-not-blank-p "@foo hello @bar"))
-  (test-assert-ok (twittering-status-not-blank-p "hello @foo"))
+  (test-assert-ok (not (twindrill-status-not-blank-p "")))
+  (test-assert-ok (not (twindrill-status-not-blank-p "\n")))
+  (test-assert-ok (not (twindrill-status-not-blank-p "@foo")))
+  (test-assert-ok (not (twindrill-status-not-blank-p "@bar ")))
+  (test-assert-ok (twindrill-status-not-blank-p "hello"))
+  (test-assert-ok (twindrill-status-not-blank-p "@baz hello"))
+  (test-assert-ok (twindrill-status-not-blank-p "@baz\n\nhello"))
+  (test-assert-ok (twindrill-status-not-blank-p "\nhello"))
+  (test-assert-ok (twindrill-status-not-blank-p "hello\n"))
+  (test-assert-ok (twindrill-status-not-blank-p "@foo hello @bar"))
+  (test-assert-ok (twindrill-status-not-blank-p "hello @foo"))
   )
 
 (defcase test-hmac-sha1 nil nil
@@ -549,7 +549,7 @@
 		(t (concat v))))
 	  (data "Hi There"))
      (mapconcat (lambda (c) (format "%02x" c))
-		(twittering-hmac-sha1 key data)
+		(twindrill-hmac-sha1 key data)
 		""))
    "b617318655057264e28bc0b6fb378c8ef146be00")
 
@@ -557,7 +557,7 @@
    (let* ((key "Jefe")
 	  (data "what do ya want for nothing?"))
      (mapconcat (lambda (c) (format "%02x" c))
-		(twittering-hmac-sha1 key data)
+		(twindrill-hmac-sha1 key data)
 		""))
    "effcdf6ae5eb2fa2d27416d5f184df9c259a7c79")
 
@@ -571,7 +571,7 @@
 		 ((fboundp 'unibyte-string) (apply 'unibyte-string data-v))
 		 (t (concat data-v)))))
      (mapconcat (lambda (c) (format "%02x" c))
-		(twittering-hmac-sha1 key data)
+		(twindrill-hmac-sha1 key data)
 		""))
    "125d7342b9ac11cd91a39af48aa17b4f63f175d3")
   )
@@ -589,7 +589,7 @@
 			 (expected (cdr pair)))
 		     (string=
 		      (mapconcat (lambda (c) (format "%02x" c))
-				 (twittering-hmac-sha1 key (make-string n ?a))
+				 (twindrill-hmac-sha1 key (make-string n ?a))
 				 "")
 		      expected)))
 		 '((64 . "804f18b0143cc2677eeda7b5f60f6984fc32d094")
@@ -639,7 +639,7 @@
 		       (data "what do ya want for nothing?")
 		       (expected "effcdf6ae5eb2fa2d27416d5f184df9c259a7c79"))
 		   (string= (mapconcat (lambda (c) (format "%02x" c))
-				       (twittering-hmac-sha1 key data)
+				       (twindrill-hmac-sha1 key data)
 				       "")
 			    expected)))
 	       max-internal-length-list)))
@@ -678,20 +678,20 @@
   (test-assert-string-equal
    (let* ((oauth-params
 	   `(("oauth_nonce" . "QP70eNmVz8jvdPevU3oJD2AfF7R7odC2XJcn4XlZJqk")
-	     ("oauth_callback" . ,(twittering-oauth-url-encode "http://localhost:3005/the_dance/process_callback?service_provider_id=11"))
+	     ("oauth_callback" . ,(twindrill-oauth-url-encode "http://localhost:3005/the_dance/process_callback?service_provider_id=11"))
 	     ("oauth_signature_method" . "HMAC-SHA1")
 	     ("oauth_timestamp" . "1272323042")
 	     ("oauth_consumer_key" . ,sample-consumer-key)
 	     ("oauth_version" . "1.0")))
 	  (url "https://api.twitter.com/oauth/request_token"))
-     (twittering-oauth-auth-str-request-token
+     (twindrill-oauth-auth-str-request-token
       url nil sample-consumer-key sample-consumer-secret oauth-params))
    "OAuth oauth_nonce=\"QP70eNmVz8jvdPevU3oJD2AfF7R7odC2XJcn4XlZJqk\",oauth_callback=\"http%3A%2F%2Flocalhost%3A3005%2Fthe_dance%2Fprocess_callback%3Fservice_provider_id%3D11\",oauth_signature_method=\"HMAC-SHA1\",oauth_timestamp=\"1272323042\",oauth_consumer_key=\"GDdmIQH6jhtmLUypg82g\",oauth_version=\"1.0\",oauth_signature=\"8wUi7m5HFQy76nowoCThusfgB%2BQ%3D\"")
 
   ;; response
   (test-assert-equal
    (let ((response-str "oauth_token=8ldIZyxQeVrFZXFOZH5tAwj6vzJYuLQpl0WUEYtWc&oauth_token_secret=x6qpRnlEmW9JbQn4PQVVeVG8ZLPEx6A0TOebgwcuA&oauth_callback_confirmed=true"))
-     (twittering-oauth-make-response-alist response-str))
+     (twindrill-oauth-make-response-alist response-str))
    '(("oauth_token" . "8ldIZyxQeVrFZXFOZH5tAwj6vzJYuLQpl0WUEYtWc")
      ("oauth_token_secret"
       . "x6qpRnlEmW9JbQn4PQVVeVG8ZLPEx6A0TOebgwcuA")
@@ -702,7 +702,7 @@
   ;; response (when using callback)
   (test-assert-equal
    (let ((response-str "oauth_token=8ldIZyxQeVrFZXFOZH5tAwj6vzJYuLQpl0WUEYtWc&oauth_verifier=pDNg57prOHapMbhv25RNf75lVRd6JDsni1AJJIDYoTY"))
-     (twittering-oauth-make-response-alist response-str))
+     (twindrill-oauth-make-response-alist response-str))
    '(("oauth_token" . "8ldIZyxQeVrFZXFOZH5tAwj6vzJYuLQpl0WUEYtWc")
      ("oauth_verifier"
       . "pDNg57prOHapMbhv25RNf75lVRd6JDsni1AJJIDYoTY")))
@@ -722,7 +722,7 @@
 	     ("oauth_verifier" . ,verifier)
 	     ("oauth_version" . "1.0")))
 	  (url "https://api.twitter.com/oauth/access_token"))
-     (twittering-oauth-auth-str-exchange-token
+     (twindrill-oauth-auth-str-exchange-token
       url nil
       sample-consumer-key sample-consumer-secret
       request-token request-token-secret verifier oauth-params))
@@ -731,7 +731,7 @@
   ;; response
   (test-assert-equal
    (let ((response-str "oauth_token=819797-Jxq8aYUDRmykzVKrgoLhXSq67TEa5ruc4GJC2rWimw&oauth_token_secret=J6zix3FfA9LofH0awS24M3HcBYXO5nI1iYe8EfBA&user_id=819797&screen_name=episod"))
-     (twittering-oauth-make-response-alist response-str))
+     (twindrill-oauth-make-response-alist response-str))
    '(("oauth_token"
       . "819797-Jxq8aYUDRmykzVKrgoLhXSq67TEa5ruc4GJC2rWimw")
      ("oauth_token_secret"
@@ -753,10 +753,10 @@
 	     ("oauth_version" . "1.0")))
 	  (url "http://api.twitter.com/1/statuses/update.json")
 	  (encoded-query-parameters
-	   `((,(twittering-percent-encode "status")
-	      . ,(twittering-percent-encode
+	   `((,(twindrill-percent-encode "status")
+	      . ,(twindrill-percent-encode
 		  "setting up my twitter 私のさえずりを設定する")))))
-     (twittering-oauth-auth-str-access
+     (twindrill-oauth-auth-str-access
       "POST" url encoded-query-parameters
       sample-consumer-key sample-consumer-secret
       access-token access-token-secret
@@ -808,13 +808,13 @@
 		       (insert quoted-str)
 		       (goto-char (point-min))
 		       (condition-case err
-			   (twittering-json-read)
+			   (twindrill-json-read)
 			 (error
 			  nil)))))
 	(if (and result
 		 (stringp result)
 		 (string= result
-			  (string twittering-unicode-replacement-char)))
+			  (string twindrill-unicode-replacement-char)))
 	    t
 	  (format "failed to decode %s!" quoted-str)))))))
 
@@ -845,13 +845,13 @@
 	     (encoded-str (format "&#%d;" unsupported-code-point))
 	     (xml-str (format xml-template encoded-str))
 	     (replacement-str
-	      (string twittering-unicode-replacement-char))
+	      (string twindrill-unicode-replacement-char))
 	     (result
 	      (with-temp-buffer
 		(insert xml-str)
 		(condition-case err
 		    (let* ((xml
-			    (twittering-xml-parse-region (point-min)
+			    (twindrill-xml-parse-region (point-min)
 							 (point-max)))
 			   (str
 			    (elt (assq 'p (assq 'body (assq 'html xml))) 2)))
