@@ -1,14 +1,5 @@
 ;;; -*- coding: utf-8 -*-
 
-(when (and (> 22 emacs-major-version)
-	   (require 'url-methods nil t))
-  ;; `twittering-make-http-request-from-uri', which is called for the format
-  ;; specifier "%i", requires `url-generic-parse-url'. But the function for
-  ;; Emacs 21, which is distributed with twittering-mode, does not work
-  ;; correctly until calling `url-scheme-get-property'.
-  (url-scheme-get-property "http" 'name)
-  (url-scheme-get-property "https" 'name))
-
 (defcase test-version nil nil
   (test-assert-string-match "^twittering-mode-v\\([0-9]+\\(\\.[0-9]+\\)*\\|HEAD\\)"
     (twittering-mode-version)))
@@ -505,19 +496,11 @@
        (format-status oldest-status "\n%FILL[  ]{%T // from %f%L%r}")))
 
     (test-assert-string-equal
-     (if (> 22 emacs-major-version)
-	 ;; `fill-region' on Emacs21 does not keep white spaces and
-	 ;; tabs adjacent to hard newlines.
-	 "
---Edit XHTML5 documents in nxml-mode with on-the-fly validation:
---http://bit.ly/lYnEg
---
---	(by @hober) // from web"
-       "
+     "
 --Edit XHTML5 documents in nxml-mode with on-the-fly validation:
 --http://bit.ly/lYnEg
 --			     
---	(by @hober) // from web")
+--	(by @hober) // from web"
      (let ((twittering-fill-column 80)
 	   (oldest-status (car (last (get-fixture 'timeline-data)))))
        (format-status oldest-status "\n%FOLD[--]{%T // from %f%L%r}")))
@@ -872,11 +855,7 @@
 							 (point-max)))
 			   (str
 			    (elt (assq 'p (assq 'body (assq 'html xml))) 2)))
-		      (if (< emacs-major-version 22)
-			  ;; On Emacs 21, `xml-parse-region' does not resolve
-			  ;; numeric character references.
-			  (twittering-decode-entities-after-parsing-xml str)
-			str))
+                      str)
 		  (error
 		   nil))))
 	     (expected-result replacement-str))
