@@ -5,8 +5,8 @@ TwinDrill-mode a Twitter client for Emacs. forked from [hayamiz/twittering-mode]
 
 - https://github.com/zonuexe/twindrill-mode
 
- Features
-----------
+Features
+--------
 
 * Activities on Twitter
   * Viewing various timelines
@@ -28,13 +28,13 @@ TwinDrill-mode a Twitter client for Emacs. forked from [hayamiz/twittering-mode]
 * HTTP Proxy support
 * Secure connection via HTTPS (cURL, GNU Wget, OpenSSL or GnuTLS is required)
 
- Supported Emacsen
--------------------
+Supported Emacsen
+-----------------
 
-- GNU Emacs 24
+* GNU Emacs 24+
 
- Prerequisites
--------------------
+Prerequisites
+--------------
 
 - For SSL connection, one of the followings is required.
   SSL connection is required for the Twitter REST API v1.1.
@@ -59,8 +59,8 @@ TwinDrill-mode a Twitter client for Emacs. forked from [hayamiz/twittering-mode]
 - For keeping retrieved icons in a local storage, gzip
   ( http://www.gzip.org/ ) is required.
 
- Quick start
-------------------------
+Quick start
+-----------
 
 0.  Put *twittering-mode.el* in a directory specified by the variable
     `load-path`. Note that the directories *emacs21* and *url-emacs21*
@@ -152,8 +152,9 @@ TwinDrill-mode a Twitter client for Emacs. forked from [hayamiz/twittering-mode]
 
     Enjoy!
 
- Usage
-------------------------
+Usage
+-----
+
 - Move the cursor.
   - `0`: Go to the beginning of the line.
   - `^`: Go to the beginning of the text on the line.
@@ -220,8 +221,9 @@ TwinDrill-mode a Twitter client for Emacs. forked from [hayamiz/twittering-mode]
   - `C-cC-t`: Set the current hashtag.
 
 
-<a id="timeline-spec">Timeline spec</a>
-------------------------
+Timeline spec
+-------------
+
 By pressing *V* (`twittering-visit-timeline`) on twittering-mode, you
 can specify a timeline to be opened by *timeline spec*.
 A timeline spec can be used anywhere you have to specify a timeline.
@@ -315,8 +317,8 @@ The valid timeline specs follows:
     slash are excluded from the timeline corresponding to the Emacs
     string literal `":exclude-re/\\//:home"`.
 
- Authors & Contributors
-------------------------
+Authors & Contributors
+----------------------
 
 - Y. Hayamizu
 - naoya_t
@@ -330,10 +332,10 @@ The valid timeline specs follows:
 - Thomas Danckaert
 - IMAI Toshiyuki
 
- See also
-----------
+See also
+--------
 
-- http://www.emacswiki.org/emacs-en/TwitteringMode
+* *(for twittering-mode)* http://www.emacswiki.org/emacs-en/TwitteringMode
 
 
 ```
