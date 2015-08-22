@@ -12274,15 +12274,13 @@ the timeline buffers of twindrill-mode.
 This function must be invoked after loading `revive.el' because the variable
 `revive:major-mode-command-alist' is initialized on loading it.
 Note that the current implementation assumes `revive.el' 2.19 ."
-  (cond
-   ((featurep 'revive)
-    (add-to-list 'revive:major-mode-command-alist
-		 '(twindrill-mode . twindrill-revive:twindrill) t)
-    (add-to-list 'revive:save-variables-mode-local-default
-		 '(twindrill-mode twindrill-timeline-spec-string) t))
-   (t
-    (error "`revive' has not been loaded yet")
-    nil)))
+  (unless (featurep 'revive)
+    (error "`revive' has not been loaded yet"))
+  (add-to-list 'revive:major-mode-command-alist
+               '(twindrill-mode . twindrill-revive:twindrill) t)
+  (add-to-list 'revive:save-variables-mode-local-default
+               '(twindrill-mode twindrill-timeline-spec-string) t)
+  nil)
 
 ;;;###autoload
 (defun twind ()
