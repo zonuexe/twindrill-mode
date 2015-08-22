@@ -10624,8 +10624,7 @@ entry in `twindrill-edit-skeleton-alist' are performed."
     (define-key km (kbd "C-c C-k") 'twindrill-edit-cancel-status)
     (define-key km (kbd "C-c C-r") 'twindrill-edit-toggle-reply)
     (define-key km (kbd "M-n") 'twindrill-edit-next-history)
-    (define-key km (kbd "M-p") 'twindrill-edit-previous-history)
-    (define-key km (kbd "<f4>") 'twindrill-edit-replace-at-point)))
+    (define-key km (kbd "M-p") 'twindrill-edit-previous-history)))
 
 (defun twindrill-effective-length (str &optional short-length-http short-length-https)
   "Return the effective length of STR with taking account of shortening URIs.
@@ -10767,7 +10766,6 @@ instead."
   \\[twindrill-edit-toggle-reply]: toggle a normal tweet and a reply.
   \\[twindrill-edit-next-history]: next history element
   \\[twindrill-edit-previous-history]: previous history element
-  \\[twindrill-edit-replace-at-point]: shorten URL at point
 
 ---- text above this line is ignored ----
 ") item item)
@@ -10912,11 +10910,6 @@ Pairs of a key symbol and an associated value are following:
       (incf twindrill-edit-local-history-idx)
       (twindrill-edit-reset-status (nth twindrill-edit-local-history-idx
 					 twindrill-edit-local-history)))))
-
-(defun twindrill-edit-replace-at-point ()
-  (interactive)
-  (when (eq major-mode 'twindrill-edit-mode)
-    (twindrill-edit-length-check)))
 
 (defun twindrill-edit-toggle-reply ()
   "Toggle whether the tweet being edited will be sent as a reply or not."
