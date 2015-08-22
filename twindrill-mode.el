@@ -7916,6 +7916,8 @@ You should change through function `twindrill-icon-mode'.")
 With a numeric argument, if the argument is positive, turn on
 icon mode; otherwise, turn off icon mode."
   (interactive "P")
+  (unless (eq major-mode 'twindrill-mode)
+    (error "Major-mode is not twindrill-mode"))
   (let ((prev-mode twindrill-icon-mode))
     (setq twindrill-icon-mode
 	  (if (null arg)
