@@ -3,8 +3,7 @@
 
 TwinDrill-mode a Twitter client for Emacs. forked from [hayamiz/twittering-mode](https://github.com/hayamiz/twittering-mode)
 
-- web: 
-- github: https://github.com/zonuexe/twindrill-mode
+- https://github.com/zonuexe/twindrill-mode
 
  Features
 ----------
@@ -32,7 +31,7 @@ TwinDrill-mode a Twitter client for Emacs. forked from [hayamiz/twittering-mode]
  Supported Emacsen
 -------------------
 
-- GNU Emacs 22, 23, 24
+- GNU Emacs 24
 
  Prerequisites
 -------------------

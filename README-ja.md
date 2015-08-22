@@ -1,13 +1,12 @@
- Twittering-mode: Emacs用Twitterクライアント
-=============================================
+ξ ^ω^)ξ ＜ Twittering TwinDrill!
+===================================
 
-Twittering-modeを使うと、EmacsenからTwitterを利用することができます。
+`TwinDrill-mode`はEmacs用のTwitterクライアントだよ。[hayamiz/twittering-mode](https://github.com/hayamiz/twittering-mode)から派生しますた。
 
-- web: http://twmode.sf.net
-- github: http://github.com/hayamiz/twittering-mode
+- https://github.com/zonuexe/twindrill-mode
 
- 機能
-------
+機能
+----
 
 * Twitterの機能への対応状況:
   * 様々なタイムラインの閲覧
@@ -25,14 +24,19 @@ Twittering-modeを使うと、EmacsenからTwitterを利用することができ
 * HTTPプロキシ対応
 * HTTPSによる安全な通信
 
- 動作確認環境
---------------
+### twittering-modeからの変更点
 
-- GNU Emacs 21 (一部機能制限あり)
-- GNU Emacs 22, 23
+* Emacs 21向けのpolyfillを削除
+* win-curlのバンドルを削除
+* *(未実装)* [chumpage/mag-menu](https://github.com/chumpage/mag-menu)を使ったUI
 
- 作者と協力者
---------------
+動作確認環境
+------------
+
+- GNU Emacs 24
+
+作者と協力者
+------------
 
 - Y. Hayamizu
 - naoya_t
@@ -46,7 +50,7 @@ Twittering-modeを使うと、EmacsenからTwitterを利用することができ
 - Thomas Danckaert
 - IMAI Toshiyuki
 
- 参考
-------
+参考
+----
 
 - http://www.emacswiki.org/emacs-en/TwitteringMode
