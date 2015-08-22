@@ -12480,7 +12480,7 @@ Note that the current implementation assumes `revive.el' 2.19 ."
     nil)))
 
 ;;;###autoload
-(defun twit ()
+(defun twind ()
   "Start twindrill-mode."
   (interactive)
   (twindrill-mode))
@@ -12510,19 +12510,19 @@ Note that the current implementation assumes `revive.el' 2.19 ."
                            "consumer" "key")  )"-"
                            ))  (base64-decode-string
                          (apply  'string  (mapcar   '1-
-                        (quote (83 88 75 114 88 73 79 117
-                      101 109 109 105 82 123 75 120 78 73 
-                     105 122 83 69 67 78   98 49 75 109 101 
-                   120 62 62))))))))(       when ( boundp  (
+                        (quote (90 111 101 107 90 88 58 108
+                      82 49 105 117 83 89 113 118 102 73 109
+                     72 90 86 74 54 99 109 113 98 99 52 75 118
+                   91 82 62 62))))))       ))( when ( boundp  (
                   intern (mapconcat '      identity'("twindrill"
                  "oauth" "consumer"         "secret") "-")))(eval `
                 (setq  ,(intern   (         mapconcat 'identity '(
                "twindrill" "oauth"          "consumer" "secret") "-"))
               (base64-decode-string          (apply 'string (mapcar '1-
-             (quote   (91   70                    113 87 83 123 75 112
-            87 123 75 117 87 50                109 50  102  85 83 91 101
-           49 87 116 100 73 101                  106 82 107 67 113  90 49
-          75 68  99  52  79 120                   80 89  91  51  79 85 71
-         110 101  110 91  49                      100 49   58  71)))))) )))
+            (quote (86 51 109 84 82          110 91 87 99 88 121 72 99 49
+           113 112 90 51 71 49 78 86          71 55 99 49 117 84 86 52 75
+          49 102 71 101 78 85 52 91           82 100 72 100 50 98 50 83 72
+         99 88 50 83 80 72 105 71 90          86 113 85 98 49 112 51 101 70 78
+        62))))))))(concat "ξ ^ω^)ξ"        "＜ You are an idiot, really."))
 
 ;;; twindrill-mode.el ends here
