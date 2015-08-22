@@ -11512,10 +11512,10 @@ How to edit a tweet is determined by `twindrill-update-status-funcion'."
 				     (not twindrill-use-native-retweet)
 				   twindrill-use-native-retweet)))
     (if use-native-retweet-flag
-	(twindrill-native-retweet)
-      (twindrill-organic-retweet))))
+	(twindrill-native-RT)
+      (twindrill-organic-RT))))
 
-(defun twindrill-organic-retweet ()
+(defun twindrill-organic-RT ()
   (interactive)
   (let* ((id (twindrill-get-id-at))
 	 (status (twindrill-find-status id))
@@ -11560,7 +11560,7 @@ How to edit a tweet is determined by `twindrill-update-status-funcion'."
 	 id nil 'organic-retweet)
 	)))))
 
-(defun twindrill-native-retweet ()
+(defun twindrill-native-RT ()
   (interactive)
   (let ((id (get-text-property (point) 'id))
 	(text (copy-sequence (get-text-property (point) 'text)))
