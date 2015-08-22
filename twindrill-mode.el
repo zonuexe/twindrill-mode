@@ -844,15 +844,9 @@ unknown are returned as nil."
   (let* ((parsed (parse-time-string str))
 	 (current (decode-time (current-time)))
 	 (replacement-alist
-	  `((SEC . ,(if round-up
-			59
-		      0))
-	    (MIN . ,(if round-up
-			59
-		      0))
-	    (HOUR . ,(if round-up
-			 23
-		       0))
+	  `((SEC . ,(if round-up 59 0))
+	    (MIN . ,(if round-up 59 0))
+	    (HOUR . ,(if round-up 23 0))
 	    (DAY . nil)
 	    (MON . nil)
 	    (YEAR . nil)
@@ -12283,6 +12277,9 @@ Note that the current implementation assumes `revive.el' 2.19 ."
   (add-to-list 'revive:save-variables-mode-local-default
                '(twindrill-mode twindrill-timeline-spec-string) t)
   nil)
+
+
+(defalias 'twind-tweet 'twindrill-update-status-interactive)
 
 ;;;###autoload
 (defun twind ()
