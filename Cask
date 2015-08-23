@@ -3,6 +3,7 @@
 
 (package "twindrill-mode" "4.0.0" "Twitter client for Emacs")
 (package-file "twindrill-mode.el")
+(package-file "twindrill-plus.el")
 
 (depends-on "dash")
 (depends-on "request")
