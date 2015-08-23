@@ -604,6 +604,11 @@ pop-up buffer."
   :type 'boolean
   :group 'twindrill-mode)
 
+(defcustom twindrill-request-confirmation-on-favouriting nil
+  "*If non-nil, confirmation will be requested on favorite a tweet."
+  :type 'boolean
+  :group 'twindrill-mode)
+
 (defcustom twindrill-use-master-password nil
   "*If non-nil, store private information encrypted with a master password."
   :type 'boolean
@@ -11706,7 +11711,8 @@ How to edit a tweet is determined by `twindrill-update-status-funcion'."
 				(truncate-string-to-width text (- width 3))
 				"...")
 			     text))))
-	  (if (y-or-n-p mes)
+	  (if (or (not twindrill-request-confirmation-on-favouriting)
+                  (y-or-n-p mes))
 	      (twindrill-call-api method `((id . ,id)))
 	    (message "Request canceled")))
       (message "No status selected"))))
