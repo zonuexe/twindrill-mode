@@ -28,6 +28,7 @@
 
 * Emacs 21向けのpolyfillを削除
 * win-curlのバンドルを削除
+* twittering-jojo-modeを削除
 * *(未実装)* [chumpage/mag-menu](https://github.com/chumpage/mag-menu)を使ったUI
 
 動作確認環境
