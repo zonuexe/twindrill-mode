@@ -2960,5 +2960,1160 @@ like following:
 		    "&")))
     (twindrill-oauth-get-token-alist access-token-url auth-str post-body)))
 
+;;;;
+;;;; Server info
+;;;;
+
+(defun twindrill-update-api-table (spec api-string)
+  "Register a pair of a timeline spec and an API for retrieving the timeline.
+SPEC is a timeline spec. API-STRING is an identifier of an API for retrieving
+the timeline."
+  (let ((current (assoc spec twindrill-timeline-spec-to-api-table)))
+    (if (null current)
+	(add-to-list 'twindrill-timeline-spec-to-api-table
+		     `(,spec . ,api-string))
+      (setcdr current api-string))))
+
+(defun twindrill-make-rate-limit-alist (header-info)
+  "Make a rate-limit information alist from HEADER-INFO.
+Key symbols of a returned alist are following; limit, remaining, reset-time.
+Values bound to limit and remaining is a positive integer and
+one bound to reset-time is an Emacs time (result of `seconds-to-time')."
+  (let ((symbol-table
+	 '(("X-Rate-Limit-Limit" . limit)
+	   ("X-Rate-Limit-Remaining" . remaining)
+	   ("X-Rate-Limit-Reset" . reset-time)
+	   ;; For Twitter API v1.0.
+	   ("X-RateLimit-Limit" . limit)
+	   ("X-RateLimit-Remaining" . remaining)
+	   ("X-RateLimit-Reset" . reset-time))))
+    (remove
+     nil
+     (mapcar (lambda (entry)
+	       (let ((sym
+		      (cdr
+		       (twindrill-assoc-string (car entry) symbol-table t))))
+		 (cond
+		  ((memq sym '(limit remaining))
+		   `(,sym . ,(string-to-number (cdr entry))))
+		  ((eq sym 'reset-time)
+		   `(,sym
+		     . ,(seconds-to-time (string-to-number (cdr entry)))))
+		  (t
+		   nil))))
+	     header-info))))
+
+(defun twindrill-update-rate-limit-info (api-string spec header-info)
+  "Register rate-limit information.
+API-STRING is an identifier of an API. SPEC is a timeline spec that had been
+retrieved by the API. HEADER-INFO is an alist generated from the HTTP response
+header of the API."
+  (let* ((api-string
+	  (if (eq twindrill-service-method 'twitter)
+	      ;; The key for Twitter API v1.0 is nil.
+	      nil
+	    api-string))
+	 (current (assoc api-string twindrill-api-limit-info-alist))
+	 (rate-limit-alist (twindrill-make-rate-limit-alist header-info)))
+    (twindrill-update-api-table spec api-string)
+    (if (null current)
+	(add-to-list 'twindrill-api-limit-info-alist
+		     `(,api-string . ,rate-limit-alist))
+      (setcdr current rate-limit-alist))))
+
+(defun twindrill-update-server-info (connection-info header-info)
+  (let* ((new-entry-list (mapcar 'car header-info))
+	 (account-info (cdr (assq 'account-info connection-info)))
+	 (account
+	  (twindrill-get-from-account-info "screen_name" account-info))
+	 (spec (cdr (assq 'timeline-spec connection-info)))
+	 (api-string
+	  (cdr (assq 'uri-without-query (assq 'request connection-info)))))
+    (twindrill-update-rate-limit-info api-string spec header-info)
+    (when (remove t (mapcar
+		     (lambda (entry)
+		       (equal (assoc entry header-info)
+			      (assoc entry twindrill-server-info-alist)))
+		     new-entry-list))
+      (setq twindrill-server-info-alist
+	    (append header-info
+		    (remove nil (mapcar
+				 (lambda (entry)
+				   (if (member (car entry) new-entry-list)
+				       nil
+				     entry))
+				 twindrill-server-info-alist))))
+      (when twindrill-display-remaining
+	(mapc (lambda (buffer)
+		(with-current-buffer buffer
+		  (twindrill-update-mode-line)))
+	      (twindrill-get-buffer-list))))
+    ;; cookie
+    (let* ((new-cookies
+	    (twindrill-extract-cookie connection-info header-info))
+	   (old-cookies (cdr (assoc account twindrill-cookie-alist)))
+	   (updated-cookies
+	    (append new-cookies
+		    (remove nil
+			    (mapcar (lambda (cookie)
+				      (unless (assoc (car cookie) new-cookies)
+					cookie))
+				    old-cookies)))))
+      (setq twindrill-cookie-alist
+	    (cons (cons account updated-cookies)
+		  (remove nil
+			  (mapcar (lambda (entry)
+				    (unless (equal account (car entry))
+				      entry))
+				  twindrill-cookie-alist)))))
+    header-info))
+
+(defun twindrill-extract-cookie (connection-info header-info)
+  (remove
+   nil
+   (mapcar
+    (lambda (entry)
+      (let ((header-item (car entry))
+	    (header-value (cdr entry)))
+	(when (and (string= header-item "Set-Cookie")
+		   (string-match "\\([^= ]*\\) *= *\\([^; ]*\\) *;? *"
+				 header-value))
+	  ;; For ease of implementation, the followings are assumed.
+	  ;; 1. Each response header includes only one cookie.
+	  ;; 2. `value' of cookie is a token, not a quoted string.
+	  ;; 3. Attributes except `domain', `expires' and `path' are ignored.
+	  (let* ((name (downcase (match-string 1 header-value)))
+		 (value (match-string 2 header-value))
+		 (attributes
+		  (mapcar
+		   (lambda (str)
+		     (when (string-match "\\` *\\([^ ]*\\) *= *\\(.*\\)\\'"
+					 str)
+		       (let ((attr (downcase (match-string 1 str)))
+			     (value (match-string 2 str)))
+			 (cond
+			  ((string= attr "domain")
+			   `(domain . ,value))
+			  ((string= attr "expires")
+			   `(expires
+			     . ,(apply 'encode-time
+				       (parse-time-string
+					(replace-regexp-in-string
+					 "-" " " value)))))
+			  ((string= attr "path")
+			   `(path . ,value))
+			  (t
+			   nil)))))
+		   (split-string (substring header-value (match-end 0))
+				 " *; *")))
+		 (additional-attributes
+		  `(,@(let* ((domain (cdr (assq 'domain attributes)))
+			     (request (cdr (assq 'request connection-info)))
+			     (host (cdr (assq 'host request)))
+			     (prefix
+			      (if domain
+				  (regexp-quote domain)
+				(concat "\\`" (regexp-quote host)))))
+			`((domain-regexp . ,(concat prefix "\\'")))))))
+	    `(,name
+	      (value . ,value)
+	      ,@attributes
+	      ,@additional-attributes)))))
+    header-info)))
+
+(defun twindrill-make-cookie-string (request account-info)
+  (let ((account
+	 (twindrill-get-from-account-info "screen_name" account-info))
+	(current-time (current-time))
+	(host (cdr (assq 'host request))))
+    (when account
+      (mapconcat
+       'identity
+       (remove nil
+	       (mapcar
+		(lambda (entry)
+		  (let* ((expires (cdr (assq 'expires entry)))
+			 (not-expired (or (null expires)
+					  (time-less-p current-time expires)))
+			 (domain-regexp (cdr (assq 'domain-regexp entry))))
+		    (when (and not-expired
+			       (string-match domain-regexp host))
+		      (format "%s=%s" (car entry) (cdr (assq 'value entry))))))
+		(cdr (assoc account twindrill-cookie-alist))))
+       ";"))))
+
+(defun twindrill-get-ratelimit-alist (&optional spec)
+  (let ((api-string
+	 (cdr (assoc spec twindrill-timeline-spec-to-api-table))))
+    (cdr (assoc api-string twindrill-api-limit-info-alist))))
+
+(defun twindrill-get-ratelimit-remaining (&optional spec)
+  (or (cdr (assq 'remaining (twindrill-get-ratelimit-alist spec)))
+      0))
+
+(defun twindrill-get-ratelimit-limit (&optional spec)
+  (or (cdr (assq 'limit (twindrill-get-ratelimit-alist spec)))
+      0))
+
+(defun twindrill-get-ratelimit-indicator-string (&optional spec)
+  "Make an indicator string of rate-limit information of SPEC."
+  (cond
+   ((eq twindrill-service-method 'twitter)
+    ;; Twitter API v1.0.
+    (format "%d/%d"
+	    (twindrill-get-ratelimit-remaining)
+	    (twindrill-get-ratelimit-limit)))
+   (t
+    (mapconcat
+     (lambda (api-string)
+       (let* ((alist (cdr (assoc api-string twindrill-api-limit-info-alist)))
+	      (remaining (cdr (assq 'remaining alist)))
+	      (limit (cdr (assq 'limit alist))))
+	 (format "%s/%s"
+		 (if remaining (number-to-string remaining) "?")
+		 (if limit (number-to-string limit) "?"))))
+     (twindrill-remove-duplicates
+      (mapcar (lambda (spec)
+		(cdr (assoc spec twindrill-timeline-spec-to-api-table)))
+	      (twindrill-get-primary-base-timeline-specs spec)))
+     "+"))))
+
+;;;;
+;;;; Abstract layer for Twitter API
+;;;;
+
+(defun twindrill-api-path (&rest params)
+  (mapconcat 'identity `(,twindrill-api-prefix ,@params) ""))
+
+(defun twindrill-call-api (command args-alist &optional additional-info)
+  "Call Twitter API and return the process object for the request.
+Invoke `twindrill-call-api-with-account' with the main account specified
+by `twindrill-get-main-account-info'.
+For details of arguments, see `twindrill-call-api-with-account'."
+  (let ((account-info-alist (twindrill-get-main-account-info)))
+    (twindrill-call-api-with-account account-info-alist command args-alist
+				      additional-info)))
+
+(defun twindrill-call-api-with-account (account-info-alist command args-alist &optional additional-info)
+  "Call Twitter API and return the process object for the request.
+COMMAND is a symbol specifying API. ARGS-ALIST is an alist specifying
+arguments for the API corresponding to COMMAND. Each key of ARGS-ALIST is a
+symbol.
+ACCOUNT-INFO-ALIST is an alist storing account information, which has
+the following key;
+\"screen_name\", \"oauth_token\" and \"oauth_token_secret\" for OAuth/xAuth,
+\"screen_name\" and \"password\" for basic authentication.
+ADDITIONAL-INFO is used as an argument ADDITIONAL-INFO of
+`twindrill-send-http-request'. Sentinels associated to the returned process
+receives it as the fourth argument. See also the function
+`twindrill-send-http-request'.
+
+The valid symbols as COMMAND follows:
+retrieve-timeline -- Retrieve a timeline.
+  Valid key symbols in ARGS-ALIST:
+    timeline-spec -- the timeline spec to be retrieved.
+    timeline-spec-string -- the string representation of the timeline spec.
+    format -- (optional) the symbol specifying the format.
+    number -- (optional) how many tweets are retrieved. It must be an integer.
+      If nil, `twindrill-number-of-tweets-on-retrieval' is used instead.
+      The maximum for search timeline is 100, and that for other timelines is
+      `twindrill-max-number-of-tweets-on-retrieval'.
+      If the given number exceeds the maximum, the maximum is used instead.
+    max_id -- (optional) the maximum ID of retrieved tweets.
+    since_id -- (optional) the minimum ID of retrieved tweets.
+    sentinel -- (optional) the sentinel that processes the buffer consisting
+      of retrieved data.. This is used as an argument SENTINEL of
+      `twindrill-send-http-request' via `twindrill-http-get'.
+      If nil, `twindrill-http-get-default-sentinel' is used.
+    clean-up-sentinel -- (optional) the clean-up sentinel that post-processes
+      the buffer associated to the process. This is used as an argument
+      CLEAN-UP-SENTINEL of `twindrill-send-http-request' via
+      `twindrill-http-get'.
+    page -- (optional and valid only for favorites timeline) which page will
+      be retrieved.
+retrieve-single-tweet -- Retrieve a single tweet.
+  Valid key symbols in ARGS-ALIST:
+    id -- the ID of the tweet to be retrieved.
+    username -- (optional) the screen name of the author of the tweet.
+    format -- (optional) the symbol specifying the format.
+    sentinel -- (optional) the sentinel that processes the buffer consisting
+      of retrieved data.. This is used as an argument SENTINEL of
+      `twindrill-send-http-request' via `twindrill-http-get'.
+      If nil, `twindrill-http-get-default-sentinel' is used.
+    clean-up-sentinel -- (optional) the clean-up sentinel that post-processes
+      the buffer associated to the process. This is used as an argument
+      CLEAN-UP-SENTINEL of `twindrill-send-http-request' via
+      `twindrill-http-get'.
+get-list-index -- Retrieve list names owned by a user.
+  Valid key symbols in ARGS-ALIST:
+    username -- the username.
+    sentinel -- the sentinel that processes retrieved strings. This is used
+      as an argument SENTINEL of `twindrill-send-http-request'
+      via `twindrill-http-get'.
+    clean-up-sentinel -- (optional) the clean-up sentinel that post-processes
+      the buffer associated to the process. This is used as an argument
+      CLEAN-UP-SENTINEL of `twindrill-send-http-request' via
+      `twindrill-http-get'.
+get-list-subscriptions -- Retrieve list names followed by a user.
+  Valid key symbols in ARGS-ALIST:
+    username -- the username.
+    sentinel -- the sentinel that processes retrieved strings. This is used
+      as an argument SENTINEL of `twindrill-send-http-request'
+      via `twindrill-http-get'.
+    clean-up-sentinel -- (optional) the clean-up sentinel that post-processes
+      the buffer associated to the process. This is used as an argument
+      CLEAN-UP-SENTINEL of `twindrill-send-http-request' via
+      `twindrill-http-get'.
+create-friendships -- Follow a user.
+  Valid key symbols in ARGS-ALIST:
+    username -- the username which will be followed.
+destroy-friendships -- Unfollow a user.
+  Valid key symbols in ARGS-ALIST:
+    username -- the username which will be unfollowed.
+create-favorites -- Mark a tweet as a favorite.
+  Valid key symbols in ARGS-ALIST:
+    id -- the ID of the target tweet.
+destroy-favorites -- Remove a mark of a tweet as a favorite.
+  Valid key symbols in ARGS-ALIST:
+    id -- the ID of the target tweet.
+update-status -- Post a tweet.
+  Valid key symbols in ARGS-ALIST:
+    status -- the string to be posted.
+    in-reply-to-status-id -- (optional) the ID of a status that this post is
+      in reply to.
+destroy-status -- Destroy a tweet posted by the authenticated user itself.
+  Valid key symbols in ARGS-ALIST:
+    id -- the ID of the target tweet.
+retweet -- Retweet a tweet.
+  Valid key symbols in ARGS-ALIST:
+    id -- the ID of the target tweet.
+verify-credentials -- Verify the current credentials.
+  Valid key symbols in ARGS-ALIST:
+    sentinel -- the sentinel that processes returned information. This is used
+      as an argument SENTINEL of `twindrill-send-http-request'
+      via `twindrill-http-get'.
+    clean-up-sentinel -- the clean-up sentinel that post-processes the buffer
+      associated to the process. This is used as an argument CLEAN-UP-SENTINEL
+      of `twindrill-send-http-request' via `twindrill-http-get'.
+send-direct-message -- Send a direct message.
+  Valid key symbols in ARGS-ALIST:
+    username -- the username who the message is sent to.
+    status -- the sent message.
+mute -- Mute a user.
+  Valid key symbols in ARGS-ALIST:
+    user-id -- the user-id that will be muted.
+    username -- the username who will be muted.
+  This command requires either of the above key. If both are given, `user-id'
+  will be used in REST API.
+unmute -- Un-mute a user.
+  Valid key symbols in ARGS-ALIST:
+    user-id -- the user-id that will be un-muted.
+    username -- the username who will be un-muted.
+  This command requires either of the above key. If both are given, `user-id'
+  will be used in REST API.
+block -- Block a user.
+  Valid key symbols in ARGS-ALIST:
+    user-id -- the user-id that will be blocked.
+    username -- the username who will be blocked.
+  This command requires either of the above key. If both are given, `user-id'
+  will be used in REST API.
+block-and-report-as-spammer -- Block a user and report him or her as a spammer.
+  Valid key symbols in ARGS-ALIST:
+    user-id -- the user-id that will be blocked.
+    username -- the username who will be blocked.
+  This command requires either of the above key. If both are given, `user-id'
+  will be used in REST API.
+get-service-configuration -- Get the configuration of the server.
+  Valid key symbols in ARGS-ALIST:
+    sentinel -- the sentinel that processes retrieved strings. This is used
+      as an argument SENTINEL of `twindrill-send-http-request'.
+    clean-up-sentinel -- (optional) the clean-up sentinel that post-processes
+      the buffer associated to the process. This is used as an argument
+      CLEAN-UP-SENTINEL of `twindrill-send-http-request'."
+  (let* ((additional-info
+	  `(,@additional-info
+	    (service-method . ,twindrill-service-method))))
+    (cond
+     ((memq twindrill-service-method '(twitter statusnet))
+      (twindrill-call-api-with-account-in-api1.0
+       account-info-alist command args-alist additional-info))
+     ((eq twindrill-service-method 'twitter-api-v1.1)
+      (cond
+       ((not (require 'json nil t))
+	(error "`json.el' is required to use the Twitter REST API v1.1")
+	nil)
+       ((not twindrill-use-ssl)
+	(error "SSL is required to use the Twitter REST API v1.1")
+	nil)
+       (t
+	(twindrill-call-api-with-account-in-api1.1
+	 account-info-alist command args-alist additional-info))))
+     (t
+      (error "`twindrill-service-method' is an invalid service method")
+      ))))
+
+(defun twindrill-call-api-with-account-in-api1.0 (account-info-alist command args-alist &optional additional-info)
+  "Call the Twitter REST API v1.0 and return the process object for the request."
+  (cond
+   ((eq command 'retrieve-timeline)
+    ;; Retrieve a timeline.
+    (let* ((spec (cdr (assq 'timeline-spec args-alist)))
+	   (spec-string (cdr (assq 'timeline-spec-string args-alist)))
+	   (spec-type (car-safe spec))
+	   (max-number (if (eq 'search spec-type)
+			   100 ;; FIXME: refer to defconst.
+			 twindrill-max-number-of-tweets-on-retrieval))
+	   (number
+	    (let ((number
+		   (or (cdr (assq 'number args-alist))
+		       (let* ((default-number 20)
+			      (n twindrill-number-of-tweets-on-retrieval))
+			 (cond
+			  ((integerp n) n)
+			  ((string-match "^[0-9]+$" n) (string-to-number n 10))
+			  (t default-number))))))
+	      (min (max 1 number) max-number)))
+	   (number-str (number-to-string number))
+	   (max_id (cdr (assq 'max_id args-alist)))
+	   (page (cdr (assq 'page args-alist)))
+	   (since_id (cdr (assq 'since_id args-alist)))
+	   (word (when (eq 'search spec-type)
+		   (cadr spec)))
+	   (parameters
+	    (cond
+	     ((eq spec-type 'favorites)
+	      `(("include_entities" . "true")
+		,@(when max_id `(("max_id" . ,max_id)))
+		,@(when page `(("page" . ,page)))))
+	     ((eq spec-type 'retweeted_by_user)
+	      (let ((username (elt spec 1)))
+		`(("count" . ,number-str)
+		  ,@(when max_id `(("max_id" . ,max_id)))
+		  ("include_entities" . "true")
+		  ("screen_name" . ,username)
+		  ,@(when since_id `(("since_id" . ,since_id))))))
+	     ((eq spec-type 'retweeted_to_user)
+	      (let ((username (elt spec 1)))
+		`(("count" . ,number-str)
+		  ("include_entities" . "true")
+		  ,@(when max_id `(("max_id" . ,max_id)))
+		  ("screen_name" . ,username)
+		  ,@(when since_id `(("since_id" . ,since_id))))))
+	     (t
+	      `(,@(when max_id `(("max_id" . ,max_id)))
+		,@(when since_id `(("since_id" . ,since_id)))
+		,@(cond
+		   ((eq spec-type 'search)
+		    `(("include_entities" . "true")
+		      ("q" . ,word)
+		      ("rpp" . ,number-str)
+		      ("with_twitter_user_id". "true")))
+		   ((eq spec-type 'list)
+		    (let ((username (elt spec 1))
+			  (list-name (elt spec 2)))
+		      `(("include_entities" . "true")
+			("include_rts" . "true")
+			("owner_screen_name" . ,username)
+			("per_page" . ,number-str)
+			("slug" . ,list-name))))
+		   ((eq spec-type 'user)
+		    (let ((username (elt spec 1)))
+		      `(("count" . ,number-str)
+			("include_entities" . "true")
+			("include_rts" . "true")
+			("screen_name" . ,username))))
+		   ((memq spec-type '(friends mentions public))
+		    `(("include_entities" . "true")
+		      ("count" . ,number-str)
+		      ("include_rts" . "true")))
+		   (t
+		    ;; direct_messages
+		    ;; direct_messages_sent
+		    ;; home
+		    ;; replies
+		    ;; retweeted_by_me
+		    ;; retweeted_to_me
+		    ;; retweets_of_me
+		    `(("include_entities" . "true")
+		      ("count" . ,number-str))))))))
+	   (format
+	    (let ((format (cdr (assq 'format args-alist))))
+	      (cond
+	       ((and format (symbolp format))
+		format)
+	       ((eq spec-type 'search)
+		'atom)
+	       (t
+		'xml))))
+	   (format-str (symbol-name format))
+	   (simple-spec-list
+	    '((direct_messages . "direct_messages")
+	      (direct_messages_sent . "direct_messages/sent")
+	      (friends . "statuses/friends_timeline")
+	      (home . "statuses/home_timeline")
+	      (mentions . "statuses/mentions")
+	      (public . "statuses/public_timeline")
+	      (replies . "statuses/replies")
+	      (retweeted_by_me . "statuses/retweeted_by_me")
+	      (retweeted_to_me . "statuses/retweeted_to_me")
+	      (retweets_of_me . "statuses/retweets_of_me")
+	      (user . "statuses/user_timeline")))
+	   (host (cond ((eq spec-type 'search) twindrill-api-search-host)
+		       (t twindrill-api-host)))
+	   (method
+	    (cond
+	     ((eq spec-type 'list)
+	      (twindrill-api-path "lists/statuses"))
+	     ((eq spec-type 'favorites)
+	      (let ((user (elt spec 1)))
+		(if user
+		    (twindrill-api-path "favorites/" user)
+		  (twindrill-api-path "favorites"))))
+	     ((eq spec-type 'retweeted_by_user)
+	      (twindrill-api-path "statuses/retweeted_by_user"))
+	     ((eq spec-type 'retweeted_to_user)
+	      (twindrill-api-path "statuses/retweeted_to_user"))
+	     ((eq spec-type 'search)
+	      twindrill-search-api-method)
+	     ((assq spec-type simple-spec-list)
+	      (twindrill-api-path (cdr (assq spec-type simple-spec-list))))
+	     (t nil)))
+	   (sentinel (cdr (assq 'sentinel args-alist)))
+	   (clean-up-sentinel (cdr (assq 'clean-up-sentinel args-alist)))
+	   (additional-info `(,@additional-info (format . ,format))))
+      (cond
+       ((eq spec-type 'single)
+	(let ((id (cadr spec))
+	      (sentinel (or sentinel
+			    'twindrill-retrieve-single-tweet-sentinel)))
+	  (if (twindrill-find-status id)
+	      ;; If the status has already retrieved, do nothing.
+	      nil
+	    (twindrill-call-api 'retrieve-single-tweet
+				 `((id . ,id)
+				   (format . ,format)
+				   (sentinel . ,sentinel)
+				   (clean-up-sentinel . ,clean-up-sentinel))
+				 additional-info))))
+       ((and host method)
+	(twindrill-http-get account-info-alist host method parameters
+			     format-str
+			     additional-info sentinel clean-up-sentinel))
+       (t
+	(error "Invalid timeline spec")))))
+   ((eq command 'retrieve-single-tweet)
+    (let* ((id (cdr (assq 'id args-alist)))
+	   (user-screen-name (cdr (assq 'username args-alist)))
+	   (format
+	    (let ((format (cdr (assq 'format args-alist))))
+	      (cond
+	       ((and format (symbolp format))
+		format)
+	       (t
+		'xml))))
+	   (format-str (symbol-name format))
+	   (parameters '(("include_entities" . "true")))
+	   (sentinel (cdr (assq 'sentinel args-alist)))
+	   (clean-up-sentinel (cdr (assq 'clean-up-sentinel args-alist)))
+	   (additional-info `(,@additional-info
+			      (id . ,id)
+			      (user-screen-name . ,user-screen-name)
+			      (format . ,format))))
+      (twindrill-http-get account-info-alist twindrill-api-host
+			   (twindrill-api-path "statuses/show/" id)
+			   parameters format-str additional-info
+			   sentinel clean-up-sentinel)))
+   ((eq command 'get-list-index)
+    ;; Get list names.
+    (let* ((username (cdr (assq 'username args-alist)))
+	   (sentinel (cdr (assq 'sentinel args-alist)))
+	   (format (if (require 'json nil t) 'json 'xml))
+	   (format-str (symbol-name format))
+	   (clean-up-sentinel (cdr (assq 'clean-up-sentinel args-alist))))
+      (twindrill-http-get account-info-alist twindrill-api-host
+			   (twindrill-api-path username "/lists")
+			   nil format-str additional-info
+			   sentinel clean-up-sentinel)))
+   ((eq command 'get-list-subscriptions)
+    (let* ((username (cdr (assq 'username args-alist)))
+	   (sentinel (cdr (assq 'sentinel args-alist)))
+	   (format (if (require 'json nil t) 'json 'xml))
+	   (format-str (symbol-name format))
+	   (clean-up-sentinel (cdr (assq 'clean-up-sentinel args-alist))))
+      (twindrill-http-get account-info-alist twindrill-api-host
+			   (twindrill-api-path username "/lists/subscriptions")
+			   nil format-str additional-info
+			   sentinel clean-up-sentinel)))
+   ((eq command 'create-friendships)
+    ;; Create a friendship.
+    (let ((username (cdr (assq 'username args-alist))))
+      (twindrill-http-post account-info-alist twindrill-api-host
+			    (twindrill-api-path "friendships/create")
+			    `(("screen_name" . ,username))
+			    nil additional-info)))
+   ((eq command 'destroy-friendships)
+    ;; Destroy a friendship
+    (let ((username (cdr (assq 'username args-alist))))
+      (twindrill-http-post account-info-alist twindrill-api-host
+			    (twindrill-api-path "friendships/destroy")
+			    `(("screen_name" . ,username))
+			    nil additional-info)))
+   ((eq command 'create-favorites)
+    ;; Create a favorite.
+    (let ((id (cdr (assq 'id args-alist))))
+      (twindrill-http-post account-info-alist twindrill-api-host
+			    (twindrill-api-path "favorites/create/" id)
+			    nil nil additional-info)))
+   ((eq command 'destroy-favorites)
+    ;; Destroy a favorite.
+    (let ((id (cdr (assq 'id args-alist))))
+      (twindrill-http-post account-info-alist twindrill-api-host
+			    (twindrill-api-path "favorites/destroy/" id)
+			    nil nil additional-info)))
+   ((eq command 'update-status)
+    ;; Post a tweet.
+    (let* ((status (cdr (assq 'status args-alist)))
+	   (id (cdr (assq 'in-reply-to-status-id args-alist)))
+	   (parameters
+	    `(("status" . ,status)
+	      ,@(when (eq twindrill-auth-method 'basic)
+		  '(("source" . "twmode")))
+	      ,@(when id `(("in_reply_to_status_id" . ,id))))))
+      (twindrill-http-post account-info-alist twindrill-api-host
+			    (twindrill-api-path "statuses/update")
+			    parameters nil additional-info)))
+   ((eq command 'destroy-status)
+    ;; Destroy a status.
+    (let* ((id (cdr (assq 'id args-alist)))
+	   (format (if (require 'json nil t) 'json 'xml))
+	   (format-str (symbol-name format)))
+      (twindrill-http-post account-info-alist twindrill-api-host
+			    (twindrill-api-path "statuses/destroy/" id)
+			    nil format-str additional-info
+			    'twindrill-http-post-destroy-status-sentinel)))
+   ((eq command 'retweet)
+    ;; Post a retweet.
+    (let ((id (cdr (assq 'id args-alist))))
+      (twindrill-http-post account-info-alist twindrill-api-host
+			    (twindrill-api-path "statuses/retweet/" id)
+			    nil nil additional-info)))
+   ((eq command 'verify-credentials)
+    ;; Verify the account.
+    (let ((sentinel (cdr (assq 'sentinel args-alist)))
+	  (clean-up-sentinel (cdr (assq 'clean-up-sentinel args-alist))))
+      (twindrill-http-get account-info-alist twindrill-api-host
+			   (twindrill-api-path "account/verify_credentials")
+			   nil nil additional-info
+			   sentinel clean-up-sentinel)))
+   ((eq command 'send-direct-message)
+    ;; Send a direct message.
+    (let ((parameters
+	   `(("screen_name" . ,(cdr (assq 'username args-alist)))
+	     ("text" . ,(cdr (assq 'status args-alist))))))
+      (twindrill-http-post account-info-alist twindrill-api-host
+			    (twindrill-api-path "direct_messages/new")
+			    parameters nil additional-info)))
+   ((eq command 'block)
+    ;; Block a user.
+    (let* ((user-id (cdr (assq 'user-id args-alist)))
+	   (username (cdr (assq 'username args-alist)))
+	   (parameters (if user-id
+			   `(("user_id" . ,user-id))
+			 `(("screen_name" . ,username)))))
+      (twindrill-http-post account-info-alist twindrill-api-host
+			    (twindrill-api-path "blocks/create")
+			    parameters nil additional-info)))
+   ((eq command 'block-and-report-as-spammer)
+    ;; Report a user as a spammer and block him or her.
+    (let* ((user-id (cdr (assq 'user-id args-alist)))
+	   (username (cdr (assq 'username args-alist)))
+	   (parameters (if user-id
+			   `(("user_id" . ,user-id))
+			 `(("screen_name" . ,username)))))
+      (twindrill-http-post account-info-alist twindrill-api-host
+			    (twindrill-api-path "report_spam")
+			    parameters nil additional-info)))
+   ((eq command 'get-service-configuration)
+    (let* ((format (if (require 'json nil t) 'json 'xml))
+	   (format-str (symbol-name format))
+	   (request
+	    (twindrill-make-http-request-from-uri
+	     "GET" nil
+	     (concat (if twindrill-use-ssl
+			 "https"
+		       "http")
+		     "://" twindrill-api-host
+		     "/"
+		     (twindrill-api-path "help/configuration." format-str))))
+	   (additional-info nil)
+	   (sentinel (cdr (assq 'sentinel args-alist)))
+	   (clean-up-sentinel (cdr (assq 'clean-up-sentinel args-alist))))
+      (twindrill-send-http-request request additional-info
+				    sentinel clean-up-sentinel)))
+   (t
+    nil)))
+
+(defun twindrill-call-api-with-account-in-api1.1 (account-info-alist command args-alist &optional additional-info)
+  "Call the Twitter REST API v1.1 and return the process object for the request."
+  (cond
+   ((eq command 'retrieve-timeline)
+    ;; Retrieve a timeline.
+    (let* ((args-alist
+	    (let* ((spec (cdr (assq 'timeline-spec args-alist)))
+		   (spec-type (car-safe spec))
+		   (table '((friends . (home))
+			    (replies . (mentions)))))
+	      (cond
+	       ((memq spec-type '(friends replies))
+		(let* ((alternative (cdr (assq spec-type table)))
+		       (alternative-str
+			(twindrill-timeline-spec-to-string alternative)))
+		  (message
+		   "Timeline spec %s is not supported in the Twitter REST API v1.1"
+		   spec)
+		  `((timeline-spec . ,alternative)
+		    (timeline-spec-string . ,alternative-str)
+		    ,@args-alist)))
+	       (t
+		args-alist))))
+	   (spec (cdr (assq 'timeline-spec args-alist)))
+	   (spec-string (cdr (assq 'timeline-spec-string args-alist)))
+	   (spec-type (car-safe spec))
+	   (max-number (if (eq 'search spec-type)
+			   100 ;; FIXME: refer to defconst.
+			 twindrill-max-number-of-tweets-on-retrieval))
+	   (number
+	    (let ((number
+		   (or (cdr (assq 'number args-alist))
+		       (let* ((default-number 20)
+			      (n twindrill-number-of-tweets-on-retrieval))
+			 (cond
+			  ((integerp n) n)
+			  ((string-match "^[0-9]+$" n) (string-to-number n 10))
+			  (t default-number))))))
+	      (min (max 1 number) max-number)))
+	   (number-str (number-to-string number))
+	   (max_id (cdr (assq 'max_id args-alist)))
+	   (since_id (cdr (assq 'since_id args-alist)))
+	   (word (when (eq 'search spec-type)
+		   (cadr spec)))
+	   (parameters
+	    (cond
+	     ((eq spec-type 'user)
+	      (let ((username (elt spec 1)))
+		`("api.twitter.com"
+		  "1.1/statuses/user_timeline"
+		  ("count" . ,number-str)
+		  ("include_entities" . "true")
+		  ("include_rts" . "true")
+		  ,@(when max_id `(("max_id" . ,max_id)))
+		  ("screen_name" . ,username)
+		  ,@(when since_id `(("since_id" . ,since_id)))
+		  )))
+	     ((eq spec-type 'list)
+	      (let ((username (elt spec 1))
+		    (list-name (elt spec 2)))
+		`("api.twitter.com"
+		  "1.1/lists/statuses"
+		  ("count" . ,number-str)
+		  ("include_entities" . "true")
+		  ("include_rts" . "true")
+		  ,@(when max_id `(("max_id" . ,max_id)))
+		  ("owner_screen_name" . ,username)
+		  ,@(when since_id `(("since_id" . ,since_id)))
+		  ("slug" . ,list-name))))
+	     ((eq spec-type 'direct_messages)
+	      `("api.twitter.com"
+		"1.1/direct_messages"
+		("count" . ,number-str)
+		("include_entities" . "true")
+		,@(when max_id `(("max_id" . ,max_id)))
+		,@(when since_id `(("since_id" . ,since_id)))))
+	     ((eq spec-type 'direct_messages_sent)
+	      `("api.twitter.com"
+		"1.1/direct_messages/sent"
+		("count" . ,number-str)
+		("include_entities" . "true")
+		,@(when max_id `(("max_id" . ,max_id)))
+		,@(when since_id `(("since_id" . ,since_id)))))
+	     ((eq spec-type 'favorites)
+	      (let ((user (elt spec 1)))
+		`("api.twitter.com"
+		  "1.1/favorites/list"
+		  ("count" . ,number-str)
+		  ("include_entities" . "true")
+		  ,@(when max_id `(("max_id" . ,max_id)))
+		  ,@(when user `(("screen_name" . ,user)))
+		  ,@(when since_id `(("since_id" . ,since_id))))))
+	     ((eq spec-type 'home)
+	      `("api.twitter.com"
+		"1.1/statuses/home_timeline"
+		("count" . ,number-str)
+		("include_entities" . "true")
+		,@(when max_id `(("max_id" . ,max_id)))
+		,@(when since_id `(("since_id" . ,since_id)))))
+	     ((eq spec-type 'mentions)
+	      `("api.twitter.com"
+		"1.1/statuses/mentions_timeline"
+		("count" . ,number-str)
+		("include_entities" . "true")
+		,@(when max_id `(("max_id" . ,max_id)))
+		,@(when since_id `(("since_id" . ,since_id)))))
+	     ((eq spec-type 'public)
+	      (error
+	       "Timeline spec %s is not supported in the Twitter REST API v1.1"
+	       spec)
+	      nil)
+	     ((memq spec-type '(retweeted_by_me
+				retweeted_by_user
+				retweeted_to_me
+				retweeted_to_user))
+	      (error
+	       "Timeline spec %s is not supported in the Twitter REST API v1.1"
+	       spec)
+	      nil)
+	     ((eq spec-type 'retweets_of_me)
+	      `("api.twitter.com"
+		"1.1/statuses/retweets_of_me"
+		("count" . ,number-str)
+		("include_entities" . "true")
+		,@(when max_id `(("max_id" . ,max_id)))
+		,@(when since_id `(("since_id" . ,since_id)))))
+	     ((eq spec-type 'single)
+	      (let ((id (elt spec 1)))
+		`("api.twitter.com"
+		  "1.1/statuses/show"
+		  ("id" . ,id)
+		  ("include_entities" . "true"))))
+	     ((eq spec-type 'search)
+	      (let ((word (elt spec 1)))
+		`("api.twitter.com"
+		  "1.1/search/tweets"
+		  ("count" . ,number-str)
+		  ("include_entities" . "true")
+		  ,@(when max_id `(("max_id" . ,max_id)))
+		  ("q" . ,word)
+		  ("result_type" . "recent")
+		  ,@(when since_id `(("since_id" . ,since_id))))))
+	     (t
+	      (error
+	       "Timeline spec %s is unknown"
+	       spec-string)
+	      nil)))
+	   (format 'json)
+	   (format-str (symbol-name format))
+	   (host (elt parameters 0))
+	   (method (elt parameters 1))
+	   (http-parameters (nthcdr 2 parameters))
+	   (sentinel (cdr (assq 'sentinel args-alist)))
+	   (clean-up-sentinel (cdr (assq 'clean-up-sentinel args-alist)))
+	   (additional-info `(,@additional-info (format . ,format)))
+	   ;; special treatment for single timeline.
+	   (id (cdr (assoc "id" http-parameters)))
+	   (sentinel (or sentinel
+			 (when (eq spec-type 'single)
+			   'twindrill-retrieve-single-tweet-sentinel))))
+      (cond
+       ((null parameters)
+	nil)
+       ((not (and (string= format-str "json")
+		  (require 'json nil t)))
+	(error "The Twitter REST API v1.1 supports only JSON")
+	nil)
+       ((and (eq spec-type 'single)
+	     (twindrill-find-status id))
+	;; If the status has already retrieved, do nothing.
+	nil)
+       ((and host method)
+	(twindrill-http-get account-info-alist host method http-parameters
+			     format-str
+			     additional-info sentinel clean-up-sentinel))
+       (t
+	(error "Invalid timeline spec")
+	nil))))
+   ((eq command 'retrieve-single-tweet)
+    (let* ((id (cdr (assq 'id args-alist)))
+	   (user-screen-name (cdr (assq 'username args-alist)))
+	   (format
+	    (let ((format (cdr (assq 'format args-alist))))
+	      (cond
+	       ((and format (symbolp format))
+		format)
+	       (t
+		'json))))
+	   (format-str (symbol-name format))
+	   (sentinel (cdr (assq 'sentinel args-alist)))
+	   (clean-up-sentinel (cdr (assq 'clean-up-sentinel args-alist)))
+	   (additional-info `(,@additional-info
+			      (id . ,id)
+			      (user-screen-name . ,user-screen-name)
+			      (format . ,format))))
+      (twindrill-call-api-with-account-in-api1.1
+       account-info-alist 'retrieve-timeline
+       `((timeline-spec . (single ,id))
+	 (format . ,format)
+	 (sentinel . ,sentinel)
+	 (clean-up-sentinel . ,clean-up-sentinel))
+       additional-info)))
+   ((eq command 'get-list-index)
+    ;; Get list names.
+    (let* ((username (cdr (assq 'username args-alist)))
+	   (sentinel (cdr (assq 'sentinel args-alist)))
+	   (host "api.twitter.com")
+	   (method "1.1/lists/list")
+	   (http-parameters `(("screen_name" . ,username)))
+	   (format-str "json")
+	   (clean-up-sentinel (cdr (assq 'clean-up-sentinel args-alist))))
+      (twindrill-http-get account-info-alist host method http-parameters
+			   format-str additional-info
+			   sentinel clean-up-sentinel)))
+   ((eq command 'get-list-subscriptions)
+    (let* ((username (cdr (assq 'username args-alist)))
+	   (sentinel (cdr (assq 'sentinel args-alist)))
+	   (host "api.twitter.com")
+	   (method "1.1/lists/subscriptions")
+	   (http-parameters
+	    `(("count" . "20")
+	      ("screen_name" . ,username)))
+	   (format-str "json")
+	   (clean-up-sentinel (cdr (assq 'clean-up-sentinel args-alist))))
+      (twindrill-http-get account-info-alist host method http-parameters
+			   format-str additional-info
+			   sentinel clean-up-sentinel)))
+   ((eq command 'create-friendships)
+    ;; Create a friendship.
+    (let* ((username (cdr (assq 'username args-alist)))
+	   (host "api.twitter.com")
+	   (method "1.1/friendships/create")
+	   (http-parameters
+	    `(("screen_name" . ,username)))
+	   (format-str "json"))
+      (twindrill-http-post account-info-alist host method http-parameters
+			    format-str additional-info)))
+   ((eq command 'destroy-friendships)
+    ;; Destroy a friendship
+    (let* ((username (cdr (assq 'username args-alist)))
+	   (host "api.twitter.com")
+	   (method "1.1/friendships/destroy")
+	   (http-parameters
+	    `(("screen_name" . ,username)))
+	   (format-str "json"))
+      (twindrill-http-post account-info-alist host method http-parameters
+			    format-str additional-info)))
+   ((eq command 'create-favorites)
+    ;; Create a favorite.
+    (let* ((id (cdr (assq 'id args-alist)))
+	   (host "api.twitter.com")
+	   (method "1.1/favorites/create")
+	   (http-parameters `(("id" . ,id)))
+	   (format-str "json"))
+      (twindrill-http-post account-info-alist host method http-parameters
+			    format-str additional-info)))
+   ((eq command 'destroy-favorites)
+    ;; Destroy a favorite.
+    (let* ((id (cdr (assq 'id args-alist)))
+	   (host "api.twitter.com")
+	   (method "1.1/favorites/destroy")
+	   (http-parameters `(("id" . ,id)))
+	   (format-str "json"))
+      (twindrill-http-post account-info-alist host method http-parameters
+			    format-str additional-info)))
+   ((eq command 'update-status)
+    ;; Post a tweet.
+    (let* ((status (cdr (assq 'status args-alist)))
+	   (id (cdr (assq 'in-reply-to-status-id args-alist)))
+	   (host "api.twitter.com")
+	   (method "1.1/statuses/update")
+	   (http-parameters
+	    `(("status" . ,status)
+	      ,@(when id `(("in_reply_to_status_id" . ,id)))))
+	   (format-str "json"))
+      (twindrill-http-post account-info-alist host method http-parameters
+			    format-str additional-info)))
+   ((eq command 'destroy-status)
+    ;; Destroy a status.
+    (let* ((id (cdr (assq 'id args-alist)))
+	   (host "api.twitter.com")
+	   (method (format "1.1/statuses/destroy/%s" id))
+	   (http-parameters nil)
+	   (format-str "json"))
+      (twindrill-http-post account-info-alist host method http-parameters
+			    format-str additional-info
+			    'twindrill-http-post-destroy-status-sentinel)))
+   ((eq command 'retweet)
+    ;; Post a retweet.
+    (let* ((id (cdr (assq 'id args-alist)))
+	   (host "api.twitter.com")
+	   (method (format "1.1/statuses/retweet/%s" id))
+	   (http-parameters nil)
+	   (format-str "json"))
+      (twindrill-http-post account-info-alist host method http-parameters
+			    format-str additional-info)))
+   ((eq command 'verify-credentials)
+    ;; Verify the account.
+    (let* ((host "api.twitter.com")
+	   (method "1.1/account/verify_credentials")
+	   (http-parameters nil)
+	   (format-str "json")
+	   (sentinel (cdr (assq 'sentinel args-alist)))
+	   (clean-up-sentinel (cdr (assq 'clean-up-sentinel args-alist))))
+      (twindrill-http-get account-info-alist host method http-parameters
+			   format-str additional-info
+			   sentinel clean-up-sentinel)))
+   ((eq command 'send-direct-message)
+    ;; Send a direct message.
+    (let* ((host "api.twitter.com")
+	   (method "1.1/direct_messages/new")
+	   (http-parameters
+	    `(("screen_name" . ,(cdr (assq 'username args-alist)))
+	      ("text" . ,(cdr (assq 'status args-alist)))))
+	   (format-str "json"))
+      (twindrill-http-post account-info-alist host method http-parameters
+			    format-str additional-info)))
+   ((memq command '(mute unmute))
+    ;; Mute a user.
+    (let* ((user-id (cdr (assq 'user-id args-alist)))
+	   (username (cdr (assq 'username args-alist)))
+	   (host "api.twitter.com")
+	   (method
+	    (cdr (assq command '((mute . "1.1/mutes/users/create")
+				 (unmute . "1.1/mutes/users/destroy")))))
+	   (http-parameters (if user-id
+				`(("user_id" . ,user-id))
+			      `(("screen_name" . ,username))))
+	   (format-str "json"))
+      (twindrill-http-post account-info-alist host method http-parameters
+			    format-str additional-info)))
+   ((eq command 'block)
+    ;; Block a user.
+    (let* ((user-id (cdr (assq 'user-id args-alist)))
+	   (username (cdr (assq 'username args-alist)))
+	   (host "api.twitter.com")
+	   (method "1.1/blocks/create")
+	   (http-parameters (if user-id
+				`(("user_id" . ,user-id))
+			      `(("screen_name" . ,username))))
+	   (format-str "json"))
+      (twindrill-http-post account-info-alist host method http-parameters
+			    format-str additional-info)))
+   ((eq command 'block-and-report-as-spammer)
+    ;; Report a user as a spammer and block him or her.
+    (let* ((user-id (cdr (assq 'user-id args-alist)))
+	   (username (cdr (assq 'username args-alist)))
+	   (host "api.twitter.com")
+	   (method "1.1/users/report_spam")
+	   (http-parameters (if user-id
+				`(("user_id" . ,user-id))
+			      `(("screen_name" . ,username))))
+	   (format-str "json"))
+      (twindrill-http-post account-info-alist host method http-parameters
+			    format-str additional-info)))
+   ((eq command 'get-service-configuration)
+    (let* ((host "api.twitter.com")
+	   (method "1.1/help/configuration")
+	   (http-parameters nil)
+	   (format-str "json")
+	   (additional-info nil)
+	   (sentinel (cdr (assq 'sentinel args-alist)))
+	   (clean-up-sentinel (cdr (assq 'clean-up-sentinel args-alist))))
+      (twindrill-http-get account-info-alist host method http-parameters
+			   format-str additional-info
+			   sentinel clean-up-sentinel)))
+   (t
+    nil)))
+
+;;;;
+;;;; Service configuration
+;;;;
+
+(defconst twindrill-service-configuration-default
+  '((short_url_length . 19)
+    (short_url_length_https . 20))
+  "Default value of `twindrill-service-configuration'.")
+(defvar twindrill-service-configuration nil
+  "Current server configuration.")
+(defvar twindrill-service-configuration-queried nil)
+(defvar twindrill-service-configuration-update-interval 86400
+  "*Interval of updating `twindrill-service-configuration'.")
+
+(defun twindrill-get-service-configuration (entry)
+  (let ((pair (assq entry twindrill-service-configuration)))
+    (if (null pair)
+	(cdr (assq entry twindrill-service-configuration-default))
+      (cdr pair))))
+
+(defun twindrill-update-service-configuration (&optional ignore-time)
+  "Update `twindrill-service-configuration' if necessary."
+  (when (and
+	 (memq twindrill-service-method '(twitter twitter-api-v1.1))
+	 (null twindrill-service-configuration-queried)
+	 (or ignore-time
+	     (let ((current (twindrill-get-service-configuration 'time))
+		   (interval
+		    (seconds-to-time
+		     twindrill-service-configuration-update-interval)))
+	       (if (null current)
+		   t
+		 ;; If time passed more than `interval',
+		 ;; update the configuration.
+		 (time-less-p interval (time-since current))))))
+    (setq twindrill-service-configuration-queried t)
+    (twindrill-call-api
+     'get-service-configuration
+     '((sentinel . twindrill-update-service-configuration-sentinel)
+       (clean-up-sentinel
+	. twindrill-update-service-configuration-clean-up-sentinel)))))
+
+(defun twindrill-update-service-configuration-sentinel (proc status connection-info header-info)
+  (let ((status-line (cdr (assq 'status-line header-info)))
+	(status-code (cdr (assq 'status-code header-info)))
+	(format
+	 (twindrill-get-content-subtype-symbol-from-header-info header-info)))
+    (case-string
+     status-code
+     (("200")
+      (let* ((conf-alist
+	      (cond
+	       ((eq format 'xml)
+		(let ((xml
+		       (twindrill-xml-parse-region (point-min) (point-max))))
+		  (mapcar
+		   (lambda (entry)
+		     `(,(car entry) . ,(elt entry 2)))
+		   (cddr (assq 'configuration xml)))))
+	       ((eq format 'json)
+		(twindrill-json-read))
+	       (t
+		(error "Format \"%s\" is not supported" format)
+		nil)))
+	     (entries '(short_url_length short_url_length_https)))
+	(setq twindrill-service-configuration
+	      `((time . ,(current-time))
+		,@(mapcar (lambda (entry)
+			    (let ((value (cdr (assq entry conf-alist))))
+			      (cons
+			       entry
+			       (cond
+				((stringp value)
+				 (string-to-number value))
+				(t
+				 value)))))
+			  entries)))
+	(setq twindrill-service-configuration-queried nil)
+	nil))
+     (("400")
+      ;; Rate limit exceeded.
+      (setq twindrill-service-configuration-queried nil)
+      (format "Response: %s"
+	      (twindrill-get-error-message header-info connection-info)))
+     (t
+      (setq twindrill-service-configuration-queried nil)
+      (format "Response: %s"
+	      (twindrill-get-error-message header-info connection-info))))))
+
+(defun twindrill-update-service-configuration-clean-up-sentinel (proc status connection-info)
+  (when (not (twindrill-process-alive-p proc))
+    (setq twindrill-service-configuration-queried nil)))
+
 (provide 'twindrill-api)
 ;;; twindrill-api.el ends here
