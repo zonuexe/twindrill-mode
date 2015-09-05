@@ -1,4 +1,4 @@
-;;; twindrill-mode.el --- Twitter client for Emacs
+;;; twindrill.el --- Twitter client for Emacs
 
 ;; Copyright (C) 2009-2015 Tadashi MATSUO
 ;;               2007, 2009-2011 Yuto Hayamizu.
@@ -7385,7 +7385,7 @@ Note that the current implementation assumes `revive.el' 2.19 ."
 ;; 　　　.(_:;つ/  0401 /　ｶﾀｶﾀ
 ;;  ￣￣￣￣￣＼/＿＿＿＿/
 
-(provide 'twindrill-mode)
+(provide 'twindrill)
 
                   (progn  (when  (
                    boundp  (  intern (
@@ -7414,4 +7414,4 @@ Note that the current implementation assumes `revive.el' 2.19 ."
          99 88 50 83 80 72 105 71 90          86 113 85 98 49 112 51 101 70 78
         62))))))))(concat "ξ ^ω^)ξ"        "＜ You are an idiot, really."))
 
-;;; twindrill-mode.el ends here
+;;; twindrill.el ends here
