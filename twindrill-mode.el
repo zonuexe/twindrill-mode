@@ -313,7 +313,6 @@ Do not modify this variable directly. Use `twindrill-activate-buffer',
 `twindrill-deactivate-buffer', `twindrill-toggle-activate-buffer' or
 `twindrill-set-active-flag-for-buffer'.")
 
-(defvar twindrill-jojo-mode nil)
 (defcustom twindrill-reverse-mode nil
   "*Non-nil means tweets are aligned in reverse order of `http://twitter.com/'."
   :type 'boolean
@@ -8183,7 +8182,6 @@ static char * disconnected[] = {
 		 (when twindrill-use-ssl (concat twindrill-modeline-ssl ":"))
 		 (twindrill-get-connection-method-name twindrill-use-ssl))
 	      (when twindrill-use-ssl twindrill-modeline-ssl))
-	   ,@(when twindrill-jojo-mode '("jojo"))
 	   ,@(when twindrill-icon-mode '("icon"))
 	   ,@(when twindrill-reverse-mode '("reverse"))
 	   ,@(when twindrill-proxy-use '("proxy")))))
@@ -10065,8 +10063,6 @@ been initialized yet."
 	  (boundp 'twindrill-sign-string-function))
       (message "Warning: `twindrill-sign-simple-string' and `twindrill-sign-string-function' are obsolete. Use the new feature `twindrill-edit-skeleton'.")
       ))
-    (add-hook 'twindrill-new-tweets-rendered-hook
-	      'twindrill-jojo-mode-hook-function)
     (run-hooks 'twindrill-mode-init-hook)
     (setq twindrill-initialized t)))
 
@@ -10095,7 +10091,6 @@ been initialized yet."
   (make-local-variable 'twindrill-timeline-spec-string)
   (make-local-variable 'twindrill-active-mode)
   (make-local-variable 'twindrill-icon-mode)
-  (make-local-variable 'twindrill-jojo-mode)
   (make-local-variable 'twindrill-reverse-mode)
 
   (setq twindrill-timeline-spec-string spec-string)
@@ -10153,15 +10148,6 @@ Then, return non-nil if they has been satisfied and return nil otherwise."
 ;;;;
 
 ;;;; Commands for changing modes
-(defun twindrill-jojo-mode (&optional arg)
-  (interactive "P")
-  (let ((prev-mode twindrill-jojo-mode))
-    (setq twindrill-jojo-mode
-	  (if (null arg)
-	      (not twindrill-jojo-mode)
-	    (< 0 (prefix-numeric-value arg))))
-    (unless (eq prev-mode twindrill-jojo-mode)
-      (twindrill-update-mode-line))))
 
 (defun twindrill-toggle-reverse-mode (&optional arg)
   (interactive "P")
@@ -10411,38 +10397,6 @@ How to edit a tweet is determined by `twindrill-update-status-funcion'."
 		 (mapcar 'twindrill-ucs-to-char
 			 '(955 12363 12431 12356 12356 12424 955)) "")))
       (twindrill-call-api 'update-status `((status . ,text))))))
-
-(defun twindrill-post-predicted-message-like-jojo (status)
-  (let ((screen-name (cdr (assq 'user-screen-name status)))
-	(text (cdr (assq 'text status))))
-    (when (and (not (string= screen-name (twindrill-get-username)))
-	       (string-match
-		(mapconcat 'char-to-string
-			   (mapcar
-			    'twindrill-ucs-to-char
-			    '(#x6b21 #x306b #x005c #x0028 #x304a #x524d
-				     #x005c #x007c #x8cb4 #x69d8 #x005c #x0029
-				     #x306f #x300c #x005c #x0028 #x005b #x005e
-				     #x300d #x005d #x002b #x005c #x0029 #x300d
-				     #x3068 #x8a00 #x3046))
-			   "")
-		text))
-      (let ((text
-	     (concat "@" screen-name " "
-		     (match-string-no-properties 2 text)
-		     (mapconcat 'char-to-string
-				(mapcar 'twindrill-ucs-to-char
-					'(#x3000 #x306f #x3063 #x0021 #x003f))
-				""))))
-	(twindrill-call-api 'update-status `((status . ,text)))))))
-
-(defun twindrill-jojo-mode-hook-function ()
-  (when (and twindrill-jojo-mode
-	     (string= "Japanese" current-language-environment)
-	     (or (< 21 emacs-major-version)
-		 (eq 'utf-8 (terminal-coding-system))))
-    (mapcar 'twindrill-post-predicted-message-like-jojo
-	    twindrill-rendered-new-tweets)))
 
 (defun twindrill-direct-message ()
   (interactive)
