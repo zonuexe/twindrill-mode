@@ -2,6 +2,7 @@
 (source melpa)
 
 (package "twindrill-mode" "4.0.0" "Twitter client for Emacs")
+(package-file "twindrill-api.el")
 (package-file "twindrill-mode.el")
 (package-file "twindrill-edit.el")
 (package-file "twindrill-util.el")
