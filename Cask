@@ -8,6 +8,7 @@
 (package-file "twindrill-edit.el")
 (package-file "twindrill-util.el")
 (package-file "twindrill-storage.el")
+(package-file "twindrill-timeline.el")
 (package-file "twindrill-render.el")
 (package-file "twindrill-plus.el")
 
