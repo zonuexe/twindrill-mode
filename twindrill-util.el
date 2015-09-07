@@ -286,6 +286,7 @@ unknown are returned as nil."
     (reverse result)))
 
 (defun twindrill-normalize-string (str)
+  "Normalize unicode `STR' for tweet."
   (if (require 'ucs-normalize nil t)
       (ucs-normalize-NFC-string str)
     str))
