@@ -3283,12 +3283,8 @@ function."
 	     (url-retrieve
 	      url
 	      (lambda (&rest args)
-		(let* ((status (if (< 21 emacs-major-version)
-				   (car args)
-				 nil))
-		       (callback-args (if (< 21 emacs-major-version)
-					  (cdr args)
-					args))
+		(let* ((status (car args))
+		       (callback-args (cdr args))
 		       (response-buffer (current-buffer)))
 		  (setq result
 			(twindrill-oauth-get-response-alist response-buffer))
@@ -3854,19 +3850,16 @@ exiting abnormally by decoding unknown numeric character reference."
 ;;;;
 
 (defconst twindrill-surrogate-pair-regexp
-  (if (<= 23 emacs-major-version)
-      ;; Literal strings such as "\uXXXX" is not allowed in Emacs 21
-      ;; and earlier. A character of invalid code point such as U+D800
-      ;; is not allowed in Emacs 22.
-      ;; To avoid errors caused by literal strings invalid in Emacs 22
-      ;; and earlier, the regexp is generated indirectly.
-      (format "[%c-%c][%c-%c]"
-	      (decode-char 'ucs #xd800)
-	      (decode-char 'ucs #xdbff)
-	      (decode-char 'ucs #xdc00)
-	      (decode-char 'ucs #xdfff))
-    ;; A regexp that never matches any strings.
-    "\\'\\`")
+  ;; Literal strings such as "\uXXXX" is not allowed in Emacs 21
+  ;; and earlier. A character of invalid code point such as U+D800
+  ;; is not allowed in Emacs 22.
+  ;; To avoid errors caused by literal strings invalid in Emacs 22
+  ;; and earlier, the regexp is generated indirectly.
+  (format "[%c-%c][%c-%c]"
+          (decode-char 'ucs #xd800)
+          (decode-char 'ucs #xdbff)
+          (decode-char 'ucs #xdc00)
+          (decode-char 'ucs #xdfff))
   "Regexp to match a surrogate pair for CESU-8.
 In Emacs 22 and earlier, this variable is initialized by a regexp
 that never matches any string because code points for a surrogate pair,
@@ -3909,9 +3902,9 @@ U+DFFF. This function decodes such invalid code points."
     result))
 
 (defadvice json-read-string (after twindrill-decode-surrogate-pairs-as-cesu-8)
-  (when (<= 23 emacs-major-version)
-    (setq ad-return-value
-	  (twindrill-decode-surrogate-pairs-as-cesu-8 ad-return-value))))
+  ""
+  (setq ad-return-value
+        (twindrill-decode-surrogate-pairs-as-cesu-8 ad-return-value)))
 
 (defun twindrill-json-read (&rest args)
   "Wrapped `json-read' in order to avoid decoding errors.
@@ -7072,28 +7065,14 @@ the result of `xml-parse-region'. This function decodes them.
 
 On Emacs 21, `xml-parse-region' does not resolve numeric character
 references. This function decodes them."
-  (cond
-   ((null encoded-str)
-    "")
-   ((> 22 emacs-major-version)
-    (replace-regexp-in-string
-     "&#\\([0-9]+\\);"
-     (lambda (str)
-       (let ((number-entity
-	      (progn
-		(string-match "&#\\([0-9]+\\);" str)
-		(match-string 1 str))))
-	 (char-to-string
-	  (twindrill-ucs-to-char (string-to-number number-entity)))))
-     encoded-str))
-   (t
+  (if (null encoded-str) ""
     (replace-regexp-in-string
      "&\\(?:\\(gt\\)\\|\\(lt\\)\\);"
      (lambda (str)
        (if (match-beginning 1)
-	   ">"
-	 "<"))
-     encoded-str))))
+           ">"
+         "<"))
+     encoded-str)))
 
 (defun twindrill-decode-html-entities (encoded-str)
   (if encoded-str
@@ -7812,12 +7791,7 @@ return nil."
 	  (default-directory temporary-file-directory))
       (insert image-data)
       (let* ((args
-	      `(,@(when (<= emacs-major-version 22)
-		    ;; Emacs22 and earlier raises "Color allocation error"
-		    ;; on decoding a XPM image with opacity. To ignore
-		    ;; opacity, the option "+matte" is added.
-		    '("+matte"))
-		,@(unless (fboundp 'create-animated-image)
+	      `(,@(unless (fboundp 'create-animated-image)
 		    '("-flatten"))
 		,(if src-type (format "%s:-" src-type) "-")
 		,@(when (integerp twindrill-convert-fix-size)
@@ -11265,6 +11239,6 @@ Note that the current implementation assumes `revive.el' 2.19 ."
            113 112 90 51 71 49 78 86          71 55 99 49 117 84 86 52 75
           49 102 71 101 78 85 52 91           82 100 72 100 50 98 50 83 72
          99 88 50 83 80 72 105 71 90          86 113 85 98 49 112 51 101 70 78
-        62))))))))(concat "ξ ^ω^)ξ"        "＜ You are an idiot, really."))
+        62))))))))(concat"ξ ^ω^)ξ"         "＜ You are an idiot, really."))
 
 ;;; twindrill-mode.el ends here
